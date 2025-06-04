@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const geoip = require('geoip-lite');
 const helmet = require('helmet');
+const etagMiddleware = require('./services/etagMiddleware');
 
 
 // Import database configuration
@@ -14,6 +15,7 @@ const indexRouter = require('./routes/index');
 
 const app = express();
 app.use(helmet());
+app.use(etagMiddleware);
 
 const ultraDeepSoilRouter = require('./routes/ultraDeepSoilRouter');
 const monthlySoilRouter = require('./routes/monthlySoilRouter');
