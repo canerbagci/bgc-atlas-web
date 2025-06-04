@@ -74,12 +74,6 @@ router.get('/about', (req, res) => {
   res.render('about', );
 });
 
-router.use(
-  '/monthly-soil',
-  express.static('/ceph/ibmi/tgm/bgc-atlas/monthly-soil', { index: false })  // remove { index:false } if you want directory indexes
-);
-
-
 var map = sitemap({
   generate: router,
   http: 'https',
