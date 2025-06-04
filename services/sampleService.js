@@ -69,6 +69,177 @@ async function getSampleData() {
 }
 
 /**
+ * Get paginated sample data with search and ordering capabilities
+ * @param {Object} options - Pagination, search, and ordering options
+ * @param {number} options.start - Starting index for pagination
+ * @param {number} options.length - Number of records to return
+ * @param {string} options.searchValue - Search value for filtering
+ * @param {Array} options.order - Ordering information
+ * @param {number} options.draw - DataTables draw counter
+ * @returns {Promise<Object>} - Object containing paginated data and metadata
+ */
+async function getPaginatedSampleData(options) {
+  const { start, length, searchValue, order, draw } = options;
+
+  try {
+    // Base query for counting total records
+    const baseCountQuery = `
+      SELECT COUNT(*) AS total
+      FROM (
+        SELECT ar.status, ma.sampleacc, ma.assembly, ab.longest_biome, ma.submittedseqs,
+               COALESCE(pc.protocluster_count, 0) AS protocluster_count,
+               ma.longitude, ma.latitude, ma.envbiome, ma.envfeat, ma.collectdate,
+               ma.biosample, ma.species, ma.hosttaxid
+        FROM atlas.public.antismash_runs ar
+        INNER JOIN atlas.public.mgnify_asms ma ON ar.assembly = ma.assembly
+        LEFT JOIN (
+          SELECT assembly, COUNT(*) AS protocluster_count
+          FROM atlas.public.protoclusters
+          GROUP BY assembly
+        ) pc ON ma.assembly = pc.assembly
+        INNER JOIN (
+          SELECT assembly, MAX(LENGTH(biome)) AS max_length,
+                 FIRST_VALUE(biome) OVER (PARTITION BY assembly ORDER BY LENGTH(biome) DESC) AS longest_biome
+          FROM atlas.public.assembly2biome
+          GROUP BY assembly, biome
+        ) ab ON ma.assembly = ab.assembly
+        GROUP BY ar.status, ma.sampleacc, ma.assembly, ab.longest_biome, ma.submittedseqs,
+                 ma.longitude, ma.latitude, ma.envbiome, ma.envfeat, ma.collectdate,
+                 ma.biosample, ma.species, ma.hosttaxid, pc.protocluster_count
+      ) AS counted_data
+    `;
+
+    // Base query for data
+    let baseDataQuery = `
+      SELECT ar.status, ma.sampleacc, ma.assembly, ab.longest_biome, ma.submittedseqs,
+             COALESCE(pc.protocluster_count, 0) AS protocluster_count,
+             ma.longitude, ma.latitude, ma.envbiome, ma.envfeat, ma.collectdate,
+             ma.biosample, ma.species, ma.hosttaxid
+      FROM atlas.public.antismash_runs ar
+      INNER JOIN atlas.public.mgnify_asms ma ON ar.assembly = ma.assembly
+      LEFT JOIN (
+        SELECT assembly, COUNT(*) AS protocluster_count
+        FROM atlas.public.protoclusters
+        GROUP BY assembly
+      ) pc ON ma.assembly = pc.assembly
+      INNER JOIN (
+        SELECT assembly, MAX(LENGTH(biome)) AS max_length,
+               FIRST_VALUE(biome) OVER (PARTITION BY assembly ORDER BY LENGTH(biome) DESC) AS longest_biome
+        FROM atlas.public.assembly2biome
+        GROUP BY assembly, biome
+      ) ab ON ma.assembly = ab.assembly
+    `;
+
+    // Search condition
+    let searchCondition = '';
+    let searchParams = [];
+
+    if (searchValue) {
+      searchCondition = `
+        WHERE ma.sampleacc ILIKE $1
+        OR ma.assembly ILIKE $1
+        OR ab.longest_biome ILIKE $1
+        OR ma.envbiome ILIKE $1
+        OR ma.envfeat ILIKE $1
+        OR ma.biosample ILIKE $1
+        OR ma.species ILIKE $1
+      `;
+      searchParams.push(`%${searchValue}%`);
+    }
+
+    // Get total count (without search)
+    const totalResult = await pool.query(baseCountQuery);
+    const totalRecords = parseInt(totalResult.rows[0].total);
+
+    // Get filtered count (with search)
+    let filteredRecords = totalRecords;
+    if (searchValue) {
+      const filteredCountQuery = `
+        SELECT COUNT(*) AS total
+        FROM (
+          SELECT ar.status, ma.sampleacc, ma.assembly, ab.longest_biome, ma.submittedseqs,
+                 COALESCE(pc.protocluster_count, 0) AS protocluster_count,
+                 ma.longitude, ma.latitude, ma.envbiome, ma.envfeat, ma.collectdate,
+                 ma.biosample, ma.species, ma.hosttaxid
+          FROM atlas.public.antismash_runs ar
+          INNER JOIN atlas.public.mgnify_asms ma ON ar.assembly = ma.assembly
+          LEFT JOIN (
+            SELECT assembly, COUNT(*) AS protocluster_count
+            FROM atlas.public.protoclusters
+            GROUP BY assembly
+          ) pc ON ma.assembly = pc.assembly
+          INNER JOIN (
+            SELECT assembly, MAX(LENGTH(biome)) AS max_length,
+                   FIRST_VALUE(biome) OVER (PARTITION BY assembly ORDER BY LENGTH(biome) DESC) AS longest_biome
+            FROM atlas.public.assembly2biome
+            GROUP BY assembly, biome
+          ) ab ON ma.assembly = ab.assembly
+          ${searchCondition}
+          GROUP BY ar.status, ma.sampleacc, ma.assembly, ab.longest_biome, ma.submittedseqs,
+                   ma.longitude, ma.latitude, ma.envbiome, ma.envfeat, ma.collectdate,
+                   ma.biosample, ma.species, ma.hosttaxid, pc.protocluster_count
+        ) AS filtered_data
+      `;
+      const filteredResult = await pool.query(filteredCountQuery, searchParams);
+      filteredRecords = parseInt(filteredResult.rows[0].total);
+    }
+
+    // Add search condition to data query
+    if (searchValue) {
+      baseDataQuery += searchCondition;
+    }
+
+    // Add GROUP BY clause
+    baseDataQuery += `
+      GROUP BY ar.status, ma.sampleacc, ma.assembly, ab.longest_biome, ma.submittedseqs,
+               ma.longitude, ma.latitude, ma.envbiome, ma.envfeat, ma.collectdate,
+               ma.biosample, ma.species, ma.hosttaxid, pc.protocluster_count
+    `;
+
+    // Add ORDER BY clause
+    let orderClause = 'ORDER BY protocluster_count DESC';
+
+    if (order && order.length > 0) {
+      const columns = [
+        'status', 'sampleacc', 'assembly', 'longest_biome', 'submittedseqs',
+        'protocluster_count', 'longitude', 'latitude', 'envbiome', 'envfeat',
+        'collectdate', 'biosample', 'species', 'hosttaxid'
+      ];
+
+      const orderParts = order.map(o => {
+        const columnIndex = parseInt(o.column);
+        const direction = o.dir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+        return `${columns[columnIndex]} ${direction}`;
+      });
+
+      if (orderParts.length > 0) {
+        orderClause = `ORDER BY ${orderParts.join(', ')}`;
+      }
+    }
+
+    baseDataQuery += ` ${orderClause}`;
+
+    // Add LIMIT and OFFSET
+    baseDataQuery += ` LIMIT $${searchParams.length + 1} OFFSET $${searchParams.length + 2}`;
+    searchParams.push(length);
+    searchParams.push(start);
+
+    // Execute the final query
+    const { rows } = await pool.query(baseDataQuery, searchParams);
+
+    return {
+      draw: draw,
+      recordsTotal: totalRecords,
+      recordsFiltered: filteredRecords,
+      data: rows
+    };
+  } catch (error) {
+    console.error('Error getting paginated sample data:', error);
+    throw error;
+  }
+}
+
+/**
  * Get alternative sample data
  * @returns {Promise<Array>} - Array of alternative sample data
  */
@@ -128,5 +299,6 @@ module.exports = {
   getSampleInfo,
   getSampleData,
   getSampleData2,
-  getBgcId
+  getBgcId,
+  getPaginatedSampleData
 };

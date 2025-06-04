@@ -267,8 +267,39 @@ router.get('/sample-info', async (req, res) => {
 
 router.get('/sample-data', async (req, res) => {
   try {
-    const rows = await sampleService.getSampleData();
-    res.json({ data: rows });
+    // Extract pagination parameters from the request
+    const options = {
+      draw: parseInt(req.query.draw) || 1,
+      start: parseInt(req.query.start) || 0,
+      length: parseInt(req.query.length) || 50,
+      searchValue: req.query.search ? req.query.search.value : '',
+      order: []
+    };
+
+    // Process order parameters from DataTables
+    if (req.query.order) {
+      for (let i = 0; i < Object.keys(req.query.order).length; i++) {
+        if (req.query.order[i] && req.query.order[i].column !== undefined) {
+          options.order.push({
+            column: req.query.order[i].column,
+            dir: req.query.order[i].dir
+          });
+        }
+      }
+    }
+
+    // Log pagination parameters for debugging
+    console.log('Pagination options:', {
+      draw: options.draw,
+      start: options.start,
+      length: options.length,
+      searchValue: options.searchValue,
+      orderLength: options.order.length
+    });
+
+    // Get paginated data
+    const result = await sampleService.getPaginatedSampleData(options);
+    res.json(result);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal server error' });

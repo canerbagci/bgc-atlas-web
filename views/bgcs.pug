@@ -332,6 +332,7 @@ block scripts
             var table = $('#bgcTable').DataTable({
                 "processing": true,
                 "serverSide": true,
+                "searchDelay": 500, // Delay search execution by 500ms after user stops typing
                 "ajax": {
                     "url": '/bgc-table',
                     "data": function (d) {

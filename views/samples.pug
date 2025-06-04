@@ -52,13 +52,17 @@ append head
             // Initialize the DataTable
             var table = $('#samplesTable').DataTable({
                 ajax: '/sample-data',
+                serverSide: true, // Enable server-side processing
+                processing: true, // Show processing indicator
                 pageLength: 50, // Ensure appropriate page length
                 paging: true, // Ensure paging is enabled
                 scrollCollapse: true,
+                searchDelay: 500, // Delay search execution by 500ms after user stops typing
                 language: {
                     searchBuilder: {
                         button: 'Filter',
-                    }
+                    },
+                    processing: 'Loading...'
                 },
                 buttons: [
                     'searchBuilder'
