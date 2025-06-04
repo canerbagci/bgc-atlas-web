@@ -12,6 +12,7 @@ var sitemap = require('express-sitemap');
 require('dotenv').config();
 const { Pool } = require('pg');
 
+
 const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
@@ -72,6 +73,11 @@ router.get('/downloads', (req, res) => {
 router.get('/about', (req, res) => {
   res.render('about', );
 });
+
+router.use(
+  '/monthly-soil',
+  express.static('/ceph/ibmi/tgm/bgc-atlas/monthly-soil', { index: false })  // remove { index:false } if you want directory indexes
+);
 
 
 var map = sitemap({
@@ -979,188 +985,5 @@ function getMembership(reportId, callback) {
     }
   });
 }
-
-//
-// router.post('/homology-search', upload.single('fastaFile'), (req, res) => {
-//
-//   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
-//   res.setHeader("Pragma", "no-cache");
-//   res.setHeader("Expires", "0");
-//
-//   console.log("homology search!");
-//
-//   // Access form fields and uploaded file via req.body and req.file
-//   const querySeq = req.body.querySeq;
-//   const gbkFile = req.file; // This contains information about the uploaded file
-//
-//   console.log('Text Input:', querySeq);
-//   console.log('File Input:', gbkFile);
-//
-//   const timestamp = Date.now();
-//   //create a new directory with the name timestamp
-//   const fs = require('fs');
-//   fs.mkdir('/ceph/ibmi/tgm/bgc-atlas/search/uploads/' + timestamp, function (err) {
-//     if (err) console.log(err);
-//   });
-//
-//
-//   //if querySeq is not empty, create a new fasta file from it
-//   if(querySeq){
-//     //check if query seq is in proper fasta format
-//     const fs = require('fs');
-//     fs.writeFile('/ceph/ibmi/tgm/bgc-atlas/search/uploads/' + timestamp + '/query.gbk', '>querySeq\n' + querySeq, function (err) {
-//       if (err) throw err;
-//     });
-//   }
-//
-//   //save the file gbkFile in the uploads folder
-//   if(gbkFile){
-//     const fs = require('fs');
-//     const dirPath = '/ceph/ibmi/tgm/bgc-atlas/search/uploads/' + timestamp;
-//     fs.mkdirSync(dirPath, { recursive: true }); // Ensure the directory and its parents are created
-//     fs.writeFile(dirPath + '/' + gbkFile.originalname, gbkFile.buffer, function (err) {
-//       if (err) console.log(err);
-//     });
-//
-//
-//     //
-//     // const fs = require('fs');
-//     // fs.writeFile('search/uploads/' + timestamp + '/' + gbkFile.originalname, gbkFile.buffer, function (err) {
-//     //   if (err) console.log(err);
-//     // });
-//   }
-//
-//   //run bigslice from a conda environment
-//   const { spawn } = require('child_process');
-//   const pyProg = spawn('bash', ['/ceph/ibmi/tgm/bgc-atlas/search/bigslice.sh', timestamp]);
-//
-//
-//   let membership_line = '';
-//
-//   pyProg.stdout.on('data', function(data) {
-//
-//     console.log(data.toString());
-//
-//     const regex = /^gcf_membership.*/m;
-//     const found = data.toString().match(regex);
-//     if(found) {
-//       membership_line = found[0];
-//       console.log("found_line: " + membership_line);
-//     } else {
-//       console.log("no membership line found");
-//     }
-//   });
-//
-//   pyProg.stderr.on('data', function(data) {
-//
-//     console.log(data.toString());
-//
-//
-//   });
-//
-//   //check if the child process has ended
-//   pyProg.on('close', (code) => {
-//     console.log(`child process exited with code ${code}`);
-//     if(code === 0) {
-//       console.log("success!");
-//       console.log("membership line: " + membership_line);
-//
-//       const splitArray = membership_line.substring(membership_line.indexOf("\t") + 1).trim().split("|");
-//
-//       console.log(splitArray);
-//
-//       const records = [];
-//
-//       const record = {
-//         bgc_name:splitArray[6],
-//         gcf_id: splitArray[7],
-//         membership_value: splitArray[8]
-//       };
-//
-//       records.push(record);
-//
-//       res.json(records);
-//
-//       //
-//       // const query = `SELECT id FROM reports WHERE name='query_${timestamp}';`;
-//       //
-//       // const getReportIdProc = spawn('sqlite3', [
-//       //   '/vol/compl_bgcs_bigslice_def_t300/reports/reports.db',
-//       //   query
-//       // ]);
-//       //
-//       // let reportId = 0;
-//       //
-//       // getReportIdProc.stderr.on('data', function(data) {
-//       //   console.log(data.toString());
-//       // });
-//       //
-//       // getReportIdProc.stdout.on('data', function(data) {
-//       //   console.log('report id: ' + data.toString());
-//       //   reportId = data.toString();
-//       // });
-//       //
-//       // getReportIdProc.on('close', function(code) {
-//       //   if(code === 0) {
-//       //     console.log("bigslice process existed successfully.");
-//       //     console.log("report id2: " + reportId);
-//       //
-//       //     getMembership(reportId.replace(/\n/g, ''), function(err, membershipString) {
-//       //         if(!err) {
-//       //
-//       //         }
-//       //     });
-//       //   }
-//       // });
-//
-//       // getReportIdProc.on('close', function(code) {
-//       //   if (code === 0) {
-//       //     console.log('SQLite process exited successfully.');
-//       //     console.log("report id2: " + reportId);
-//       //
-//       //     getMembership(reportId.replace(/\n/g, ''), function(err, membershipString) {
-//       //       if (!err) {
-//       //         console.log("membership2: " + membershipString);
-//       //
-//       //         const rows = membershipString.split('\n');
-//       //         const records = [];
-//       //
-//       //         rows.forEach((row) => {
-//       //           // Split each row into columns using '|'
-//       //             const columns = row.split('|');
-//       //             if (columns.length === 4) {
-//       //             console.log("columns: " + columns);
-//       //             // Create an object for each record with properties for each column
-//       //             const record = {
-//       //               bgc_name: columns[1],
-//       //               gcf_id: columns[0],
-//       //               membership_value: columns[2]
-//       //             };
-//       //
-//       //             // Add the record to the array of records
-//       //             records.push(record);
-//       //           }
-//       //         });
-//       //
-//       //         res.json(records);
-//       //       } else {
-//       //         console.error(err);
-//       //       }
-//       //     });
-//       //
-//       //   } else {
-//       //     console.error(`SQLite process exited with code ${code}.`);
-//       //   }
-//       // });
-//
-//       // res.redirect('/search/results?timestamp=' + timestamp);
-//     } else {
-//       console.log("error!");
-//       res.redirect('/search/error');
-//     }
-//
-//   });
-// });
-
 
 module.exports = router;
