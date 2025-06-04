@@ -10,13 +10,31 @@ const etagMiddleware = require('./services/etagMiddleware');
 // Import database configuration
 require('./config/database');
 
-const indexRouter = require('./routes/index');
+const pageRouter = require('./routes/pageRouter');
+const cacheRouter = require('./routes/cacheRouter');
+const mapRouter = require('./routes/mapRouter');
+const sampleRouter = require('./routes/sampleRouter');
+const bgcRouter = require('./routes/bgcRouter');
+const gcfRouter = require('./routes/gcfRouter');
+const uploadRouter = require('./routes/uploadRouter');
+const sitemapRouter = require('./routes/sitemapRouter');
+const experimentalRouter = require('./routes/experimentalRouter');
+const ultraDeepSoilRouter = require('./routes/ultraDeepSoilRouter');
+const monthlySoilRouter = require('./routes/monthlySoilRouter');
 
 const app = express();
 app.use(etagMiddleware);
 
-const ultraDeepSoilRouter = require('./routes/ultraDeepSoilRouter');
-const monthlySoilRouter = require('./routes/monthlySoilRouter');
+// Mount all routers
+app.use('/', pageRouter);
+app.use('/', cacheRouter);
+app.use('/', mapRouter);
+app.use('/', sampleRouter);
+app.use('/', bgcRouter);
+app.use('/', gcfRouter);
+app.use('/', uploadRouter);
+app.use('/', sitemapRouter);
+app.use('/', experimentalRouter);
 app.use('/', ultraDeepSoilRouter);
 app.use('/', monthlySoilRouter);
 
@@ -86,9 +104,6 @@ app.get('/AS/:dataset', (req, res) => {
   const dataset = req.params.dataset;
   res.redirect('/datasets/' + dataset + '/antismash/index.html');
 });
-
-
-app.use('/', indexRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

@@ -4,15 +4,15 @@
 }
 
 .search-button-custom {
-  color: #FF6666;
-  border-color: #FF6666;
+  color: #c41c1c;
+  border-color: #c41c1c;
   background-color: transparent;
 }
 
 .search-button-custom:hover {
   color: #fff; /* White text on hover */
-  border-color: #FF6666; /* Red border on hover */
-  background-color: #FF6666; /* Red background on hover */
+  border-color: #c41c1c; /* Darker red border on hover */
+  background-color: #c41c1c; /* Darker red background on hover */
 }
 
 html, body {
@@ -85,7 +85,7 @@ footer a:hover {
 
 .bodyParts{
   border-color: black;
-  fill: #72B8FC;cursor: pointer;
+  fill: #0056b3;cursor: pointer;
 }
 area.bodyParts
 {
