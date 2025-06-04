@@ -4,6 +4,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const geoip = require('geoip-lite');
+const helmet = require('helmet');
 
 
 // Import database configuration
@@ -12,6 +13,7 @@ require('./config/database');
 const indexRouter = require('./routes/index');
 
 const app = express();
+app.use(helmet());
 
 const ultraDeepSoilRouter = require('./routes/ultraDeepSoilRouter');
 const monthlySoilRouter = require('./routes/monthlySoilRouter');
