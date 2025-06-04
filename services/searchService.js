@@ -2,6 +2,25 @@ const path = require('path');
 const fs = require('fs-extra');
 const { spawn } = require('child_process');
 
+// Allowed pattern for directory names (alphanumeric, underscores and hyphens)
+const VALID_DIR_REGEX = /^[A-Za-z0-9_-]+$/;
+
+/**
+ * Sanitize a directory name to prevent path traversal
+ * @param {string} dir - The directory name to sanitize
+ * @returns {string} - The sanitized directory name
+ * @throws {Error} - If the directory name is invalid
+ */
+function sanitizeDirectoryName(dir) {
+  if (dir.includes('..') || dir.includes('/') || dir.includes('\\')) {
+    throw new Error('Invalid directory name');
+  }
+  if (!VALID_DIR_REGEX.test(dir)) {
+    throw new Error('Invalid directory name');
+  }
+  return dir;
+}
+
 /**
  * Create a timestamped directory for file uploads
  * @param {string} basePath - The base path for uploads
@@ -100,12 +119,20 @@ function getMembership(reportId) {
   return new Promise((resolve, reject) => {
     const { spawn } = require('child_process');
 
+    let sanitizedId;
+    try {
+      sanitizedId = sanitizeDirectoryName(reportId);
+    } catch (err) {
+      return reject(err);
+    }
+
     const query = `SELECT * FROM gcf_membership;`;
 
     console.log("query: " + query);
 
+    const dbPath = path.join('/vol/compl_bgcs_bigslice_def_t300/reports', sanitizedId, 'data.db');
     const getReportIdProc = spawn('sqlite3', [
-      '/vol/compl_bgcs_bigslice_def_t300/reports/' + reportId + '/data.db',
+      dbPath,
       query
     ]);
 
@@ -136,5 +163,6 @@ function getMembership(reportId) {
 module.exports = {
   createTimestampedDirectory,
   processUploadedFiles,
-  getMembership
+  getMembership,
+  sanitizeDirectoryName
 };
