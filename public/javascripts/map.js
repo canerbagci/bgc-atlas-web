@@ -1,5 +1,5 @@
 function createMap() {
-    var map = L.map('map').setView({lon: 0, lat: 0}, 2.5);
+    var map = L.map('map').setView({lat: 0, lon: 0}, 2.5);
 
     const southWest = L.latLng(-90, -180);
     const northEast = L.latLng(90, 180);
@@ -88,8 +88,6 @@ function createMap() {
             containedIDs = containedMarkers.map(function(item) {
                 return item.id; // Get the IDs of the contained markers
             });
-
-            console.log('Markers within the rectangle:', containedIDs);
         }
 
         drawnItems.addLayer(layer);
@@ -142,7 +140,6 @@ function getSampleInfo() {
     xhr.open('GET', '/sample-info', true);
     xhr.responseType = 'json';
 
-    console.log("getting sample info");
     xhr.onload = function () {
         if (xhr.status === 200) {
             const results = xhr.response;

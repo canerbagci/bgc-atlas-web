@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs-extra');
 const { spawn } = require('child_process');
+require('dotenv').config();
 
 // Allowed pattern for directory names (alphanumeric, underscores and hyphens)
 const VALID_DIR_REGEX = /^[A-Za-z0-9_-]+$/;
@@ -48,13 +49,13 @@ async function processUploadedFiles(req, sendEvent) {
       name: file.originalname,
       id: file.filename,
       value: 'Sample Value', // Replace with actual logic
-      path: path.relative('/ceph/ibmi/tgm/bgc-atlas/search/uploads', file.path) // Relative path to the file
+      path: path.relative(process.env.SEARCH_UPLOADS_DIR, file.path) // Relative path to the file
     }));
 
     const uploadDir = req.uploadDir;
 
     // Execute the script
-    const scriptPath = '/ceph/ibmi/tgm/bgc-atlas/search/bigslice.sh';
+    const scriptPath = process.env.SEARCH_SCRIPT_PATH;
     const scriptArgs = [uploadDir];
 
     console.log('Running script:', scriptPath, scriptArgs);
@@ -87,8 +88,6 @@ async function processUploadedFiles(req, sendEvent) {
         return reject(new Error('No membership lines found'));
       }
 
-      console.log(matches);
-
       const records = [];
 
       matches.forEach((line) => {
@@ -103,7 +102,6 @@ async function processUploadedFiles(req, sendEvent) {
         records.push(record);
       });
 
-      console.log(records);
       sendEvent({ status: 'Complete', records: records });
       resolve(records);
     });
@@ -128,9 +126,7 @@ function getMembership(reportId) {
 
     const query = `SELECT * FROM gcf_membership;`;
 
-    console.log("query: " + query);
-
-    const dbPath = path.join('/vol/compl_bgcs_bigslice_def_t300/reports', sanitizedId, 'data.db');
+    const dbPath = path.join(process.env.REPORTS_DIR, sanitizedId, 'data.db');
     const getReportIdProc = spawn('sqlite3', [
       dbPath,
       query

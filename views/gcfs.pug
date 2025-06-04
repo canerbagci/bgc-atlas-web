@@ -98,8 +98,6 @@ block scripts
                     const labels = results.map((row) => row.bgc_type);
                     const data = results.map((row) => row.unique_families);
 
-                    console.log("labels: " + labels)
-
                     const canvas = document.getElementById('gcf-category-chart');
                     const ctx = canvas.getContext('2d');
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -142,8 +140,6 @@ block scripts
                     const results = xhr.response;
                     const labels = results.map((row) => row.bucket_range);
                     const data = results.map((row) => row.count_in_bucket);
-
-                    console.log("labels: " + labels)
 
                     const canvas = document.getElementById('gcf-count-hist-chart');
                     const ctx = canvas.getContext('2d');
@@ -225,14 +221,6 @@ block scripts
             });
         }
 
-        // Function to clear the legend and reset global labels
-        function clearLegend() {
-            console.log("clearing legend");
-            const legendContainer = document.getElementById('legend-container');
-            legendContainer.innerHTML = '';  // Clear the legend DOM
-            legendLabels.clear();  // Clear the Set to reset the global legendLabels
-        }
-
         function buildHierarchy(labels, counts) {
             const root = {name: "root", children: []};
 
@@ -265,9 +253,6 @@ block scripts
             canvas.id = canvasId;
             canvas.width = 100;
             canvas.height = 100;
-
-            console.log(counts);
-            console.log(labels);
 
             const data = buildHierarchy(labels, counts);
 
@@ -358,7 +343,6 @@ block scripts
             let isTextView = false; // Flag to toggle between text and chart view
 
             $('#toggleViewButton').on('click', function () {
-                console.log('Toggling view');
                 isTextView = !isTextView; // Toggle the view state
                 const buttonText = isTextView ? 'Switch to Pie Charts' : 'Switch to Text View';
                 $(this).text(buttonText); // Update button text
@@ -457,7 +441,6 @@ block scripts
                     }
                 },
                 "initComplete": function (settings, json) {
-                    console.log("DataTable initialized. Table object:", table); // Log the table object for debugging
                     appendCustomPaginationControls(table);
                 },
                 "drawCallback": function (settings) {

@@ -99,7 +99,6 @@ append head
                     }
                 },
                 initComplete: function (settings, json) {
-                    console.log("DataTable initialized:", table); // Debugging log to ensure table initialization
                     // Ensure page method is available
                     if (typeof table.page === 'function') {
                         appendCustomPaginationControls(table);

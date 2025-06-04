@@ -176,7 +176,6 @@ block scripts
             xhr.onload = function () {
                 if (xhr.status === 200) {
                     const results = xhr.response;
-                    console.log(results);
 
                     document.getElementById("bgc-count").innerHTML = Number(results[0].bgc_count).toLocaleString();
                     document.getElementById("meanbgcsamples").innerHTML = results[0].meanbgcsamples;

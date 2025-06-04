@@ -1,5 +1,4 @@
 function parseBiomes(biomes) {
-    console.log(biomes);
     // Create the root node
     const root = { name: 'root', levelId: 'root', children: [] };
 
@@ -51,7 +50,6 @@ function parseBiomes(biomes) {
     // Start the traversal at the root node
     traverse(root, null);
     // Return the flattened data
-    console.log(flatData);
     return flatData;
 }
 

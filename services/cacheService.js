@@ -21,8 +21,6 @@ async function getOrFetch(key, fetchFunction, ttl = 3600) {
   
   // If data is in cache, return it
   if (cachedData !== undefined) {
-    console.log("sending cached data for key:", key);
-    console.log(cachedData);
     return cachedData;
   }
   

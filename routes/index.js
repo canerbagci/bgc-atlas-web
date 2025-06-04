@@ -16,7 +16,7 @@ const cacheService = require('../services/cacheService');
 /* GET home page. */
 router.get('/', function(req, res, next) {
   res.render('map', { 
-    title: 'Interactive Map', 
+    title: 'Home',
     metaDescription: 'Explore the global distribution of biosynthetic gene clusters (BGCs) with our interactive map visualization tool.',
     activePage: 'home' 
   });
@@ -24,7 +24,7 @@ router.get('/', function(req, res, next) {
 
 router.get('/map', (req, res) => {
   res.render('map', { 
-    title: 'Interactive Map', 
+    title: 'Home',
     metaDescription: 'Explore the global distribution of biosynthetic gene clusters (BGCs) with our interactive map visualization tool.',
     activePage: 'home' 
   });
@@ -32,7 +32,7 @@ router.get('/map', (req, res) => {
 
 router.get('/samples', (req, res) => {
   res.render('samples', { 
-    title: 'Sample Database', 
+    title: 'Samples',
     metaDescription: 'Browse and search our comprehensive database of environmental samples containing biosynthetic gene clusters from around the world.',
     activePage: 'samples' 
   });
@@ -40,7 +40,7 @@ router.get('/samples', (req, res) => {
 
 router.get('/bgcs', (req, res) => {
   res.render('bgcs', { 
-    title: 'Biosynthetic Gene Clusters', 
+    title: 'BGCs',
     metaDescription: 'Explore our collection of biosynthetic gene clusters (BGCs) that encode for the production of secondary metabolites.',
     activePage: 'bgcs' 
   });
@@ -48,7 +48,7 @@ router.get('/bgcs', (req, res) => {
 
 router.get('/gcfs', (req, res) => {
   res.render('gcfs', { 
-    title: 'Gene Cluster Families', 
+    title: 'GCFs',
     metaDescription: 'Discover gene cluster families (GCFs) that group similar biosynthetic gene clusters based on sequence similarity and functional characteristics.',
     activePage: 'gcfs' 
   });
@@ -56,7 +56,7 @@ router.get('/gcfs', (req, res) => {
 
 router.get('/search', (req, res) => {
   res.render('search', {
-    title: 'Advanced Search', 
+    title: 'Search',
     metaDescription: 'Powerful search tools to find specific biosynthetic gene clusters, samples, and gene cluster families in our database.',
     activePage: 'search' 
   });
@@ -79,7 +79,6 @@ router.get('/privacy', (req, res) => {
 });
 
 router.get('/antismash', (req, res) => {
-  console.log("dataset:" + req.query.dataset);
   res.render('antismash', {
     title: 'antiSMASH Analysis', 
     metaDescription: 'View detailed antiSMASH analysis results for biosynthetic gene clusters in our database.',
@@ -91,7 +90,7 @@ router.get('/antismash', (req, res) => {
 
 router.get('/downloads', (req, res) => {
   res.render('downloads', { 
-    title: 'Data Downloads', 
+    title: 'Downloads',
     metaDescription: 'Download and analysis results from the BGC Atlas database for your research.',
     activePage: 'downloads' 
   });
@@ -99,7 +98,7 @@ router.get('/downloads', (req, res) => {
 
 router.get('/about', (req, res) => {
   res.render('about', { 
-    title: 'About BGC Atlas', 
+    title: 'About',
     metaDescription: 'Learn about the BGC Atlas project.',
     activePage: 'about' 
   });
@@ -269,7 +268,6 @@ router.get('/map-data-gcf', async (req, res) => {
 
 router.get('/getBgcId', async (req, res) => {
   try {
-    console.log("getBgcId " + req.query.dataset + " " + req.query.anchor);
     const { dataset, anchor } = req.query;
     const result = await sampleService.getBgcId(dataset, anchor);
     res.json(result);
@@ -282,7 +280,6 @@ router.get('/getBgcId', async (req, res) => {
 router.get('/map-data', async (req, res) => {
   try {
     const data = await mapService.getMapData();
-    console.log("rows length: " + data.length);
     res.json(data);
   } catch (error) {
     console.error(error);
@@ -292,7 +289,6 @@ router.get('/map-data', async (req, res) => {
 
 router.get('/body-map-data', async (req, res) => {
   try {
-    console.log("querying body map data");
     const data = await mapService.getBodyMapData();
     res.json(data);
   } catch (error) {
@@ -354,15 +350,6 @@ router.get('/sample-data', async (req, res) => {
         }
       }
     }
-
-    // Log pagination parameters for debugging
-    console.log('Pagination options:', {
-      draw: options.draw,
-      start: options.start,
-      length: options.length,
-      searchValue: options.searchValue,
-      orderLength: options.order.length
-    });
 
     // Get paginated data
     const result = await sampleService.getPaginatedSampleData(options);
@@ -478,6 +465,7 @@ router.get('/gcf-table', async (req, res) => {
 
 
 router.get('/bgc-table', async (req, res) => {
+  console.log("bgc-table");
   try {
     const options = {
       gcf: req.query.gcf,
@@ -491,10 +479,6 @@ router.get('/bgc-table', async (req, res) => {
       order: req.query.order || [],
       searchBuilder: req.query.searchBuilder
     };
-
-    console.log("search: " + options.searchValue);
-    console.log('Search Builder Params:', options.searchBuilder);
-    console.log("gcf: " + options.gcf);
 
     const result = await bgcService.getBgcTable(options);
     res.json(result);

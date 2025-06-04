@@ -84,7 +84,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/AS/:dataset', (req, res) => {
   const dataset = req.params.dataset;
-  console.log("serving dataset: " + dataset);
   res.redirect('/datasets/' + dataset + '/antismash/index.html');
 });
 
