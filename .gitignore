@@ -132,3 +132,5 @@ dist
 #IDEA files
 .idea/
 .DS_Store
+views/layout-2.pug
+views/test.pug
