@@ -2,7 +2,8 @@ const fs = require('fs').promises;
 const path = require('path');
 const cacheService = require('./cacheService');
 
-const BASE_DIR = '/ceph/ibmi/tgm/bgc-atlas/monthly-soil';
+// Read BASE_DIR from environment variable with fallback to default value
+const BASE_DIR = process.env.MONTHLY_SOIL_BASE_DIR || '/ceph/ibmi/tgm/bgc-atlas/monthly-soil';
 const FULL_AS_DIR = path.join(BASE_DIR, 'full-AS');
 const PRODUCT_AS_DIR = path.join(BASE_DIR, 'product-AS');
 

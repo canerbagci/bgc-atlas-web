@@ -65,6 +65,7 @@ To set up a local instance of BGC Atlas, follow these steps:
    PORT=3000
    APP_URL=http://localhost:3000
    DATABASE_URL=postgres://username:password@localhost:5432/bgcatlas
+   MONTHLY_SOIL_BASE_DIR=/path/to/monthly-soil  # Optional: Path to monthly soil data directory
    ```
 
 4. Set up the database:

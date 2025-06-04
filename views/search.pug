@@ -44,7 +44,7 @@ append head
 
     link(rel="stylesheet", href="https://cdn.datatables.net/searchbuilder/1.4.2/css/searchBuilder.bootstrap5.min.css")
     link(rel="stylesheet", href="https://cdn.datatables.net/datetime/1.4.1/css/dataTables.dateTime.min.css")
-    script(href="https://cdn.datatables.net/datetime/1.4.1/js/dataTables.dateTime.min.js")
+    script(src="https://cdn.datatables.net/datetime/1.4.1/js/dataTables.dateTime.min.js")
     script(src="https://cdn.datatables.net/searchbuilder/1.4.2/js/dataTables.searchBuilder.min.js")
     script(src="https://cdn.datatables.net/searchbuilder/1.4.2/js/searchBuilder.bootstrap5.min.js")
     script(src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js")
@@ -55,6 +55,10 @@ append head
         #upload-status-message {
             font-size: 1em;
             color: #007bff;
+        }
+
+        .putative-bgc {
+            background-color: #ffcccb !important;
         }
 
     script.
@@ -167,6 +171,11 @@ append head
                     idCell.appendChild(gcfLink);
 
                     valueCell.textContent = item.membership_value;
+
+                    // Add putative-bgc class if membership value is less than 0.405
+                    if (parseFloat(item.membership_value) < 0.405) {
+                        row.classList.add('putative-bgc');
+                    }
 
                     row.appendChild(nameCell);
                     row.appendChild(idCell);
