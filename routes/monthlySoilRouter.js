@@ -39,6 +39,37 @@ async function listProductTypes(monthDir) {
   }
 }
 
+async function countBGCs(datasetPath) {
+  try {
+    // Look for files matching the pattern "*regionXXX.gbk"
+    const files = await fs.readdir(datasetPath, { withFileTypes: true });
+    const bgcCount = files.filter(file => 
+      !file.isDirectory() && file.name.match(/.*region\d+\.gbk$/i)
+    ).length;
+    return bgcCount;
+  } catch (err) {
+    console.error(`Error counting BGCs in ${datasetPath}:`, err);
+    return 0;
+  }
+}
+
+async function getDatasetDetails(baseDir, month, datasets) {
+  const detailedDatasets = [];
+
+  for (const dataset of datasets) {
+    const datasetPath = path.join(baseDir, month, dataset);
+    const bgcCount = await countBGCs(datasetPath);
+
+    detailedDatasets.push({
+      name: dataset,
+      bgcCount,
+      path: `/monthly-soil/${baseDir.includes('full-AS') ? 'full-AS' : 'product-AS'}/${month}/${dataset}/index.html`
+    });
+  }
+
+  return detailedDatasets;
+}
+
 /* ───────────────────────────── routes ─────────────────────────────── */
 
 // 1. Landing page - links to full-AS and product-AS
@@ -59,30 +90,13 @@ router.get('/monthly-soil/full-AS/:month/?', async (req, res, next) => {
   try {
     const month = req.params.month;
     const monthDir = path.join(FULL_AS_DIR, month);
-    const datasets = await listDatasets(monthDir);
+    const datasetNames = await listDatasets(monthDir);
+    const datasets = await getDatasetDetails(FULL_AS_DIR, month, datasetNames);
 
-    res.type('html').send(`<!doctype html>
-      <html><head><meta charset="utf-8"><title>${month.toUpperCase()} - Full antiSMASH Results</title>
-      <style>
-        body { font-family: sans-serif; margin: 2rem; line-height: 1.5; }
-        h1 { margin-top: 0; color: #2c3e50; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        .back-link { margin-bottom: 1rem; display: block; }
-        ul { padding-left: 1.5rem; column-count: 3; }
-        @media (max-width: 768px) { ul { column-count: 2; } }
-        @media (max-width: 480px) { ul { column-count: 1; } }
-        a { color: #2980b9; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-      </style>
-      </head><body>
-        <div class="container">
-          <a href="/monthly-soil/" class="back-link">← Back to Monthly Soil Index</a>
-          <h1>${month.toUpperCase()} - Full antiSMASH Results (${datasets.length} datasets)</h1>
-          <ul>
-            ${datasets.map(dataset => `<li><a href="/monthly-soil/full-AS/${month}/${dataset}/index.html">${dataset}</a></li>`).join('\n')}
-          </ul>
-        </div>
-      </body></html>`);
+    res.render('fullASMonth', {
+      month,
+      datasets
+    });
   } catch (err) { next(err); }
 });
 
@@ -93,61 +107,43 @@ router.get('/monthly-soil/product-AS/:month/?', async (req, res, next) => {
     const monthDir = path.join(PRODUCT_AS_DIR, month);
     const productTypes = await listProductTypes(monthDir);
 
-    res.type('html').send(`<!doctype html>
-      <html><head><meta charset="utf-8"><title>${month.toUpperCase()} - Product-Specific Results</title>
-      <style>
-        body { font-family: sans-serif; margin: 2rem; line-height: 1.5; }
-        h1 { margin-top: 0; color: #2c3e50; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        .back-link { margin-bottom: 1rem; display: block; }
-        ul { padding-left: 1.5rem; }
-        a { color: #2980b9; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-      </style>
-      </head><body>
-        <div class="container">
-          <a href="/monthly-soil/" class="back-link">← Back to Monthly Soil Index</a>
-          <h1>${month.toUpperCase()} - Product-Specific Results</h1>
-          <p>Select a product type:</p>
-          <ul>
-            ${productTypes.map(productType => `<li><a href="/monthly-soil/product-AS/${month}/${productType}/">${productType}</a></li>`).join('\n')}
-          </ul>
-        </div>
-      </body></html>`);
+    // Create an array to hold all product types with their datasets
+    const productTypesWithDatasets = [];
+
+    // For each product type, get all datasets and their details
+    for (const productType of productTypes) {
+      const productTypeDir = path.join(PRODUCT_AS_DIR, month, productType);
+      const datasetNames = await listDatasets(productTypeDir);
+
+      // Get detailed dataset information
+      const datasets = [];
+      for (const datasetName of datasetNames) {
+        const datasetPath = path.join(productTypeDir, datasetName);
+        const bgcCount = await countBGCs(datasetPath);
+
+        datasets.push({
+          name: datasetName,
+          bgcCount,
+          path: `/monthly-soil/product-AS/${month}/${productType}/${datasetName}/index.html`
+        });
+      }
+
+      // Add product type with its datasets to the array
+      productTypesWithDatasets.push({
+        name: productType,
+        datasets
+      });
+    }
+
+    res.render('productASMonth', {
+      month,
+      productTypesWithDatasets
+    });
   } catch (err) { next(err); }
 });
 
-// 4. Product-AS product type index page
-router.get('/monthly-soil/product-AS/:month/:productType/?', async (req, res, next) => {
-  try {
-    const { month, productType } = req.params;
-    const productTypeDir = path.join(PRODUCT_AS_DIR, month, productType);
-    const datasets = await listDatasets(productTypeDir);
-
-    res.type('html').send(`<!doctype html>
-      <html><head><meta charset="utf-8"><title>${productType} Results - ${month.toUpperCase()}</title>
-      <style>
-        body { font-family: sans-serif; margin: 2rem; line-height: 1.5; }
-        h1 { margin-top: 0; color: #2c3e50; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        .back-link { margin-bottom: 1rem; display: block; }
-        ul { padding-left: 1.5rem; column-count: 3; }
-        @media (max-width: 768px) { ul { column-count: 2; } }
-        @media (max-width: 480px) { ul { column-count: 1; } }
-        a { color: #2980b9; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-      </style>
-      </head><body>
-        <div class="container">
-          <a href="/monthly-soil/product-AS/${month}/" class="back-link">← Back to ${month.toUpperCase()} Product Types</a>
-          <h1>${productType} Results - ${month.toUpperCase()} (${datasets.length} datasets)</h1>
-          <ul>
-            ${datasets.map(dataset => `<li><a href="/monthly-soil/product-AS/${month}/${productType}/${dataset}/index.html">${dataset}</a></li>`).join('\n')}
-          </ul>
-        </div>
-      </body></html>`);
-  } catch (err) { next(err); }
-});
+// Note: Product-AS product type index page route removed
+// Now all datasets are shown directly on the Product-AS month index page
 
 // 5. Serve static files from the monthly-soil directory
 router.use(
