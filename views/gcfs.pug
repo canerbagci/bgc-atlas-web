@@ -47,6 +47,11 @@ block append head
             text-align: center;
         }
 
+        /* Set height for the chart canvases to make them larger */
+        #gcf-count-hist-chart, #gcf-category-chart {
+            height: 400px;
+        }
+
         #legend-container {
             margin-top: 20px;
             display: flex;
@@ -330,7 +335,7 @@ block scripts
 
             const data = buildHierarchy(labels, counts);
 
-
+            console.log("Building hierarchy for pie chart:", data);
 
             setTimeout(() => {
                 const ctx = document.getElementById(canvasId)?.getContext('2d');

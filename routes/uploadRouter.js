@@ -12,7 +12,7 @@ const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     // Create the upload directory once per request
     if (!req.uploadDir) {
-      const baseUploadPath = '/ceph/ibmi/tgm/bgc-atlas/search/uploads';
+      const baseUploadPath = process.env.SEARCH_UPLOADS_DIR || '/ceph/ibmi/tgm/bgc-atlas/search/uploads';
       req.uploadDir = searchService.createTimestampedDirectory(baseUploadPath);
     }
     cb(null, req.uploadDir);

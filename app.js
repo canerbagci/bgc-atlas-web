@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const geoip = require('geoip-lite');
 const etagMiddleware = require('./services/etagMiddleware');
+require('dotenv').config();
 
 
 // Import database configuration
