@@ -1,9 +1,11 @@
 const https = require('https');
 const fs = require('fs');
+const path = require('path');
 const app = require('../app');
 
-const privateKey = fs.readFileSync('/etc/letsencrypt/live/bgc-atlas.cs.uni-tuebingen.de/privkey.pem', 'utf8');
-const certificate = fs.readFileSync('/etc/letsencrypt/live/bgc-atlas.cs.uni-tuebingen.de/fullchain.pem', 'utf8');
+const certDir = process.env.SSL_CERT_PATH || '/etc/letsencrypt/live/bgc-atlas.cs.uni-tuebingen.de';
+const privateKey = fs.readFileSync(path.join(certDir, 'privkey.pem'), 'utf8');
+const certificate = fs.readFileSync(path.join(certDir, 'fullchain.pem'), 'utf8');
 
 const credentials = {
     key: privateKey,
