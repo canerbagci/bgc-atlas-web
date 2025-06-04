@@ -67,8 +67,8 @@ function render(data, targetElement) {
     const spec = {
         "$schema": "https://vega.github.io/schema/vega/v5.json",
         "description": "A hierarchical view of biome tree distribution with zoom functionality and tooltip on click.",
-        "width": 300,
-        "height": 300,
+        "width": 350,
+        "height": 350,
         "padding": 5,
         "autosize": "pad",
 
@@ -137,7 +137,7 @@ function render(data, targetElement) {
                 "name": "color",
                 "type": "ordinal",
                 "domain": {"data": "tree", "field": "levelId"},
-                "range": {"scheme": "spectral"}
+                "range": {"scheme": "category20b"}
             }
         ],
 
@@ -147,7 +147,7 @@ function render(data, targetElement) {
                 "fill": "color",
                 "title": "Biomes",
                 "orient": "right",
-                "columns": 2,  // You can adjust the number of columns to fit your design
+                "columns": 3,
                 "labelLimit": 0
             }
         ],

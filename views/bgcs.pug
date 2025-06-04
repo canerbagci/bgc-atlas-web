@@ -227,10 +227,10 @@ block scripts
                     const ctx = canvas.getContext('2d');
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                    // Create a gradient color scheme
+                    // Create a gradient color scheme with a smoother transition
                     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-                    gradient.addColorStop(0, 'rgba(255, 102, 102, 0.8)');    // Lighter red (top)
-                    gradient.addColorStop(1, 'rgba(204, 51, 51, 0.6)');      // Darker red (bottom)
+                    gradient.addColorStop(0, 'rgba(255, 183, 77, 0.9)');    // light orange
+                    gradient.addColorStop(1, 'rgba(251, 140, 0, 0.7)');     // dark orange
 
                     const chart = new Chart(ctx, {
                         type: 'bar',
@@ -259,6 +259,7 @@ block scripts
                             },
                             plugins: {
                                 legend: {
+                                    position: 'top',
                                     labels: {
                                         font: {
                                             size: 14,
@@ -354,8 +355,8 @@ block scripts
 
                     // Create a gradient color scheme - using a different shade for this chart
                     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-                    gradient.addColorStop(0, 'rgba(102, 153, 255, 0.8)');    // Lighter blue (top)
-                    gradient.addColorStop(1, 'rgba(51, 102, 204, 0.6)');     // Darker blue (bottom)
+                    gradient.addColorStop(0, 'rgba(102, 187, 106, 0.9)');  // light green
+                    gradient.addColorStop(1, 'rgba(56, 142, 60, 0.7)');    // dark green
 
                     const chart = new Chart(ctx, {
                         type: 'bar',
@@ -384,6 +385,7 @@ block scripts
                             },
                             plugins: {
                                 legend: {
+                                    position: 'top',
                                     labels: {
                                         font: {
                                             size: 14,
