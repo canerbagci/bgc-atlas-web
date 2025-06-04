@@ -84,6 +84,7 @@ To set up a local instance of BGC Atlas, follow these steps:
 BGC Atlas is built with the following main dependencies:
 
 - [Express.js](https://expressjs.com/) - Web framework
+- [Helmet](https://helmetjs.github.io/) - Security headers
 - [Pug](https://pugjs.org/) - Template engine
 - [PostgreSQL](https://www.postgresql.org/) - Database
 - [Leaflet](https://leafletjs.com/) - Interactive maps
