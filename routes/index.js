@@ -15,52 +15,52 @@ const cacheService = require('../services/cacheService');
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('map', { title: 'BGC-Atlas' });
+  res.render('map', { title: 'BGC-Atlas', activePage: 'home' });
 });
 
 router.get('/map', (req, res) => {
-  res.render('map', );
+  res.render('map', { activePage: 'home' });
 });
 
 router.get('/samples', (req, res) => {
-  res.render('samples', );
+  res.render('samples', { activePage: 'samples' });
 });
 
 router.get('/bgcs', (req, res) => {
-  res.render('bgcs', );
+  res.render('bgcs', { activePage: 'bgcs' });
 });
 
 router.get('/gcfs', (req, res) => {
-  res.render('gcfs', );
+  res.render('gcfs', { activePage: 'gcfs' });
 });
 
 router.get('/search-old', (req, res) => {
-  res.render('search', );
+  res.render('search', { activePage: 'search' });
 });
 
 router.get('/search', (req, res) => {
-  res.render('search2', );
+  res.render('search2', { activePage: 'search' });
 });
 
 router.get('/imprint', (req, res) => {
-  res.render('imprint', );
+  res.render('imprint', { activePage: 'imprint' });
 });
 
 router.get('/privacy', (req, res) => {
-  res.render('privacy', );
+  res.render('privacy', { activePage: 'privacy' });
 });
 
 router.get('/antismash', (req, res) => {
   console.log("dataset:" + req.query.dataset);
-  res.render('antismash', {dataset: req.query.dataset, anchor:req.query.anchor});
+  res.render('antismash', {dataset: req.query.dataset, anchor:req.query.anchor, activePage: 'antismash'});
 });
 
 router.get('/downloads', (req, res) => {
-  res.render('downloads', );
+  res.render('downloads', { activePage: 'downloads' });
 });
 
 router.get('/about', (req, res) => {
-  res.render('about', );
+  res.render('about', { activePage: 'about' });
 });
 
 // Cache statistics route - only available in development mode

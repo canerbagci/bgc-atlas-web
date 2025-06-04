@@ -28,19 +28,19 @@ html(lang="en")
                     #mynavbar.collapse.navbar-collapse
                         ul.navbar-nav.me-auto
                             li.nav-item
-                                a.nav-link(href='/') Home
+                                a.nav-link(href='/', class=activePage === 'home' ? 'active' : '') Home
                             li.nav-item
-                                a.nav-link(href='/samples') Samples
+                                a.nav-link(href='/samples', class=activePage === 'samples' ? 'active' : '') Samples
                             li.nav-item
-                                a.nav-link(href='/bgcs') BGCs
+                                a.nav-link(href='/bgcs', class=activePage === 'bgcs' ? 'active' : '') BGCs
                             li.nav-item
-                                a.nav-link(href='/gcfs') GCFs
+                                a.nav-link(href='/gcfs', class=activePage === 'gcfs' ? 'active' : '') GCFs
                             li.nav-item
-                                a.nav-link(href="/search") Search
+                                a.nav-link(href="/search", class=activePage === 'search' ? 'active' : '') Search
                             li.nav-item
-                                a.nav-link(href="/downloads") Downloads
+                                a.nav-link(href="/downloads", class=activePage === 'downloads' ? 'active' : '') Downloads
                             li.nav-item
-                                a.nav-link(href="/about") About
+                                a.nav-link(href="/about", class=activePage === 'about' ? 'active' : '') About
                         //form.d-flex
                         //    input.form-control.me-2(type='text' placeholder='Search')
                         //    button.btn.btn-primary(type='button') Search
