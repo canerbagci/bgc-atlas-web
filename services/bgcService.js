@@ -1,4 +1,5 @@
 const { client, pool } = require('../config/database');
+const cacheService = require('./cacheService');
 
 /**
  * Get BGC information including counts of BGCs, success runs, GCFs, etc.
@@ -7,105 +8,111 @@ const { client, pool } = require('../config/database');
  * @returns {Promise<Array>} - Array of BGC information
  */
 async function getBgcInfo(gcfId = null, samples = null) {
-  try {
-    let sql = `
-      SELECT
-          (SELECT COUNT(*) FROM regions) AS bgc_count,
-          (SELECT COUNT(*) FROM antismash_runs WHERE status = 'success') AS success_count,
-          (SELECT COUNT(DISTINCT gcf_id) FROM bigslice_gcf_membership) AS gcf_count,
-          ROUND(
-              CAST((SELECT COUNT(*) FROM regions) AS NUMERIC) /
-              (SELECT COUNT(*) FROM antismash_runs WHERE status = 'success'),
-              2
-          ) AS meanbgcsamples,
-          ROUND(
-              (SELECT COUNT(*) FROM bigslice_gcf_membership) /
-              CAST((SELECT COUNT(DISTINCT gcf_id) FROM bigslice_gcf_membership) AS NUMERIC),
-              2
-          ) AS meanbgc,
-          (SELECT COUNT(*) FROM regions WHERE gcf_from_search = false) AS core_count,
-          (SELECT COUNT(*) FROM regions WHERE membership_value < 0.405) AS non_putative_count
-    `;
+  // Create a cache key based on the function parameters
+  const cacheKey = `bgcInfo_${gcfId || 'null'}_${samples ? (Array.isArray(samples) ? samples.join(',') : samples) : 'null'}`;
 
-    let params = [];
-    let whereClause = [];
+  // Use the caching service to get or fetch the data
+  return cacheService.getOrFetch(cacheKey, async () => {
+    try {
+      let sql = `
+        SELECT
+            (SELECT COUNT(*) FROM regions) AS bgc_count,
+            (SELECT COUNT(*) FROM antismash_runs WHERE status = 'success') AS success_count,
+            (SELECT COUNT(DISTINCT gcf_id) FROM bigslice_gcf_membership) AS gcf_count,
+            ROUND(
+                CAST((SELECT COUNT(*) FROM regions) AS NUMERIC) /
+                (SELECT COUNT(*) FROM antismash_runs WHERE status = 'success'),
+                2
+            ) AS meanbgcsamples,
+            ROUND(
+                (SELECT COUNT(*) FROM bigslice_gcf_membership) /
+                CAST((SELECT COUNT(DISTINCT gcf_id) FROM bigslice_gcf_membership) AS NUMERIC),
+                2
+            ) AS meanbgc,
+            (SELECT COUNT(*) FROM regions WHERE gcf_from_search = false) AS core_count,
+            (SELECT COUNT(*) FROM regions WHERE membership_value < 0.405) AS non_putative_count
+      `;
 
-    // Handle the gcf query parameter
-    if (gcfId) {
-      let bigslice_gcf_id = parseInt(gcfId, 10);
-      if (isNaN(bigslice_gcf_id)) {
-        throw new Error('Invalid gcf parameter');
+      let params = [];
+      let whereClause = [];
+
+      // Handle the gcf query parameter
+      if (gcfId) {
+        let bigslice_gcf_id = parseInt(gcfId, 10);
+        if (isNaN(bigslice_gcf_id)) {
+          throw new Error('Invalid gcf parameter');
+        }
+
+        whereClause.push(`bigslice_gcf_id = $1`);
+        params.push(bigslice_gcf_id);
       }
 
-      whereClause.push(`bigslice_gcf_id = $1`);
-      params.push(bigslice_gcf_id);
-    }
+      // Handle the samples query parameter
+      if (samples && samples.length > 0) {
+        let samplesArray = Array.isArray(samples) ? samples : samples.split(',').map(sample => sample.trim());
+        whereClause.push(`assembly IN (${samplesArray.map((_, idx) => `$${params.length + idx + 1}`).join(', ')})`);
+        params.push(...samplesArray);
+      }
 
-    // Handle the samples query parameter
-    if (samples && samples.length > 0) {
-      let samplesArray = Array.isArray(samples) ? samples : samples.split(',').map(sample => sample.trim());
-      whereClause.push(`assembly IN (${samplesArray.map((_, idx) => `$${params.length + idx + 1}`).join(', ')})`);
-      params.push(...samplesArray);
-    }
-
-    // Adjust the SQL query if filters are applied
-    if (whereClause.length > 0) {
-      sql = `
-        WITH
-          bgc AS (
-            SELECT COUNT(*) AS count
-            FROM regions
-            WHERE ${whereClause.join(' AND ')}
-          ),
-          success AS (
-            SELECT COUNT(*) AS count
-            FROM antismash_runs
-            WHERE status = 'success'
-            AND assembly IN (
-              SELECT assembly
+      // Adjust the SQL query if filters are applied
+      if (whereClause.length > 0) {
+        sql = `
+          WITH
+            bgc AS (
+              SELECT COUNT(*) AS count
               FROM regions
               WHERE ${whereClause.join(' AND ')}
-            )
-          ),
-          gcf AS (
-            SELECT COUNT(DISTINCT gcf_id) AS count
-            FROM bigslice_gcf_membership
-            WHERE gcf_id IN (
-              SELECT bigslice_gcf_id
+            ),
+            success AS (
+              SELECT COUNT(*) AS count
+              FROM antismash_runs
+              WHERE status = 'success'
+              AND assembly IN (
+                SELECT assembly
+                FROM regions
+                WHERE ${whereClause.join(' AND ')}
+              )
+            ),
+            gcf AS (
+              SELECT COUNT(DISTINCT gcf_id) AS count
+              FROM bigslice_gcf_membership
+              WHERE gcf_id IN (
+                SELECT bigslice_gcf_id
+                FROM regions
+                WHERE ${whereClause.join(' AND ')}
+              )
+            ),
+            core AS (
+              SELECT COUNT(*) AS count
               FROM regions
-              WHERE ${whereClause.join(' AND ')}
+              WHERE gcf_from_search = false
+              AND ${whereClause.join(' AND ')}
+            ),
+            non_putative AS (
+              SELECT COUNT(*) AS count
+              FROM regions
+              WHERE membership_value < 0.405
+              AND ${whereClause.join(' AND ')}
             )
-          ),
-          core AS (
-            SELECT COUNT(*) AS count
-            FROM regions
-            WHERE gcf_from_search = false
-            AND ${whereClause.join(' AND ')}
-          ),
-          non_putative AS (
-            SELECT COUNT(*) AS count
-            FROM regions
-            WHERE membership_value < 0.405
-            AND ${whereClause.join(' AND ')}
-          )
-        SELECT
-          bgc.count AS bgc_count,
-          success.count AS success_count,
-          gcf.count AS gcf_count,
-          ROUND(bgc.count::NUMERIC / NULLIF(success.count, 0), 2) AS meanbgcsamples,
-          ROUND(bgc.count / NULLIF(gcf.count::NUMERIC, 0), 2) AS meanbgc,
-          core.count AS core_count,
-          non_putative.count AS non_putative_count
-        FROM bgc, success, gcf, core, non_putative;
-      `;
-    }
+          SELECT
+            bgc.count AS bgc_count,
+            success.count AS success_count,
+            gcf.count AS gcf_count,
+            ROUND(bgc.count::NUMERIC / NULLIF(success.count, 0), 2) AS meanbgcsamples,
+            ROUND(bgc.count / NULLIF(gcf.count::NUMERIC, 0), 2) AS meanbgc,
+            core.count AS core_count,
+            non_putative.count AS non_putative_count
+          FROM bgc, success, gcf, core, non_putative;
+        `;
+      }
 
-    const result = await client.query(sql, params);
-    return JSON.parse(JSON.stringify(result.rows));
-  } catch (error) {
-    console.error('Error getting BGC info:', error);
-    throw error;
-  }
+      const result = await client.query(sql, params);
+      return JSON.parse(JSON.stringify(result.rows));
+    } catch (error) {
+      console.error('Error getting BGC info:', error);
+      throw error;
+    }
+  }, 3600); // Cache for 1 hour
 }
 
 /**
@@ -167,18 +174,24 @@ async function getProductCategoryCounts(gcfId = null, samples = null) {
  * @returns {Promise<Array>} - Array of GCF category counts
  */
 async function getGcfCategoryCounts() {
-  try {
-    const result = await client.query('SELECT bgc_type, COUNT(DISTINCT family_number) as unique_families\n' +
-      'FROM atlas.public.bigscape_clustering\n' +
-      'WHERE clustering_threshold = 0.3\n' +
-      'GROUP BY bgc_type\n' +
-      'ORDER BY unique_families DESC;');
-    
-    return JSON.parse(JSON.stringify(result.rows));
-  } catch (error) {
-    console.error('Error getting GCF category counts:', error);
-    throw error;
-  }
+  // Create a simple cache key since this function has no parameters
+  const cacheKey = 'gcfCategoryCounts';
+
+  // Use the caching service to get or fetch the data
+  return cacheService.getOrFetch(cacheKey, async () => {
+    try {
+      const result = await client.query('SELECT bgc_type, COUNT(DISTINCT family_number) as unique_families\n' +
+        'FROM atlas.public.bigscape_clustering\n' +
+        'WHERE clustering_threshold = 0.3\n' +
+        'GROUP BY bgc_type\n' +
+        'ORDER BY unique_families DESC;');
+
+      return JSON.parse(JSON.stringify(result.rows));
+    } catch (error) {
+      console.error('Error getting GCF category counts:', error);
+      throw error;
+    }
+  }, 3600); // Cache for 1 hour
 }
 
 /**
@@ -265,41 +278,47 @@ async function getProductCounts(gcfId = null, samples = null) {
  * @returns {Promise<Array>} - Array of GCF count histogram data
  */
 async function getGcfCountHistogram() {
-  try {
-    const sql = 'WITH max_row_count AS (\n' +
-      '    SELECT max(row_count) as max_row_count\n' +
-      '    FROM (\n' +
-      '             SELECT COUNT(*) as row_count\n' +
-      '             FROM atlas.public.bigscape_clustering\n' +
-      '             WHERE clustering_threshold = 0.3\n' +
-      '             GROUP BY family_number\n' +
-      '         ) counts\n' +
-      ')\n' +
-      'SELECT bucket_range, count(*) as count_in_bucket,\n' +
-      '       min(row_count) as min_row_count, max(row_count) as max_row_count\n' +
-      'FROM (\n' +
-      '         SELECT family_number,\n' +
-      '                width_bucket(count(*), 1, (SELECT max_row_count FROM max_row_count), 10) as bucket,\n' +
-      '                count(*) as row_count\n' +
-      '         FROM atlas.public.bigscape_clustering\n' +
-      '         WHERE clustering_threshold = 0.3\n' +
-      '         GROUP BY family_number\n' +
-      '     ) counts\n' +
-      '         JOIN (\n' +
-      '    SELECT generate_series(0, (SELECT max_row_count FROM max_row_count) - 10, 10) as lower_bound,\n' +
-      '           generate_series(10, (SELECT max_row_count FROM max_row_count), 10) as upper_bound,\n' +
-      '           concat(generate_series(0, (SELECT max_row_count FROM max_row_count) - 10, 10), \'-\', generate_series(10, (SELECT max_row_count FROM max_row_count), 10)) as bucket_range\n' +
-      ') buckets\n' +
-      '              ON counts.row_count >= buckets.lower_bound AND counts.row_count < buckets.upper_bound\n' +
-      'GROUP BY bucket_range, buckets.lower_bound\n' +
-      'ORDER BY lower_bound;';
-    
-    const result = await client.query(sql);
-    return JSON.parse(JSON.stringify(result.rows));
-  } catch (error) {
-    console.error('Error getting GCF count histogram:', error);
-    throw error;
-  }
+  // Create a simple cache key since this function has no parameters
+  const cacheKey = 'gcfCountHistogram';
+
+  // Use the caching service to get or fetch the data
+  return cacheService.getOrFetch(cacheKey, async () => {
+    try {
+      const sql = 'WITH max_row_count AS (\n' +
+        '    SELECT max(row_count) as max_row_count\n' +
+        '    FROM (\n' +
+        '             SELECT COUNT(*) as row_count\n' +
+        '             FROM atlas.public.bigscape_clustering\n' +
+        '             WHERE clustering_threshold = 0.3\n' +
+        '             GROUP BY family_number\n' +
+        '         ) counts\n' +
+        ')\n' +
+        'SELECT bucket_range, count(*) as count_in_bucket,\n' +
+        '       min(row_count) as min_row_count, max(row_count) as max_row_count\n' +
+        'FROM (\n' +
+        '         SELECT family_number,\n' +
+        '                width_bucket(count(*), 1, (SELECT max_row_count FROM max_row_count), 10) as bucket,\n' +
+        '                count(*) as row_count\n' +
+        '         FROM atlas.public.bigscape_clustering\n' +
+        '         WHERE clustering_threshold = 0.3\n' +
+        '         GROUP BY family_number\n' +
+        '     ) counts\n' +
+        '         JOIN (\n' +
+        '    SELECT generate_series(0, (SELECT max_row_count FROM max_row_count) - 10, 10) as lower_bound,\n' +
+        '           generate_series(10, (SELECT max_row_count FROM max_row_count), 10) as upper_bound,\n' +
+        '           concat(generate_series(0, (SELECT max_row_count FROM max_row_count) - 10, 10), \'-\', generate_series(10, (SELECT max_row_count FROM max_row_count), 10)) as bucket_range\n' +
+        ') buckets\n' +
+        '              ON counts.row_count >= buckets.lower_bound AND counts.row_count < buckets.upper_bound\n' +
+        'GROUP BY bucket_range, buckets.lower_bound\n' +
+        'ORDER BY lower_bound;';
+
+      const result = await client.query(sql);
+      return JSON.parse(JSON.stringify(result.rows));
+    } catch (error) {
+      console.error('Error getting GCF count histogram:', error);
+      throw error;
+    }
+  }, 3600); // Cache for 1 hour
 }
 
 /**
@@ -357,14 +376,20 @@ async function getGcfTableSunburst(gcfId = null, samples = null) {
  * @returns {Promise<Array>} - Array of GCF table data
  */
 async function getGcfTable() {
-  try {
-    const sql = 'SELECT * FROM bigslice_gcf';
-    const { rows } = await pool.query(sql);
-    return rows;
-  } catch (error) {
-    console.error('Error getting GCF table:', error);
-    throw error;
-  }
+  // Create a simple cache key since this function has no parameters
+  const cacheKey = 'gcfTable';
+
+  // Use the caching service to get or fetch the data
+  return cacheService.getOrFetch(cacheKey, async () => {
+    try {
+      const sql = 'SELECT * FROM bigslice_gcf';
+      const { rows } = await pool.query(sql);
+      return rows;
+    } catch (error) {
+      console.error('Error getting GCF table:', error);
+      throw error;
+    }
+  }, 3600); // Cache for 1 hour
 }
 
 /**
@@ -389,7 +414,7 @@ async function getBgcTable(options) {
 
     const columns = ['region_id', 'assembly', 'product_categories', 'products', 'longest_biome', 'start', 'bigslice_gcf_id', 'membership_value',
       'contig_edge', 'contig_name', 'region_num'];
-    
+
     let orderByClause = '';
     if (order && order.length > 0) {
       const orderByConditions = order.map((order) => {
@@ -448,7 +473,7 @@ async function getBgcTable(options) {
     if (gcf) {
       whereClauses.push('bigslice_gcf_id = ' + gcf);
     }
-    
+
     if (samples) {
       // Split the samples string into an array, and wrap each sample in single quotes
       let sampleList = samples.split(',').map(sample => `'${sample.trim()}'`).join(', ');

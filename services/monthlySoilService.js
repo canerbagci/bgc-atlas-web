@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
+const cacheService = require('./cacheService');
 
 const BASE_DIR = '/ceph/ibmi/tgm/bgc-atlas/monthly-soil';
 const FULL_AS_DIR = path.join(BASE_DIR, 'full-AS');
@@ -11,13 +12,19 @@ const PRODUCT_AS_DIR = path.join(BASE_DIR, 'product-AS');
  * @returns {Promise<string[]>} - Array of month names
  */
 async function listMonths(directory) {
-  try {
-    const entries = await fs.readdir(directory, { withFileTypes: true });
-    return entries.filter(e => e.isDirectory()).map(e => e.name).sort();
-  } catch (err) {
-    console.error(`Error reading directory ${directory}:`, err);
-    return [];
-  }
+  // Create a cache key based on the directory parameter
+  const cacheKey = `listMonths_${directory}`;
+
+  // Use the caching service to get or fetch the data
+  return cacheService.getOrFetch(cacheKey, async () => {
+    try {
+      const entries = await fs.readdir(directory, { withFileTypes: true });
+      return entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+    } catch (err) {
+      console.error(`Error reading directory ${directory}:`, err);
+      return [];
+    }
+  }, 3600); // Cache for 1 hour
 }
 
 /**
@@ -26,13 +33,19 @@ async function listMonths(directory) {
  * @returns {Promise<string[]>} - Array of dataset names
  */
 async function listDatasets(monthDir) {
-  try {
-    const entries = await fs.readdir(monthDir, { withFileTypes: true });
-    return entries.filter(e => e.isDirectory()).map(e => e.name).sort();
-  } catch (err) {
-    console.error(`Error reading directory ${monthDir}:`, err);
-    return [];
-  }
+  // Create a cache key based on the monthDir parameter
+  const cacheKey = `listDatasets_${monthDir}`;
+
+  // Use the caching service to get or fetch the data
+  return cacheService.getOrFetch(cacheKey, async () => {
+    try {
+      const entries = await fs.readdir(monthDir, { withFileTypes: true });
+      return entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+    } catch (err) {
+      console.error(`Error reading directory ${monthDir}:`, err);
+      return [];
+    }
+  }, 3600); // Cache for 1 hour
 }
 
 /**
@@ -41,13 +54,19 @@ async function listDatasets(monthDir) {
  * @returns {Promise<string[]>} - Array of product type names
  */
 async function listProductTypes(monthDir) {
-  try {
-    const entries = await fs.readdir(monthDir, { withFileTypes: true });
-    return entries.filter(e => e.isDirectory()).map(e => e.name).sort();
-  } catch (err) {
-    console.error(`Error reading directory ${monthDir}:`, err);
-    return [];
-  }
+  // Create a cache key based on the monthDir parameter
+  const cacheKey = `listProductTypes_${monthDir}`;
+
+  // Use the caching service to get or fetch the data
+  return cacheService.getOrFetch(cacheKey, async () => {
+    try {
+      const entries = await fs.readdir(monthDir, { withFileTypes: true });
+      return entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+    } catch (err) {
+      console.error(`Error reading directory ${monthDir}:`, err);
+      return [];
+    }
+  }, 3600); // Cache for 1 hour
 }
 
 /**
@@ -56,17 +75,23 @@ async function listProductTypes(monthDir) {
  * @returns {Promise<number>} - Number of BGCs
  */
 async function countBGCs(datasetPath) {
-  try {
-    // Look for files matching the pattern "*regionXXX.gbk"
-    const files = await fs.readdir(datasetPath, { withFileTypes: true });
-    const bgcCount = files.filter(file => 
-      !file.isDirectory() && file.name.match(/.*region\d+\.gbk$/i)
-    ).length;
-    return bgcCount;
-  } catch (err) {
-    console.error(`Error counting BGCs in ${datasetPath}:`, err);
-    return 0;
-  }
+  // Create a cache key based on the datasetPath parameter
+  const cacheKey = `countBGCs_${datasetPath}`;
+
+  // Use the caching service to get or fetch the data
+  return cacheService.getOrFetch(cacheKey, async () => {
+    try {
+      // Look for files matching the pattern "*regionXXX.gbk"
+      const files = await fs.readdir(datasetPath, { withFileTypes: true });
+      const bgcCount = files.filter(file => 
+        !file.isDirectory() && file.name.match(/.*region\d+\.gbk$/i)
+      ).length;
+      return bgcCount;
+    } catch (err) {
+      console.error(`Error counting BGCs in ${datasetPath}:`, err);
+      return 0;
+    }
+  }, 3600); // Cache for 1 hour
 }
 
 /**
@@ -99,35 +124,41 @@ async function getDatasetDetails(baseDir, month, datasets) {
  * @returns {Promise<Array<{name: string, datasets: Array<{name: string, bgcCount: number, path: string}>}>>} - Array of product types with datasets
  */
 async function getProductTypesWithDatasets(month) {
-  const monthDir = path.join(PRODUCT_AS_DIR, month);
-  const productTypes = await listProductTypes(monthDir);
-  const productTypesWithDatasets = [];
+  // Create a cache key based on the month parameter
+  const cacheKey = `getProductTypesWithDatasets_${month}`;
 
-  for (const productType of productTypes) {
-    const productTypeDir = path.join(PRODUCT_AS_DIR, month, productType);
-    const datasetNames = await listDatasets(productTypeDir);
+  // Use the caching service to get or fetch the data
+  return cacheService.getOrFetch(cacheKey, async () => {
+    const monthDir = path.join(PRODUCT_AS_DIR, month);
+    const productTypes = await listProductTypes(monthDir);
+    const productTypesWithDatasets = [];
 
-    // Get detailed dataset information
-    const datasets = [];
-    for (const datasetName of datasetNames) {
-      const datasetPath = path.join(productTypeDir, datasetName);
-      const bgcCount = await countBGCs(datasetPath);
+    for (const productType of productTypes) {
+      const productTypeDir = path.join(PRODUCT_AS_DIR, month, productType);
+      const datasetNames = await listDatasets(productTypeDir);
 
-      datasets.push({
-        name: datasetName,
-        bgcCount,
-        path: `/monthly-soil/product-AS/${month}/${productType}/${datasetName}/index.html`
+      // Get detailed dataset information
+      const datasets = [];
+      for (const datasetName of datasetNames) {
+        const datasetPath = path.join(productTypeDir, datasetName);
+        const bgcCount = await countBGCs(datasetPath);
+
+        datasets.push({
+          name: datasetName,
+          bgcCount,
+          path: `/monthly-soil/product-AS/${month}/${productType}/${datasetName}/index.html`
+        });
+      }
+
+      // Add product type with its datasets to the array
+      productTypesWithDatasets.push({
+        name: productType,
+        datasets
       });
     }
 
-    // Add product type with its datasets to the array
-    productTypesWithDatasets.push({
-      name: productType,
-      datasets
-    });
-  }
-
-  return productTypesWithDatasets;
+    return productTypesWithDatasets;
+  }, 3600); // Cache for 1 hour
 }
 
 module.exports = {
