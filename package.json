@@ -20,6 +20,7 @@
     "leaflet.markercluster": "^1.5.3",
     "morgan": "~1.9.1",
     "multer": "^2.0.1",
+    "uuid": "^9.0.1",
     "node-cache": "^5.1.2",
     "pg": "^8.10.0",
     "pug": "^3.0.3"

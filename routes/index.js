@@ -148,6 +148,8 @@ router.use(bodyParser.urlencoded({ extended: true }));
 // const storage = multer.memoryStorage(); // Store files in memory
 // const upload = multer({ storage: storage });
 
+const { v4: uuidv4 } = require('uuid');
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     // Create the upload directory once per request
@@ -158,7 +160,10 @@ const storage = multer.diskStorage({
     cb(null, req.uploadDir);
   },
   filename: function (req, file, cb) {
-    cb(null, file.originalname); // Use the original filename
+    let safeName = path.basename(file.originalname);
+    safeName = safeName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const uniqueName = `${uuidv4()}_${safeName}`;
+    cb(null, uniqueName);
   }
 });
 
