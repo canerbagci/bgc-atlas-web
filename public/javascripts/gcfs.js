@@ -236,91 +236,93 @@ function buildHierarchy(labels, counts) {
 function createPieChart(canvasId, labels, counts, percentages) {
     const canvas = document.createElement('canvas');
     canvas.id = canvasId;
-    canvas.width = 100;
-    canvas.height = 100;
+    canvas.width = 150;
+    canvas.height = 150;
 
     const data = buildHierarchy(labels, counts);
 
     console.log("Building hierarchy for pie chart:", data);
 
-    setTimeout(() => {
-        const ctx = document.getElementById(canvasId)?.getContext('2d');
-        if (!ctx) {
-            console.error(`Canvas with ID ${canvasId} not found.`);
-            return;
-        }
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: labels, // Labels are needed for the tooltip
-                datasets: [{
-                    data: percentages, // Percentages for pie chart distribution
-                    backgroundColor: labels.map(label => getColorForLabel(label)), // Generate colors based on labels
-                    borderColor: 'rgba(255, 255, 255, 1)',
-                    borderWidth: 1
-                }]
+    const ctx = document.getElementById(canvasId)?.getContext('2d');
+    if (!ctx) {
+        console.error(`Canvas with ID ${canvasId} not found.`);
+        return;
+    }
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels, // Labels are needed for the tooltip
+            datasets: [{
+                data: percentages, // Percentages for pie chart distribution
+                backgroundColor: labels.map(label => getColorForLabel(label)), // Generate colors based on labels
+                borderColor: 'rgba(255, 255, 255, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            cutout: '50%',
+            animation: {
+                duration: 1000,
+                easing: 'easeOutQuart'
             },
-            options: {
-                responsive: true,
-                cutout: '50%',
-                plugins: {
-                    legend: {
-                        display: false // Hide the legend labels
+            plugins: {
+                legend: {
+                    display: false // Hide the legend labels
+                },
+                tooltip: {
+                    displayColors: false, // Remove the color box
+                    padding: 10, // Add padding inside the tooltip
+                    bodyFont: {
+                        size: 12 // Increase the font size
                     },
-                    tooltip: {
-                        displayColors: false, // Remove the color box
-                        padding: 10, // Add padding inside the tooltip
-                        bodyFont: {
-                            size: 12 // Increase the font size
+                    callbacks: {
+                        // Custom label callback to wrap text and show count + percentage
+                        label: function (tooltipItem) {
+                            let label = labels[tooltipItem.dataIndex] || '';
+                            const count = counts[tooltipItem.dataIndex] || 0;
+                            const percentage = percentages[tooltipItem.dataIndex] || 0;
+
+                            label = label.replace(/:/g, ': ');
+
+                            // Split the label into lines if it's too long
+                            const maxLineLength = 30;
+                            let lines = [];
+                            let currentLine = '';
+
+                            label.split(' ').forEach(word => {
+                                if (currentLine.length + word.length > maxLineLength) {
+                                    lines.push(currentLine);
+                                    currentLine = word;
+                                } else {
+                                    currentLine += (currentLine ? ' ' : '') + word;
+                                }
+                            });
+                            lines.push(currentLine); // Add the last line
+
+                            // Return wrapped label with count and percentage
+                            return [...lines, `Count: ${count}, Percentage: ${percentage}%`];
                         },
-                        callbacks: {
-                            // Custom label callback to wrap text and show count + percentage
-                            label: function (tooltipItem) {
-                                let label = labels[tooltipItem.dataIndex] || '';
-                                const count = counts[tooltipItem.dataIndex] || 0;
-                                const percentage = percentages[tooltipItem.dataIndex] || 0;
-
-                                label = label.replace(/:/g, ': ');
-
-                                // Split the label into lines if it's too long
-                                const maxLineLength = 30;
-                                let lines = [];
-                                let currentLine = '';
-
-                                label.split(' ').forEach(word => {
-                                    if (currentLine.length + word.length > maxLineLength) {
-                                        lines.push(currentLine);
-                                        currentLine = word;
-                                    } else {
-                                        currentLine += (currentLine ? ' ' : '') + word;
-                                    }
-                                });
-                                lines.push(currentLine); // Add the last line
-
-                                // Return wrapped label with count and percentage
-                                return [...lines, `Count: ${count}, Percentage: ${percentage}%`];
-                            },
-                            title: function () {
-                                return ''; // Remove the title
-                            }
-                        },
-                        // Ensure tooltips can overflow outside table cell
-                        external: function (context) {
-                            const tooltip = context.tooltip;
-                            if (!tooltip) {
-                                return;
-                            }
-                            tooltip.display = true;
-                            tooltip.opacity = 1;
-                            tooltip.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                        title: function () {
+                            return ''; // Remove the title
                         }
+                    },
+                    // Ensure tooltips can overflow outside table cell
+                    external: function (context) {
+                        const tooltip = context.tooltip;
+                        if (!tooltip) {
+                            return;
+                        }
+                        tooltip.display = true;
+                        tooltip.opacity = 1;
+                        tooltip.backgroundColor = 'rgba(0, 0, 0, 0.7)';
                     }
                 }
             }
-        });
+        }
+    });
 
-        // addToLegend(labels);
-    }, 0); // Ensure DOM rendering has occurred before drawing the chart
+    // addToLegend(labels);
 
     return canvas.outerHTML;
 }
@@ -405,14 +407,14 @@ $(document).ready(function () {
             'searchBuilder'
         ],
         "columns": [
-            {data: 'gcf_id', name: 'GCF Family', title: 'GCF Family', type: 'int', width: '5%'},
-            {data: 'num_core_regions', name: '# Core BGCs', title: '# Core BGCs', type: 'num', width: '5%'},
+            {data: 'gcf_id', name: 'GCF Family', title: 'GCF Family', type: 'int', width: '2.5%'},
+            {data: 'num_core_regions', name: '# Core BGCs', title: '# Core BGCs', type: 'num', width: '2.5%'},
             {
                 data: 'core_products',
                 name: 'Types (Core)',
                 title: 'Types (Core)',
                 type: 'string',
-                width: '25%',
+                width: '15%',
                 render: function (data, type, row) {
                     return type === 'display' ? data : data;
                 }
@@ -422,7 +424,7 @@ $(document).ready(function () {
                 name: 'Biomes (Core)',
                 title: 'Biomes (Core)',
                 type: 'string',
-                width: '17.5%',
+                width: '15%',
                 render: function (data, type, row) {
                     if (type === 'display') {
                         if (isTextView) {
@@ -444,7 +446,7 @@ $(document).ready(function () {
                 name: 'Taxa (Core)',
                 title: 'Taxa (Core)',
                 type: 'string',
-                width: '17.5%',
+                width: '15%',
                 render: function (data, type, row) {
                     if (type === 'display') {
                         if (isTextView) {
@@ -465,7 +467,7 @@ $(document).ready(function () {
                 name: 'Types (All)',
                 title: 'Types (All)',
                 type: 'string',
-                width: '25%',
+                width: '15%',
                 render: function (data, type, row) {
                     return type === 'display' ? data : data;
                 }
@@ -475,7 +477,7 @@ $(document).ready(function () {
                 name: 'Biomes (All)',
                 title: 'Biomes (All)',
                 type: 'string',
-                width: '17.5%',
+                width: '15%',
                 render: function (data, type, row) {
                     if (type === 'display') {
                         const canvasId = `biomes-all-pie-chart-${row.gcf_id}`;  // Unique ID for each chart
@@ -492,7 +494,7 @@ $(document).ready(function () {
                 name: 'Taxa (All)',
                 title: 'Taxa (All)',
                 type: 'string',
-                width: '17.5%',
+                width: '15%',
                 render: function (data, type, row) {
                     if (type === 'display') {
                         const canvasId = `taxa-all-pie-chart-${row.gcf_id}`;

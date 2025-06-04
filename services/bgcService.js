@@ -8,111 +8,111 @@ const cacheService = require('./cacheService');
  * @returns {Promise<Array>} - Array of BGC information
  */
 async function getBgcInfo(gcfId = null, samples = null) {
-  // Create a cache key based on the function parameters
   const cacheKey = `bgcInfo_${gcfId || 'null'}_${samples ? (Array.isArray(samples) ? samples.join(',') : samples) : 'null'}`;
 
-  // Use the caching service to get or fetch the data
   return cacheService.getOrFetch(cacheKey, async () => {
     try {
+      /* ────────────
+         1. Defaults
+         ──────────── */
       let sql = `
         SELECT
-            (SELECT COUNT(*) FROM regions) AS bgc_count,
-            (SELECT COUNT(*) FROM antismash_runs WHERE status = 'success') AS success_count,
-            (SELECT COUNT(DISTINCT gcf_id) FROM bigslice_gcf_membership) AS gcf_count,
-            ROUND(
-                CAST((SELECT COUNT(*) FROM regions) AS NUMERIC) /
-                (SELECT COUNT(*) FROM antismash_runs WHERE status = 'success'),
-                2
-            ) AS meanbgcsamples,
-            ROUND(
-                (SELECT COUNT(*) FROM bigslice_gcf_membership) /
-                CAST((SELECT COUNT(DISTINCT gcf_id) FROM bigslice_gcf_membership) AS NUMERIC),
-                2
-            ) AS meanbgc,
-            (SELECT COUNT(*) FROM regions WHERE gcf_from_search = false) AS core_count,
-            (SELECT COUNT(*) FROM regions WHERE membership_value < 0.405) AS non_putative_count
+          (SELECT COUNT(*) FROM regions)                                         AS bgc_count,
+          (SELECT COUNT(*) FROM antismash_runs WHERE status = 'success')         AS success_count,
+          (SELECT COUNT(DISTINCT gcf_id) FROM bigslice_gcf_membership)           AS gcf_count,
+          ROUND(
+            (SELECT COUNT(*) FROM regions)::NUMERIC /
+            NULLIF((SELECT COUNT(*) FROM antismash_runs WHERE status = 'success'), 0),
+            2
+          ) AS meanbgcsamples,
+          ROUND(
+            (SELECT COUNT(*) FROM bigslice_gcf_membership)::NUMERIC /
+            NULLIF((SELECT COUNT(DISTINCT gcf_id) FROM bigslice_gcf_membership), 0),
+            2
+          ) AS meanbgc,
+          (SELECT COUNT(*) FROM regions WHERE gcf_from_search = false)           AS core_count,
+          (SELECT COUNT(*) FROM regions WHERE membership_value < 0.405)          AS non_putative_count
       `;
 
-      let params = [];
-      let whereClause = [];
+      const params = [];
+      const where = [];
 
-      // Handle the gcf query parameter
+      /* ────────────
+         2. gcfId filter
+         ──────────── */
       if (gcfId) {
-        let bigslice_gcf_id = parseInt(gcfId, 10);
-        if (isNaN(bigslice_gcf_id)) {
-          throw new Error('Invalid gcf parameter');
-        }
-
-        whereClauses.push(`regions.bigslice_gcf_id = $${paramIndex}`);
-        params.push(bigslice_gcf_id);
+        const id = Number.parseInt(gcfId, 10);
+        if (Number.isNaN(id)) throw new Error('Invalid gcf parameter');
+        where.push(`regions.bigslice_gcf_id = $${params.length + 1}`);
+        params.push(id);
       }
 
-      // Handle the samples query parameter
-      if (samples && samples.length > 0) {
-        let samplesArray = Array.isArray(samples) ? samples : samples.split(',').map(sample => sample.trim());
-        whereClause.push(`assembly IN (${samplesArray.map((_, idx) => `$${params.length + idx + 1}`).join(', ')})`);
-        params.push(...samplesArray);
+      /* ────────────
+         3. samples filter
+         ──────────── */
+      if (samples && samples.length) {
+        const sampleArr = Array.isArray(samples)
+            ? samples
+            : samples.split(',').map(s => s.trim());
+
+        const placeholders = sampleArr
+            .map((_, idx) => `$${params.length + idx + 1}`)
+            .join(', ');
+
+        where.push(`assembly IN (${placeholders})`);
+        params.push(...sampleArr);
       }
 
-      // Adjust the SQL query if filters are applied
-      if (whereClause.length > 0) {
+      /* ────────────
+         4. If filters → wrap with CTEs using ONE where-clause string
+         ──────────── */
+      if (where.length) {
+        const wc = where.join(' AND ');
         sql = `
           WITH
             bgc AS (
-              SELECT COUNT(*) AS count
-              FROM regions
-              WHERE ${whereClause.join(' AND ')}
+              SELECT COUNT(*) AS count FROM regions WHERE ${wc}
             ),
             success AS (
               SELECT COUNT(*) AS count
               FROM antismash_runs
               WHERE status = 'success'
-              AND assembly IN (
-                SELECT assembly
-                FROM regions
-                WHERE ${whereClause.join(' AND ')}
-              )
+                AND assembly IN (SELECT assembly FROM regions WHERE ${wc})
             ),
             gcf AS (
               SELECT COUNT(DISTINCT gcf_id) AS count
               FROM bigslice_gcf_membership
-              WHERE gcf_id IN (
-                SELECT bigslice_gcf_id
-                FROM regions
-                WHERE ${whereClause.join(' AND ')}
-              )
+              WHERE gcf_id IN (SELECT bigslice_gcf_id FROM regions WHERE ${wc})
             ),
             core AS (
               SELECT COUNT(*) AS count
               FROM regions
-              WHERE gcf_from_search = false
-              AND ${whereClause.join(' AND ')}
+              WHERE gcf_from_search = false AND ${wc}
             ),
             non_putative AS (
               SELECT COUNT(*) AS count
               FROM regions
-              WHERE membership_value < 0.405
-              AND ${whereClause.join(' AND ')}
+              WHERE membership_value < 0.405 AND ${wc}
             )
           SELECT
-            bgc.count AS bgc_count,
-            success.count AS success_count,
-            gcf.count AS gcf_count,
+            bgc.count          AS bgc_count,
+            success.count      AS success_count,
+            gcf.count          AS gcf_count,
             ROUND(bgc.count::NUMERIC / NULLIF(success.count, 0), 2) AS meanbgcsamples,
-            ROUND(bgc.count / NULLIF(gcf.count::NUMERIC, 0), 2) AS meanbgc,
-            core.count AS core_count,
+            ROUND(bgc.count::NUMERIC / NULLIF(gcf.count, 0),       2) AS meanbgc,
+            core.count         AS core_count,
             non_putative.count AS non_putative_count
           FROM bgc, success, gcf, core, non_putative;
         `;
       }
 
-      const result = await client.query(sql, params);
-      return JSON.parse(JSON.stringify(result.rows));
-    } catch (error) {
-      console.error('Error getting BGC info:', error);
-      throw error;
+      const { rows } = await pool.query(sql, params); // use pooled client
+      return rows;
+    } catch (err) {
+      console.error('Error getting BGC info:', err);
+      throw err;
     }
-  }, 3600); // Cache for 1 hour
+  }, 3600); // cache 1 h
 }
 
 /**
@@ -369,7 +369,6 @@ async function getGcfTableSunburst(gcfId = null, samples = null) {
     throw error;
   }
 }
-
 
 /**
  * Get paginated GCF table data.
