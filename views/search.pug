@@ -1,30 +1,42 @@
 extends layout
 
 block content
-    div.row.flex-fill.d-flex.justify-content-start(style=height = "inherit;")
-        div.col-md-12.text-center.bg-white.text-dark.top-level
-            p Homology Search
+    .container.mt-4
+        .row
+            .col-12
+                h2 Upload GenBank Files
+                    span.info-icon(data-bs-toggle="tooltip" title="The search function accepts antiSMASH compatible GenBank files. Please upload one or more GenBank files to search for similar BGCs in the database.")
+                        img(src="/images/info.svg" width="16" height="16" alt="Info")
+                form(id='uploadForm' action='/upload' method='post' enctype='multipart/form-data' onsubmit='registerFiles(event)')
+                    .mb-3
+                        input.form-control(type='file' id='formFile' name='file' multiple)
+                        //label(for='formFile') Input GenBank files...
+                        button#uploadButton.btn.btn-primary.mt-2(type='submit') Upload
+                hr
+                h3 Selected Files
+                table.table.table-bordered.mt-3
+                    thead
+                        tr
+                            th Selected Files
+                    tbody#fileList
+                        tr
+                            td.colspan-4.text-center No files selected
+                hr
+                button#submitButton.btn.btn-primary(type='button' onclick='submitFiles()') Submit
+                p#status <strong>Status:</strong> Idle
+                hr
+                h3 Results
+                table.table.table-bordered.mt-3
+                    thead
+                        tr
+                            th BGC Name
+                            th GCF ID
+                            th Membership Value
+                    tbody#results
+                        tr
+                            td.colspan-3.text-center No results to display
+                hr
 
-            form(id="search-bgc", action="/submit", method="post", enctype="multipart/form-data", style="margin-left: 20px; margin-right: 20px;")
-                // Add a file upload input field
-                div.form-group
-                    label(for="fastaFile") GenBank File:
-                    input.form-control(type="file", id="fastaFile", name="fastaFile")
-
-                    // Add a submit button
-                    button.btn.btn-primary(type="submit", style="margin-top: 20px;") Submit
-
-                // Add a status message
-                span#upload-status-message.badge(style="margin-top: 20px;")
-
-        div.col-md-12.text-center.bg-white.text-dark.top-level
-            table(id="results", style="margin-left: 20px; margin-right: 20px; width:100%; display = none;", class="stripe")
-                thead
-                    tr
-                        th BGC Name
-                        th GCF ID
-                        th Membership Value
-                    tbody(id="results-body")
 
 append head
     link(rel="stylesheet", href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.css")
@@ -46,66 +58,155 @@ append head
         }
 
     script.
-        // Add a script to handle form submission
-        document.addEventListener("DOMContentLoaded", function () {
-            // Select the form element by its ID
-            const form = document.getElementById("search-bgc");
+        let selectedFiles = [];
 
-            // Select the status message element by its ID
-            const statusMessage = document.getElementById("upload-status-message");
+        function registerFiles(event) {
+            event.preventDefault();
+            const input = document.getElementById('formFile');
+            const fileList = document.getElementById('fileList');
 
-            // Add a submit event listener
-            form.addEventListener("submit", function (event) {
-                event.preventDefault(); // Prevent the default form submission behavior
+            const newFiles = Array.from(input.files);
 
-                // Serialize the form data into a FormData object
-                const formData = new FormData(form);
+            // Filter out files that are already in the selectedFiles array
+            const uniqueNewFiles = newFiles.filter(file => {
+                const fileName = file.name.toLowerCase();
+                const fileExtension = fileName.split('.').pop();
 
-                // Display a message indicating that the upload has started
-                statusMessage.textContent = "Uploading ...";
-                statusMessage.classList.add("badge-primary");
+                // Only allow files with the extension 'gbk' or 'genbank'
+                if (fileExtension !== 'gbk' && fileExtension !== 'genbank') {
+                    alert(`Invalid file type: ${fileName}. Please upload files with '.gbk' or '.genbank' extensions.`);
+                    return false;
+                }
 
-                // Send the form data using fetch and handle the response
-                fetch("/homology-search", {
-                    method: "POST",
-                    body: formData
-                })
-                    .then(response => {
-                        // Display a message indicating that the upload is complete
-                        statusMessage.textContent = "Upload complete!\nRunning analysis...";
-                        statusMessage.classList.remove("badge-primary");
-                        statusMessage.classList.add("badge-warning");
-
-                        return response.json();
-                    }) // You can parse the response as JSON if needed
-                    .then(data => {
-                        // Handle the response data here
-                        console.log(data);
-                        const tbody = document.getElementById("results-body");
-
-                        tbody.innerHTML = '';
-
-                        data.forEach(item => {
-                            const row = document.createElement("tr");
-                            row.innerHTML = `
-                                <td>${item.bgc_name}</td>
-                                <td><a href="/bgcs?gcf=${item.gcf_id}" target="_blank">${item.gcf_id}</a></td>
-                                <td>${item.membership_value}</td>
-                            `;
-                            tbody.appendChild(row);
-                        });
-
-                        document.getElementById("results").style.display = "table";
-                        statusMessage.textContent = "Analysis complete!";
-                        statusMessage.classList.remove("badge-warning");
-                        statusMessage.classList.add("badge-success");
-                    })
-                    .catch(error => {
-                        // Handle any errors that occurred during the fetch
-                        console.error("Error:", error);
-                        statusMessage.textContent = "Error!";
-                        statusMessage.classList.remove("badge-warning");
-                        statusMessage.classList.add("badge-danger");
-                    });
+                return !selectedFiles.some(existingFile => existingFile.name === file.name && existingFile.size === file.size && existingFile.lastModified === file.lastModified);
             });
+
+            selectedFiles = selectedFiles.concat(uniqueNewFiles);
+
+            updateFileListDisplay();
+            toggleSubmitButton(); // Call here to update the submit button state
+        }
+
+        function updateFileListDisplay() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+
+            selectedFiles.forEach((file, index) => {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.textContent = file.name;
+                const removeButton = document.createElement('button');
+                removeButton.textContent = 'X';
+                removeButton.className = 'btn btn-danger btn-sm float-end';
+                removeButton.onclick = () => removeFile(index);
+                cell.appendChild(removeButton);
+                row.appendChild(cell);
+                fileList.appendChild(row);
+            });
+
+            if (selectedFiles.length === 0) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.className = 'colspan-4 text-center';
+                cell.textContent = 'No files selected';
+                row.appendChild(cell);
+                fileList.appendChild(row);
+            }
+
+            toggleSubmitButton(); // Call here to update the submit button state
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileListDisplay();
+            toggleSubmitButton(); // Call here to update the submit button state
+        }
+
+        function submitFiles() {
+            if (selectedFiles.length === 0) {
+                alert('No files selected');
+                return;
+            }
+
+            const submitButton = document.getElementById('submitButton');
+            const uploadButton = document.getElementById('uploadButton');
+
+            submitButton.disabled = true;
+            uploadButton.disabled = true;
+
+            const formData = new FormData();
+            selectedFiles.forEach(file => formData.append('file', file));
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function displayResults(data) {
+            const results = document.getElementById('results');
+            results.innerHTML = '';
+
+            if (data.length > 0) {
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    const nameCell = document.createElement('td');
+                    const idCell = document.createElement('td');
+                    const valueCell = document.createElement('td');
+
+                    nameCell.textContent = item.bgc_name;
+
+                    // Create a link for the GCF ID
+                    const gcfLink = document.createElement('a');
+                    gcfLink.href = `https://bgc-atlas.cs.uni-tuebingen.de/bgcs?gcf=${item.gcf_id}`;
+                    gcfLink.textContent = item.gcf_id;
+                    gcfLink.target = '_blank';
+                    idCell.appendChild(gcfLink);
+
+                    valueCell.textContent = item.membership_value;
+
+                    row.appendChild(nameCell);
+                    row.appendChild(idCell);
+                    row.appendChild(valueCell);
+                    results.appendChild(row);
+                });
+            } else {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.className = 'colspan-3 text-center';
+                cell.textContent = 'No results to display';
+                row.appendChild(cell);
+                results.appendChild(row);
+            }
+        }
+
+        function toggleSubmitButton() {
+            const submitButton = document.getElementById('submitButton');
+            if (submitButton) {
+                submitButton.disabled = selectedFiles.length === 0;
+            }
+        }
+
+        // Listen for server-sent events
+        const eventSource = new EventSource('/events');
+        eventSource.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            const status = document.getElementById('status');
+
+            if (data.status === 'Complete') {
+                displayResults(data.records);
+            }
+
+            status.innerHTML = `<strong>Status:</strong> ${data.status}`;
+        };
+
+        // Initialize the Submit button state
+        document.addEventListener('DOMContentLoaded', toggleSubmitButton);
+
+        //Initialize tooltips
+        document.addEventListener('DOMContentLoaded', function () {
+            $('[data-bs-toggle="tooltip"]').tooltip();
         });
