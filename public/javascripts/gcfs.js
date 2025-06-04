@@ -325,11 +325,47 @@ function createPieChart(canvasId, labels, counts, percentages) {
     return canvas.outerHTML;
 }
 
+// Function to check if an element is in the viewport
+function isElementInViewport(el) {
+    if (!el) return false;
+    const rect = el.getBoundingClientRect();
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
+}
+
+// Function to handle lazy loading of charts
+function handleLazyLoad() {
+    // Check if chart containers are in viewport
+    const gcfCategoryChart = document.getElementById('gcf-category-chart');
+    const gcfCountHistChart = document.getElementById('gcf-count-hist-chart');
+
+    // Load charts if they're in viewport and not already loaded
+    if (gcfCategoryChart && !gcfCategoryChart.classList.contains('chart-loaded') && isElementInViewport(gcfCategoryChart)) {
+        console.log('Lazy loading GCF category chart');
+        plotGCFChart();
+        gcfCategoryChart.classList.add('chart-loaded');
+    }
+
+    if (gcfCountHistChart && !gcfCountHistChart.classList.contains('chart-loaded') && isElementInViewport(gcfCountHistChart)) {
+        console.log('Lazy loading GCF count histogram chart');
+        plotGCFCountHist();
+        gcfCountHistChart.classList.add('chart-loaded');
+    }
+}
+
 $(document).ready(function () {
     // Initialize the page content
     getInfo();
-    plotGCFChart();
-    plotGCFCountHist();
+
+    // Set up lazy loading for charts
+    handleLazyLoad(); // Check on initial load
+
+    // Add event listeners for scroll and resize to trigger lazy loading
+    $(window).on('scroll resize', handleLazyLoad);
 
     let isTextView = false; // Flag to toggle between text and chart view
 
@@ -342,7 +378,17 @@ $(document).ready(function () {
 
     // Initialize the DataTable
     var table = $('#gcfTable').DataTable({
-        "ajax": '/gcf-table',
+        "ajax": {
+            "url": '/gcf-table',
+            "type": "GET",
+            "data": function(d) {
+                // Convert the order array to a string for transmission
+                d.order = JSON.stringify(d.order);
+                return d;
+            }
+        },
+        "serverSide": true, // Enable server-side processing
+        "processing": true, // Show processing indicator
         "pageLength": 10,
         "paging": true, // Ensure paging is explicitly enabled
         "scrollCollapse": true,
@@ -351,7 +397,8 @@ $(document).ready(function () {
         "language": {
             searchBuilder: {
                 button: 'Filter',
-            }
+            },
+            processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>'
         },
         "dom": 'Bflriptip',
         "buttons": [
@@ -483,83 +530,128 @@ $(document).ready(function () {
             // Apply the chart generation only to visible rows
             var visibleRows = api.rows({page: 'current'}).nodes(); // Get visible rows
 
-            $(visibleRows).each(function () {
-                var $row = $(this);
-                var rowData = api.row(this).data();
-                var canvasId = `biomes-pie-chart-${rowData.gcf_id}`;
+            // Function to check if a row is in the viewport
+            function isRowInViewport($row) {
+                if (!$row.length) return false;
+                const rect = $row[0].getBoundingClientRect();
+                return (
+                    rect.top < (window.innerHeight || document.documentElement.clientHeight) &&
+                    rect.bottom > 0
+                );
+            }
 
-                // Ensure the chart is not already rendered to avoid duplication
-                if (!$(`#${canvasId}`).hasClass('initialized')) {
-                    const biomeData = rowData.core_biomes.split(',').map(item => {
-                        const [biome, count] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
-                        return {label: biome, count: parseInt(count) || 0};
-                    });
+            // Function to create a chart for a specific row and chart type
+            function createChartIfVisible($row, rowData, chartType) {
+                // Only create charts for rows that are in the viewport
+                if (!isRowInViewport($row)) return;
 
-                    const totalCount = biomeData.reduce((acc, curr) => acc + curr.count, 0);
-                    const percentages = biomeData.map(b => Math.round((b.count / totalCount) * 100));
-                    const counts = biomeData.map(b => b.count);
-                    const labels = biomeData.map(b => b.label);
+                let canvasId, dataField, dataFieldAll;
 
-                    // Render the chart
-                    $(`#${canvasId}`).addClass('initialized');  // Mark the canvas as initialized
-                    createPieChart(canvasId, labels, counts, percentages);
+                if (chartType === 'biomes') {
+                    canvasId = `biomes-pie-chart-${rowData.gcf_id}`;
+                    dataField = 'core_biomes';
+                } else if (chartType === 'biomes-all') {
+                    canvasId = `biomes-all-pie-chart-${rowData.gcf_id}`;
+                    dataField = 'all_biomes';
+                } else if (chartType === 'taxa') {
+                    canvasId = `taxa-pie-chart-${rowData.gcf_id}`;
+                    dataField = 'core_taxa';
+                } else if (chartType === 'taxa-all') {
+                    canvasId = `taxa-all-pie-chart-${rowData.gcf_id}`;
+                    dataField = 'all_taxa';
                 }
 
-                canvasId = `biomes-all-pie-chart-${rowData.gcf_id}`;
+                // Skip if the canvas doesn't exist or is already initialized
+                const $canvas = $(`#${canvasId}`);
+                if (!$canvas.length || $canvas.hasClass('initialized')) return;
 
-                // Ensure the chart is not already rendered to avoid duplication
-                if (!$(`#${canvasId}`).hasClass('initialized')) {
-                    const biomeData = rowData.all_biomes.split(',').map(item => {
-                        const [biome, count] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
-                        return {label: biome, count: parseInt(count) || 0};
-                    });
+                // Skip if the data field is empty
+                if (!rowData[dataField]) return;
 
-                    const totalCount = biomeData.reduce((acc, curr) => acc + curr.count, 0);
-                    const percentages = biomeData.map(b => Math.round((b.count / totalCount) * 100));
-                    const counts = biomeData.map(b => b.count);
-                    const labels = biomeData.map(b => b.label);
+                // Parse the data
+                const itemData = rowData[dataField].split(',').map(item => {
+                    const [label, count] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
+                    return {label: label, count: parseInt(count) || 0};
+                });
 
-                    // Render the chart
-                    $(`#${canvasId}`).addClass('initialized');  // Mark the canvas as initialized
-                    createPieChart(canvasId, labels, counts, percentages);
-                }
+                const totalCount = itemData.reduce((acc, curr) => acc + curr.count, 0);
+                if (totalCount === 0) return; // Skip if there's no data
 
-                canvasId = `taxa-pie-chart-${rowData.gcf_id}`;
+                const percentages = itemData.map(b => Math.round((b.count / totalCount) * 100));
+                const counts = itemData.map(b => b.count);
+                const labels = itemData.map(b => b.label);
 
-                if (!$(`#${canvasId}`).hasClass('initialized')) {
-                    const taxData = (rowData.core_taxa || '')
-                        .split(',')
-                        .map(item => {
-                            const [taxon, count] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
-                            return { label: taxon, count: parseInt(count) || 0 };
-                        });
+                // Mark the canvas as initialized and create the chart
+                console.log(`Lazy loading chart: ${canvasId}`);
+                $canvas.addClass('initialized');
+                createPieChart(canvasId, labels, counts, percentages);
+            }
 
-                    const totalCount = taxData.reduce((acc, curr) => acc + curr.count, 0);
-                    const percentages = taxData.map(b => Math.round((b.count / totalCount) * 100));
-                    const counts = taxData.map(b => b.count);
-                    const labels = taxData.map(b => b.label);
+            // Process each visible row
+            $(visibleRows).each(function() {
+                const $row = $(this);
+                const rowData = api.row(this).data();
 
-                    $(`#${canvasId}`).addClass('initialized');
-                    createPieChart(canvasId, labels, counts, percentages);
-                }
-
-                canvasId = `taxa-all-pie-chart-${rowData.gcf_id}`;
-
-                if (!$(`#${canvasId}`).hasClass('initialized') && rowData.all_taxa) {
-                    const taxData = rowData.all_taxa.split(',').map(item => {
-                        const [taxon, count] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
-                        return {label: taxon, count: parseInt(count) || 0};
-                    });
-
-                    const totalCount = taxData.reduce((acc, curr) => acc + curr.count, 0);
-                    const percentages = taxData.map(b => Math.round((b.count / totalCount) * 100));
-                    const counts = taxData.map(b => b.count);
-                    const labels = taxData.map(b => b.label);
-
-                    $(`#${canvasId}`).addClass('initialized');
-                    createPieChart(canvasId, labels, counts, percentages);
-                }
+                // Create charts for this row if it's visible
+                createChartIfVisible($row, rowData, 'biomes');
+                createChartIfVisible($row, rowData, 'biomes-all');
+                createChartIfVisible($row, rowData, 'taxa');
+                createChartIfVisible($row, rowData, 'taxa-all');
             });
+
+            // Set up lazy loading for charts as user scrolls
+            if ('IntersectionObserver' in window) {
+                // Use IntersectionObserver if supported
+                if (!window.chartObserver) {
+                    window.chartObserver = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                const $row = $(entry.target);
+                                const rowData = api.row(entry.target).data();
+                                if (rowData) {
+                                    createChartIfVisible($row, rowData, 'biomes');
+                                    createChartIfVisible($row, rowData, 'biomes-all');
+                                    createChartIfVisible($row, rowData, 'taxa');
+                                    createChartIfVisible($row, rowData, 'taxa-all');
+                                }
+                            }
+                        });
+                    }, {
+                        root: null,
+                        rootMargin: '100px', // Load charts a bit before they come into view
+                        threshold: 0.1
+                    });
+
+                    // Observe all rows
+                    $(visibleRows).each(function() {
+                        window.chartObserver.observe(this);
+                    });
+                } else {
+                    // If observer already exists, disconnect and reconnect with new rows
+                    window.chartObserver.disconnect();
+                    $(visibleRows).each(function() {
+                        window.chartObserver.observe(this);
+                    });
+                }
+            } else {
+                // Fallback for browsers that don't support IntersectionObserver
+                // Add scroll event listener to check visibility on scroll
+                $(window).on('scroll', function() {
+                    $(visibleRows).each(function() {
+                        const $row = $(this);
+                        const rowData = api.row(this).data();
+                        if (rowData) {
+                            createChartIfVisible($row, rowData, 'biomes');
+                            createChartIfVisible($row, rowData, 'biomes-all');
+                            createChartIfVisible($row, rowData, 'taxa');
+                            createChartIfVisible($row, rowData, 'taxa-all');
+                        }
+                    });
+                });
+
+                // Initial check for visible rows
+                $(window).trigger('scroll');
+            }
         },
         headerCallback: function (thead, data, start, end, display) {
             $(thead).find('th').eq(0).html(`
@@ -638,21 +730,25 @@ $(document).ready(function () {
 
         // Check if table.page() is defined and valid before continuing
         if (typeof table.page === 'function') {
-            // Update the input box with the current page number
-            var currentPage = table.page.info().page + 1; // DataTables uses zero-based page index
-            $('#custom-page-input').val(currentPage);
+            try {
+                // Update the input box with the current page number
+                var currentPage = table.page.info().page + 1; // DataTables uses zero-based page index
+                $('#custom-page-input').val(currentPage);
 
-            // Re-bind the click event for the Go button after each redraw
-            $('#custom-page-go').off('click').on('click', function () {
-                goToPage(table);
-            });
-
-            // Handle the Enter key press to trigger the page change
-            $('#custom-page-input').off('keypress').on('keypress', function (e) {
-                if (e.which == 13) { // Enter key code is 13
+                // Re-bind the click event for the Go button after each redraw
+                $('#custom-page-go').off('click').on('click', function () {
                     goToPage(table);
-                }
-            });
+                });
+
+                // Handle the Enter key press to trigger the page change
+                $('#custom-page-input').off('keypress').on('keypress', function (e) {
+                    if (e.which == 13) { // Enter key code is 13
+                        goToPage(table);
+                    }
+                });
+            } catch (error) {
+                console.error("Error updating pagination controls:", error);
+            }
         } else {
             console.error("DataTable page method is not available.");
         }
@@ -662,13 +758,23 @@ $(document).ready(function () {
     function goToPage(table) {
         // Ensure table.page() is defined before using it
         if (typeof table.page === 'function') {
-            var pageNum = parseInt($('#custom-page-input').val(), 10);
-            var totalPages = table.page.info().pages;
+            try {
+                var pageNum = parseInt($('#custom-page-input').val(), 10);
+                var info = table.page.info();
+                var totalPages = info.pages;
 
-            if (!isNaN(pageNum) && pageNum > 0 && pageNum <= totalPages) {
-                table.page(pageNum - 1).draw('page');
-            } else {
-                alert('Invalid page number');
+                if (!isNaN(pageNum) && pageNum > 0 && pageNum <= totalPages) {
+                    // For server-side processing, we need to calculate the correct start position
+                    var pageLength = info.length;
+                    var start = (pageNum - 1) * pageLength;
+
+                    // Use the page API to navigate to the specified page
+                    table.page(pageNum - 1).draw('page');
+                } else {
+                    alert('Invalid page number. Please enter a number between 1 and ' + totalPages);
+                }
+            } catch (error) {
+                console.error("Error navigating to page:", error);
             }
         } else {
             console.error("DataTable page method is not available.");

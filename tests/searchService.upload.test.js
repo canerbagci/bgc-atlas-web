@@ -10,13 +10,11 @@ jest.mock('child_process', () => ({
   spawn: jest.fn()
 }));
 
-process.env.SEARCH_UPLOADS_DIR = '/tmp';
-process.env.SEARCH_SCRIPT_PATH = '/bin/true';
-
-const { createTimestampedDirectory, processUploadedFiles } = require('../services/searchService');
-
-process.env.SEARCH_UPLOADS_DIR = '/tmp/uploads';
+// Set script path for tests
 process.env.SEARCH_SCRIPT_PATH = '/bin/echo';
+
+// Import the required modules
+const { createTimestampedDirectory, processUploadedFiles } = require('../services/searchService');
 
 describe('createTimestampedDirectory', () => {
   beforeEach(() => {
@@ -35,6 +33,20 @@ describe('createTimestampedDirectory', () => {
 });
 
 describe('processUploadedFiles', () => {
+  // Save original environment variables
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    // Set temporary environment variables before each test
+    process.env.SEARCH_UPLOADS_DIR = '/tmp/uploads';
+    process.env.REPORTS_DIR = '/tmp/reports';
+  });
+
+  afterEach(() => {
+    // Restore original environment variables after each test
+    process.env = { ...originalEnv };
+  });
+
   it('spawns search script and parses output', async () => {
     const stdout = new EventEmitter();
     const proc = new EventEmitter();

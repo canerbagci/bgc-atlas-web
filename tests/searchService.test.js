@@ -8,12 +8,9 @@ jest.mock('child_process', () => ({
   }))
 }));
 
-process.env.REPORTS_DIR = '/tmp';
-
+// Import the required modules
 const { sanitizeDirectoryName, getMembership } = require('../services/searchService');
 const { spawn } = require('child_process');
-
-process.env.REPORTS_DIR = '/vol/compl_bgcs_bigslice_def_t300/reports';
 
 describe('sanitizeDirectoryName', () => {
   it('allows valid names', () => {
@@ -29,6 +26,20 @@ describe('sanitizeDirectoryName', () => {
 });
 
 describe('getMembership', () => {
+  // Save original environment variables
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    // Set temporary environment variables before each test
+    process.env.SEARCH_UPLOADS_DIR = '/tmp/uploads';
+    process.env.REPORTS_DIR = '/tmp/reports';
+  });
+
+  afterEach(() => {
+    // Restore original environment variables after each test
+    process.env = { ...originalEnv };
+  });
+
   it('rejects invalid report ids before spawning', async () => {
     await expect(getMembership('../evil')).rejects.toThrow();
     expect(spawn).not.toHaveBeenCalled();

@@ -32,8 +32,19 @@ router.get('/gcf-table-sunburst', async (req, res) => {
 
 router.get('/gcf-table', async (req, res) => {
   try {
-    const rows = await bgcService.getGcfTable();
-    res.json({ data: rows });
+    // Extract pagination parameters from the request
+    const options = {
+      draw: req.query.draw,
+      start: parseInt(req.query.start) || 0,
+      length: parseInt(req.query.length) || 10,
+      order: req.query.order ? JSON.parse(req.query.order) : []
+    };
+
+    // Get paginated data from the service
+    const result = await bgcService.getGcfTable(options);
+
+    // Return the result directly (it's already in the format expected by DataTables)
+    res.json(result);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal server error' });

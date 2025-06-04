@@ -111,7 +111,6 @@ function displayResults(data) {
             // Add putative-bgc class if membership value is less than 0.405
             console.log(parseFloat(item.membership_value));
             if (parseFloat(item.membership_value) > 0.405) {
-                console.log('Putative BGC');
                 row.classList.add('putative-bgc');
             }
 

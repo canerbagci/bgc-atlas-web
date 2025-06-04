@@ -371,49 +371,72 @@ async function getGcfTableSunburst(gcfId = null, samples = null) {
 }
 
 /**
- * Get GCF table data
- * @returns {Promise<Array>} - Array of GCF table data
+ * Get GCF table data with pagination
+ * @param {Object} options - Options for pagination
+ * @param {number} options.draw - DataTables draw counter
+ * @param {number} options.start - Start index for pagination
+ * @param {number} options.length - Number of records to return
+ * @param {Array} options.order - Sorting options
+ * @returns {Promise<Object>} - Object containing GCF table data and metadata
+ */
+/**
+ * Return the GCF table with aggregated core- and all-taxon strings.
+ * Uses the pre-computed materialised view `region_genus_count`,
+ * so the query is fast.  Results are cached for 1 hour.
+ *
+ * If you occasionally need “live” data, refresh the view first:
+ *   await pool.query('REFRESH MATERIALIZED VIEW CONCURRENTLY region_genus_count');
  */
 async function getGcfTable() {
-  // Create a simple cache key since this function has no parameters
   const cacheKey = 'gcfTable';
 
-  // Use the caching service to get or fetch the data
-  return cacheService.getOrFetch(cacheKey, async () => {
-    try {
-      const sql = `
-        SELECT g.*, ct.core_taxa, at.all_taxa
-        FROM bigslice_gcf g
-        LEFT JOIN (
-          SELECT bigslice_gcf_id AS gcf_id,
-                 STRING_AGG(name || ' (' || cnt || ')', ', ' ORDER BY cnt DESC) AS core_taxa
-          FROM (
-            SELECT rt.bigslice_gcf_id, tm.name, COUNT(*) AS cnt
-            FROM regions_taxonomy rt
-              JOIN taxdump_map tm ON tm.tax_id = rt.tax_id AND tm.rank = 'genus'
-            WHERE rt.gcf_from_search = false
-            GROUP BY rt.bigslice_gcf_id, tm.name
-          ) sub
-          GROUP BY bigslice_gcf_id
-        ) ct ON g.gcf_id = ct.gcf_id
-        LEFT JOIN (
-          SELECT bigslice_gcf_id AS gcf_id,
-                 STRING_AGG(name || ' (' || cnt || ')', ', ' ORDER BY cnt DESC) AS all_taxa
-          FROM (
-            SELECT rt.bigslice_gcf_id, tm.name, COUNT(*) AS cnt
-            FROM regions_taxonomy rt
-              JOIN taxdump_map tm ON tm.tax_id = rt.tax_id AND tm.rank = 'genus'
-            GROUP BY rt.bigslice_gcf_id, tm.name
-          ) sub
-          GROUP BY bigslice_gcf_id
-        ) at ON g.gcf_id = at.gcf_id`;
-      const { rows } = await pool.query(sql);
-      return rows;
-    } catch (error) {
-      console.error('Error getting GCF table:', error);
-      throw error;
-    }
-  }, 3600); // Cache for 1 hour
+  return cacheService.getOrFetch(
+      cacheKey,
+      async () => {
+        try {
+          // ──────────────────────────────────────────────────────────────
+          // Fast aggregation: each join hits the view, not raw tables
+          // ──────────────────────────────────────────────────────────────
+          const sql = `
+          SELECT
+            g.*,
+            core.core_taxa,
+            allx.all_taxa
+          FROM bigslice_gcf g
+          /*  core taxa (exclude regions from search) */
+          LEFT JOIN (
+            SELECT
+              bigslice_gcf_id,
+              STRING_AGG(
+                genus_name || ' (' || cnt || ')',
+                ', ' ORDER BY cnt DESC
+              ) AS core_taxa
+            FROM region_genus_count
+            WHERE gcf_from_search = false
+            GROUP BY bigslice_gcf_id
+          ) core ON core.bigslice_gcf_id = g.gcf_id
+          /*  all taxa (all regions) */
+          LEFT JOIN (
+            SELECT
+              bigslice_gcf_id,
+              STRING_AGG(
+                genus_name || ' (' || cnt || ')',
+                ', ' ORDER BY cnt DESC
+              ) AS all_taxa
+            FROM region_genus_count
+            GROUP BY bigslice_gcf_id
+          ) allx ON allx.bigslice_gcf_id = g.gcf_id;
+        `;
+
+          const { rows } = await pool.query(sql);
+          return rows;
+        } catch (error) {
+          console.error('Error getting GCF table:', error);
+          throw error;
+        }
+      },
+      3600 // cache for 1 hour
+  );
 }
 
 /**
