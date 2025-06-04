@@ -1,0 +1,32 @@
+extends layout
+
+block content
+  .container
+    h1 Monthly Soil BGC Catalogue
+
+    .description
+      p Schönbuch monthly soil sampling data
+
+    h2 Complete antiSMASH Results
+    p Full antiSMASH results for each dataset by month:
+    ul
+      each month in fullMonths
+        li
+          a(href=`/monthly-soil/full-AS/${month}/`)= month.toUpperCase()
+
+    h2 Product-Specific Results
+    p Results filtered by specific BGC product types:
+    ul
+      each month in productMonths
+        li
+          a(href=`/monthly-soil/product-AS/${month}/`)= month.toUpperCase()
+
+block styles
+  link(rel="stylesheet", href="/stylesheets/style.css")
+  style.
+    .description { 
+      background: #f8f9fa; 
+      padding: 1rem; 
+      border-radius: 5px; 
+      margin-bottom: 1.5rem; 
+    }
