@@ -58,8 +58,6 @@ async function processUploadedFiles(req, sendEvent) {
     const scriptPath = process.env.SEARCH_SCRIPT_PATH;
     const scriptArgs = [uploadDir];
 
-    console.log('Running script:', scriptPath, scriptArgs);
-
     const scriptProcess = spawn('bash', [scriptPath, ...scriptArgs]);
 
     let scriptOutput = '';

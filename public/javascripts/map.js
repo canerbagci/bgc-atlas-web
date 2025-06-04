@@ -1,5 +1,5 @@
 function createMap() {
-    var map = L.map('map').setView({lat: 0, lon: 0}, 2.5);
+    var map = L.map('map').setView({lat: 0, lng: 0}, 2.5);
 
     const southWest = L.latLng(-90, -180);
     const northEast = L.latLng(90, 180);

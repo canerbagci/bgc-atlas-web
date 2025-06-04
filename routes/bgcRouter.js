@@ -63,7 +63,6 @@ router.get('/pc-product-count', async (req, res) => {
 });
 
 router.get('/bgc-table', async (req, res) => {
-  console.log("bgc-table");
   try {
     const options = {
       gcf: req.query.gcf,

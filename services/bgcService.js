@@ -533,10 +533,10 @@ async function getBgcTable(options) {
 
     let whereClause = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
 
-    let totalCountQuery = 'SELECT COUNT(*) FROM regions ' + whereClause; //NEEDS TO BE LIKE THIS
+    let totalCountQuery = 'SELECT COUNT(*) FROM regions '
     let filterCountQuery = 'SELECT COUNT(*) FROM regions ' + whereClause;
 
-    const totalCountResult = await pool.query(totalCountQuery, params);
+    const totalCountResult = await pool.query(totalCountQuery);
     const filterCountResult = await pool.query(filterCountQuery, params);
 
     let dataParams = params.slice();
