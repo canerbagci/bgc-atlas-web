@@ -167,7 +167,18 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage: storage }).array('file', 20); // Limit to 20 files
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: function (req, file, cb) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext === '.gbk' || ext === '.genbank') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .gbk or .genbank files are allowed'));
+    }
+  }
+}).array('file', 20); // Limit to 20 files
 
 let clients = [];
 
@@ -201,7 +212,8 @@ router.post('/upload', (req, res) => {
   upload(req, res, async (err) => {
     if (err) {
       sendEvent({ status: 'Error', message: err.message });
-      return res.status(500).json({ error: err.message });
+      const status = err.message.includes('.gbk') || err.message.includes('.genbank') ? 400 : 500;
+      return res.status(status).json({ error: err.message });
     }
 
     try {
