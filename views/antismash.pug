@@ -107,15 +107,22 @@ block scripts
                     customScript.type = 'text/javascript';
                     customScript.text = `
                                     $(document).ready(function() {
+                                        // Make sure the region-table is visible
+                                        $('.region-table').css('display', 'table');
+
                                         // Add the new column header "BGC ID" as the second column
                                         $('.region-table thead tr').each(function() {
                                             $(this).find('th').first().after('<th>BGC ID</th>');
                                         });
 
-                                        // Loop through each row in the table's tbody and insert the "BGC ID" column
-                                        $('.region-table tbody tr').each(function(index) {
+                                        // Store all rows to avoid issues with async operations
+                                        var rows = $('.region-table tbody tr').toArray();
+
+                                        // Process each row
+                                        rows.forEach(function(row) {
+                                            var $row = $(row);
                                             // Get the href anchor from the Region column
-                                            var regionAnchor = $(this).find('td a').attr('href').substring(1); // e.g., "r277c1"
+                                            var regionAnchor = $row.find('td a').attr('href').substring(1); // e.g., "r277c1"
 
                                             // Use the dataset value passed from the parent
                                             var dataset = '${dataset}';
@@ -127,13 +134,24 @@ block scripts
                                                     var bgcId = data.bgcId || 'Not Found'; // Handle "Not Found" case
 
                                                     // Step 2: Insert the BGC ID into the table
-                                                    $(this).find('td').first().after('<td>' + bgcId + '</td>');
+                                                    $row.find('td').first().after('<td>' + bgcId + '</td>');
+
+                                                    // Ensure the table remains visible
+                                                    $('.region-table').css('display', 'table');
                                                 })
                                                 .catch(error => {
                                                     console.error('Error fetching BGC ID:', error);
-                                                    $(this).find('td').first().after('<td>Error</td>');
+                                                    $row.find('td').first().after('<td>Error</td>');
+
+                                                    // Ensure the table remains visible even on error
+                                                    $('.region-table').css('display', 'table');
                                                 });
                                         });
+
+                                        // Add a final check to ensure the table is visible after all operations
+                                        setTimeout(function() {
+                                            $('.region-table').css('display', 'table');
+                                        }, 1000);
                                     });
                                 `;
                     iframeDocument.head.appendChild(customScript);
