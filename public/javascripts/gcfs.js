@@ -1,0 +1,606 @@
+function getInfo() {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', '/bgc-info', true);
+    xhr.responseType = 'json';
+
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            const results = xhr.response;
+            document.getElementById("gcf-count").innerHTML = "Total GCFs: " + results[0].gcf_count;
+            document.getElementById("mean-gcf").innerHTML = "Mean #BGC per GCF: " + results[0].meanbgc;
+        }
+    }
+    xhr.send()
+}
+
+function plotGCFChart() {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', '/gcf-category-count', true);
+    xhr.responseType = 'json';
+
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            const results = xhr.response;
+            const labels = results.map((row) => row.bgc_type);
+            const data = results.map((row) => row.unique_families);
+
+            const canvas = document.getElementById('gcf-category-chart');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Create a gradient color scheme for improved visuals
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(171, 71, 188, 0.9)'); // light purple
+            gradient.addColorStop(1, 'rgba(123, 31, 162, 0.7)');  // dark purple
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'GCFs by Category',
+                            data: data,
+                            backgroundColor: gradient,
+                            borderColor: 'rgba(123, 31, 162, 1)',
+                            borderWidth: 2,
+                            borderRadius: 5,
+                            hoverBackgroundColor: 'rgba(171, 71, 188, 1)',
+                            hoverBorderColor: 'rgba(74, 20, 140, 1)',
+                            hoverBorderWidth: 2,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(200, 200, 200, 0.3)'
+                            },
+                            ticks: {
+                                font: {
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+                },
+            });
+        }
+    }
+    xhr.send();
+}
+
+function plotGCFCountHist() {
+    const xhr = new XMLHttpRequest();
+
+    xhr.open('GET', '/gcf-count-hist', true);
+    xhr.responseType = 'json';
+
+    xhr.onload = function () {
+        if (xhr.status === 200) {
+            const results = xhr.response;
+            const labels = results.map((row) => row.bucket_range);
+            const data = results.map((row) => row.count_in_bucket);
+
+            const canvas = document.getElementById('gcf-count-hist-chart');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Create a gradient color scheme
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(77, 182, 172, 0.9)');  // light teal
+            gradient.addColorStop(1, 'rgba(38, 166, 154, 0.7)');   // dark teal
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Histogram of BGC counts per GCF',
+                            data: data,
+                            backgroundColor: gradient,
+                            borderColor: 'rgba(0, 131, 143, 1)',
+                            borderWidth: 2,
+                            borderRadius: 5,
+                            hoverBackgroundColor: 'rgba(77, 182, 172, 1)',
+                            hoverBorderColor: 'rgba(0, 77, 64, 1)',
+                            hoverBorderWidth: 2,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                autoSkip: false,
+                                font: {
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            type: 'logarithmic',
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(200, 200, 200, 0.3)'
+                            },
+                            ticks: {
+                                font: {
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+
+                },
+            });
+        }
+    }
+    xhr.send();
+}
+
+let legendLabels = new Set();
+
+// Function to map a label to a consistent color
+function getColorForLabel(label) {
+    let hash = 0;
+    for (let i = 0; i < label.length; i++) {
+        hash = label.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    // Generate a color from the hash
+    const r = (hash >> 24) & 255;
+    const g = (hash >> 16) & 255;
+    const b = (hash >> 8) & 255;
+
+    return `rgb(${Math.abs(r)}, ${Math.abs(g)}, ${Math.abs(b)})`;
+}
+
+function addToLegend(labels) {
+    const legendContainer = document.getElementById('legend-container');
+
+    // Add only new labels to the global legend tracker
+    labels.forEach(label => {
+        if (!legendLabels[label]) {
+            legendLabels[label] = getColorForLabel(label); // Add label to global legend tracker
+
+            // Create a new legend item
+            const legendItem = document.createElement('div');
+            legendItem.innerHTML = `
+                <div style="display: flex; align-items: center;">
+                    <div style="width: 20px; height: 20px; background-color: ${legendLabels[label]}; margin-right: 10px;"></div>
+                    <span>${label}</span>
+                </div>
+            `;
+            legendContainer.appendChild(legendItem);
+        }
+    });
+}
+
+function buildHierarchy(labels, counts) {
+    const root = {name: "root", children: []};
+
+    labels.forEach((label, index) => {
+        const parts = label.split(':');
+        let currentLevel = root;
+
+        parts.forEach((part, i) => {
+            let existingNode = currentLevel.children.find(node => node.name === part);
+
+            if (!existingNode) {
+                existingNode = {name: part, children: []};
+                currentLevel.children.push(existingNode);
+            }
+
+            if (i === parts.length - 1) {
+                existingNode.value = counts[index]; // Add the count at the last level
+            }
+
+            currentLevel = existingNode;
+        });
+    });
+
+    return root;
+}
+
+function createPieChart(canvasId, labels, counts, percentages) {
+    const canvas = document.createElement('canvas');
+    canvas.id = canvasId;
+    canvas.width = 100;
+    canvas.height = 100;
+
+    const data = buildHierarchy(labels, counts);
+
+    console.log("Building hierarchy for pie chart:", data);
+
+    setTimeout(() => {
+        const ctx = document.getElementById(canvasId)?.getContext('2d');
+        if (!ctx) {
+            console.error(`Canvas with ID ${canvasId} not found.`);
+            return;
+        }
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels, // Labels are needed for the tooltip
+                datasets: [{
+                    data: percentages, // Percentages for pie chart distribution
+                    backgroundColor: labels.map(label => getColorForLabel(label)), // Generate colors based on labels
+                    borderColor: 'rgba(255, 255, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                cutout: '50%',
+                plugins: {
+                    legend: {
+                        display: false // Hide the legend labels
+                    },
+                    tooltip: {
+                        displayColors: false, // Remove the color box
+                        padding: 10, // Add padding inside the tooltip
+                        bodyFont: {
+                            size: 12 // Increase the font size
+                        },
+                        callbacks: {
+                            // Custom label callback to wrap text and show count + percentage
+                            label: function (tooltipItem) {
+                                let label = labels[tooltipItem.dataIndex] || '';
+                                const count = counts[tooltipItem.dataIndex] || 0;
+                                const percentage = percentages[tooltipItem.dataIndex] || 0;
+
+                                label = label.replace(/:/g, ': ');
+
+                                // Split the label into lines if it's too long
+                                const maxLineLength = 30;
+                                let lines = [];
+                                let currentLine = '';
+
+                                label.split(' ').forEach(word => {
+                                    if (currentLine.length + word.length > maxLineLength) {
+                                        lines.push(currentLine);
+                                        currentLine = word;
+                                    } else {
+                                        currentLine += (currentLine ? ' ' : '') + word;
+                                    }
+                                });
+                                lines.push(currentLine); // Add the last line
+
+                                // Return wrapped label with count and percentage
+                                return [...lines, `Count: ${count}, Percentage: ${percentage}%`];
+                            },
+                            title: function () {
+                                return ''; // Remove the title
+                            }
+                        },
+                        // Ensure tooltips can overflow outside table cell
+                        external: function (context) {
+                            const tooltip = context.tooltip;
+                            if (!tooltip) {
+                                return;
+                            }
+                            tooltip.display = true;
+                            tooltip.opacity = 1;
+                            tooltip.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                        }
+                    }
+                }
+            }
+        });
+
+        // addToLegend(labels);
+    }, 0); // Ensure DOM rendering has occurred before drawing the chart
+
+    return canvas.outerHTML;
+}
+
+// Initialize the page when the DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    getInfo();
+    plotGCFChart();
+    plotGCFCountHist();
+});
+
+// Initialize the DataTable when jQuery is ready
+$(document).ready(function () {
+    let isTextView = false; // Flag to toggle between text and chart view
+
+    $('#toggleViewButton').on('click', function () {
+        isTextView = !isTextView; // Toggle the view state
+        const buttonText = isTextView ? 'Switch to Pie Charts' : 'Switch to Text View';
+        $(this).text(buttonText); // Update button text
+        $('#gcfTable').DataTable().draw(); // Redraw the table with the updated view
+    });
+
+    // Initialize the DataTable
+    var table = $('#gcfTable').DataTable({
+        "ajax": '/gcf-table',
+        "pageLength": 10,
+        "paging": true, // Ensure paging is explicitly enabled
+        "scrollCollapse": true,
+        "autoWidth": false,
+        "searchDelay": 500, // Delay search execution by 500ms after user stops typing
+        "language": {
+            searchBuilder: {
+                button: 'Filter',
+            }
+        },
+        "dom": 'Bflriptip',
+        "buttons": [
+            'searchBuilder'
+        ],
+        "columns": [
+            {data: 'gcf_id', name: 'GCF Family', title: 'GCF Family', type: 'int', width: '5%'},
+            {data: 'num_core_regions', name: '# Core BGCs', title: '# Core BGCs', type: 'num', width: '5%'},
+            {
+                data: 'core_products',
+                name: 'Types (Core)',
+                title: 'Types (Core)',
+                type: 'string',
+                width: '25%',
+                render: function (data, type, row) {
+                    return type === 'display' ? data : data;
+                }
+            },
+            {
+                data: 'core_biomes',
+                name: 'Biomes (Core)',
+                title: 'Biomes (Core)',
+                type: 'string',
+                width: '17.5%',
+                render: function (data, type, row) {
+                    if (type === 'display') {
+                        if (isTextView) {
+                            // Return raw text when in text view
+                            return data;
+                        } else {
+                            // Return pie chart when in chart view
+                            const canvasId = `biomes-pie-chart-${row.gcf_id}`;
+                            return `<div id="chart-container-${row.gcf_id}">
+                                                        <canvas id="${canvasId}" width="150" height="150"></canvas>
+                                                    </div>`;
+                        }
+                    }
+                    return data;
+                }
+            },
+            {data: 'num_all_regions', name: '# All BGCs', title: '# All BGCs', type: 'num', width: '5%'},
+            {
+                data: 'all_products',
+                name: 'Types (All)',
+                title: 'Types (All)',
+                type: 'string',
+                width: '25%',
+                render: function (data, type, row) {
+                    return type === 'display' ? data : data;
+                }
+            },
+            {
+                data: 'all_biomes',
+                name: 'Biomes (All)',
+                title: 'Biomes (All)',
+                type: 'string',
+                width: '17.5%',
+                render: function (data, type, row) {
+                    if (type === 'display') {
+                        const canvasId = `biomes-all-pie-chart-${row.gcf_id}`;  // Unique ID for each chart
+                        // Set the width and height of the canvas
+                        return `<div id="chart-container-${row.gcf_id}">
+                                                    <canvas id="${canvasId}" width="150" height="150"></canvas>
+                                                </div>`;
+                    }
+                    return data;
+                }
+            }
+
+        ],
+        "order": [[1, 'desc'], [0, 'desc']],
+        "createdRow": function (row, data, dataIndex) {
+            if (data.num_core_regions > 0) {
+                var biomeCell = $(row).find('td').eq(3);
+                biomeCell.html(biomeCell.html().replaceAll('root:', ''));
+                var famNumCell = $(row).find('td').eq(0);
+                famNumCell.html('<a href="/bgcs?gcf=' + famNumCell.html() + '" target="_blank">' + famNumCell.html() + '</a>');
+            }
+        },
+        "initComplete": function (settings, json) {
+            appendCustomPaginationControls(table);
+        },
+        "drawCallback": function (settings) {
+            // Ensure table.page is available and valid before appending controls
+            if (table && typeof table.page === 'function') {
+                appendCustomPaginationControls(table);
+            } else {
+                console.error("DataTable page method is not available. Table object:", table); // Log the table object for further inspection
+            }
+
+            var api = this.api(); // Reference the DataTable API
+
+            // Apply the chart generation only to visible rows
+            var visibleRows = api.rows({page: 'current'}).nodes(); // Get visible rows
+
+            $(visibleRows).each(function () {
+                var $row = $(this);
+                var rowData = api.row(this).data();
+                var canvasId = `biomes-pie-chart-${rowData.gcf_id}`;
+
+                // Ensure the chart is not already rendered to avoid duplication
+                if (!$(`#${canvasId}`).hasClass('initialized')) {
+                    const biomeData = rowData.core_biomes.split(',').map(item => {
+                        const [biome, count] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
+                        return {label: biome, count: parseInt(count) || 0};
+                    });
+
+                    const totalCount = biomeData.reduce((acc, curr) => acc + curr.count, 0);
+                    const percentages = biomeData.map(b => Math.round((b.count / totalCount) * 100));
+                    const counts = biomeData.map(b => b.count);
+                    const labels = biomeData.map(b => b.label);
+
+                    // Render the chart
+                    $(`#${canvasId}`).addClass('initialized');  // Mark the canvas as initialized
+                    createPieChart(canvasId, labels, counts, percentages);
+                }
+
+                canvasId = `biomes-all-pie-chart-${rowData.gcf_id}`;
+
+                // Ensure the chart is not already rendered to avoid duplication
+                if (!$(`#${canvasId}`).hasClass('initialized')) {
+                    const biomeData = rowData.all_biomes.split(',').map(item => {
+                        const [biome, count] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
+                        return {label: biome, count: parseInt(count) || 0};
+                    });
+
+                    const totalCount = biomeData.reduce((acc, curr) => acc + curr.count, 0);
+                    const percentages = biomeData.map(b => Math.round((b.count / totalCount) * 100));
+                    const counts = biomeData.map(b => b.count);
+                    const labels = biomeData.map(b => b.label);
+
+                    // Render the chart
+                    $(`#${canvasId}`).addClass('initialized');  // Mark the canvas as initialized
+                    createPieChart(canvasId, labels, counts, percentages);
+                }
+            });
+        },
+        headerCallback: function (thead, data, start, end, display) {
+            $(thead).find('th').eq(0).html(`
+                                        GCF ID
+                                        <span class="info-icon" data-bs-toggle="tooltip" title="Unique identifier for the GCF. Clicking this opens the GCF viewer for this specific cluster.">
+                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                        </span>
+                                    `);
+            $(thead).find('th').eq(1).html(`
+                                        # Core BGCs
+                                        <span class="info-icon" data-bs-toggle="tooltip" title="Number of core BGCs in the GCF. Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.">
+                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                        </span>
+                                    `);
+            $(thead).find('th').eq(2).html(`
+                                        Types (Core)
+                                        <span class="info-icon" data-bs-toggle="tooltip" title="Types of core BGCs in the GCF. Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.">
+                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                        </span>
+                                    `);
+            $(thead).find('th').eq(3).html(`
+                                        Biomes (Core)
+                                        <span class="info-icon" data-bs-toggle="tooltip" title="Biomes where core BGCs are found. Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.">
+                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                        </span>
+                                    `);
+            $(thead).find('th').eq(4).html(`
+                                        # All BGCs
+                                        <span class="info-icon" data-bs-toggle="tooltip" title="Number of all BGCs in the GCF. All BGCs include both core and incomplete BGCs that are assigned to the GCF in the second step of the GCF clustering by using BiG-SLiCE's search function.">
+                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                        </span>
+                                    `);
+            $(thead).find('th').eq(5).html(`
+                                        Types (All)
+                                        <span class="info-icon" data-bs-toggle="tooltip" title="Types of all BGCs in the GCF. All BGCs include both core and incomplete BGCs that are assigned to the GCF in the second step of the GCF clustering by using BiG-SLiCE's search function.">
+                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                        </span>
+                                    `);
+            $(thead).find('th').eq(6).html(`
+                                        Biomes (All)
+                                        <span class="info-icon" data-bs-toggle="tooltip" title="Biomes where all BGCs are found. All BGCs include both core and incomplete BGCs that are assigned to the GCF in the second step of the GCF clustering by using BiG-SLiCE's search function.">
+                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                        </span>
+                                    `);
+
+        }
+    });
+
+    $('#gcfTable').on('draw.dt', function () {
+        $('[data-bs-toggle="tooltip"]').tooltip(); // Activate Bootstrap tooltips
+    });
+
+    // Function to append custom pagination controls (input box and Go button)
+    function appendCustomPaginationControls(table) {
+        // Check if the input and Go button already exist to avoid duplicates
+        if (!$('#custom-page-input').length) {
+            $('#gcfTable_paginate').append(
+                '<div style="display: inline-flex; align-items: center; margin-left: 10px;">' +
+                '<input id="custom-page-input" type="text" placeholder="Page" style="width: 60px; text-align: center; margin-right: 5px;" />' +
+                '<button id="custom-page-go" class="btn btn-primary btn-sm" style="height: 30px;">Go</button>' +
+                '</div>'
+            );
+        }
+
+        // Check if table.page() is defined and valid before continuing
+        if (typeof table.page === 'function') {
+            // Update the input box with the current page number
+            var currentPage = table.page.info().page + 1; // DataTables uses zero-based page index
+            $('#custom-page-input').val(currentPage);
+
+            // Re-bind the click event for the Go button after each redraw
+            $('#custom-page-go').off('click').on('click', function () {
+                goToPage(table);
+            });
+
+            // Handle the Enter key press to trigger the page change
+            $('#custom-page-input').off('keypress').on('keypress', function (e) {
+                if (e.which == 13) { // Enter key code is 13
+                    goToPage(table);
+                }
+            });
+        } else {
+            console.error("DataTable page method is not available.");
+        }
+    }
+
+    // Function to go to the specified page
+    function goToPage(table) {
+        // Ensure table.page() is defined before using it
+        if (typeof table.page === 'function') {
+            var pageNum = parseInt($('#custom-page-input').val(), 10);
+            var totalPages = table.page.info().pages;
+
+            if (!isNaN(pageNum) && pageNum > 0 && pageNum <= totalPages) {
+                table.page(pageNum - 1).draw('page');
+            } else {
+                alert('Invalid page number');
+            }
+        } else {
+            console.error("DataTable page method is not available.");
+        }
+    }
+});

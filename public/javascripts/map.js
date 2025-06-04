@@ -152,3 +152,9 @@ function getSampleInfo() {
     }
     xhr.send()
 }
+
+// Initialize the map when the DOM is loaded
+document.addEventListener("DOMContentLoaded", function () {
+    getSampleInfo();
+    createMap();
+});

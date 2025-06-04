@@ -43,7 +43,7 @@ async function getBgcInfo(gcfId = null, samples = null) {
           throw new Error('Invalid gcf parameter');
         }
 
-        whereClause.push(`bigslice_gcf_id = $1`);
+        whereClauses.push(`regions.bigslice_gcf_id = $${paramIndex}`);
         params.push(bigslice_gcf_id);
       }
 
@@ -510,7 +510,7 @@ async function getBgcTable(options) {
       if (isNaN(gcfIdNum)) {
         throw new Error('Invalid gcf parameter');
       }
-      whereClauses.push(`bigslice_gcf_id = $${paramIndex}`);
+      whereClauses.push(`regions.bigslice_gcf_id = $${paramIndex}`);
       params.push(gcfIdNum);
       paramIndex++;
     }
