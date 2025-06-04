@@ -102,6 +102,11 @@ block scripts
                     const ctx = canvas.getContext('2d');
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+                    // Create a gradient color scheme for improved visuals
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                    gradient.addColorStop(0, 'rgba(171, 71, 188, 0.9)'); // light purple
+                    gradient.addColorStop(1, 'rgba(123, 31, 162, 0.7)');  // dark purple
+
                     const chart = new Chart(ctx, {
                         type: 'bar',
                         data: {
@@ -110,16 +115,45 @@ block scripts
                                 {
                                     label: 'GCFs by Category',
                                     data: data,
-                                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                                    borderColor: 'rgba(54, 162, 235, 1)',
-                                    borderWidth: 1,
+                                    backgroundColor: gradient,
+                                    borderColor: 'rgba(123, 31, 162, 1)',
+                                    borderWidth: 2,
+                                    borderRadius: 5,
+                                    hoverBackgroundColor: 'rgba(171, 71, 188, 1)',
+                                    hoverBorderColor: 'rgba(74, 20, 140, 1)',
+                                    hoverBorderWidth: 2,
                                 },
                             ],
                         },
                         options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: {
+                                duration: 1000,
+                                easing: 'easeOutQuart'
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                    labels: {
+                                        font: {
+                                            size: 14,
+                                            weight: 'bold'
+                                        }
+                                    }
+                                }
+                            },
                             scales: {
                                 y: {
-                                    beginAtZero: true
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(200, 200, 200, 0.3)'
+                                    },
+                                    ticks: {
+                                        font: {
+                                            weight: 'bold'
+                                        }
+                                    }
                                 }
                             }
                         },
@@ -145,6 +179,11 @@ block scripts
                     const ctx = canvas.getContext('2d');
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+                    // Create a gradient color scheme
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                    gradient.addColorStop(0, 'rgba(77, 182, 172, 0.9)');  // light teal
+                    gradient.addColorStop(1, 'rgba(38, 166, 154, 0.7)');   // dark teal
+
                     const chart = new Chart(ctx, {
                         type: 'bar',
                         data: {
@@ -153,22 +192,57 @@ block scripts
                                 {
                                     label: 'Histogram of BGC counts per GCF',
                                     data: data,
-                                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                                    borderColor: 'rgba(54, 162, 235, 1)',
-                                    borderWidth: 1,
+                                    backgroundColor: gradient,
+                                    borderColor: 'rgba(0, 131, 143, 1)',
+                                    borderWidth: 2,
+                                    borderRadius: 5,
+                                    hoverBackgroundColor: 'rgba(77, 182, 172, 1)',
+                                    hoverBorderColor: 'rgba(0, 77, 64, 1)',
+                                    hoverBorderWidth: 2,
                                 },
                             ],
                         },
                         options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: {
+                                duration: 1000,
+                                easing: 'easeOutQuart'
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                    labels: {
+                                        font: {
+                                            size: 14,
+                                            weight: 'bold'
+                                        }
+                                    }
+                                }
+                            },
                             scales: {
                                 x: {
                                     ticks: {
                                         autoSkip: false,
+                                        font: {
+                                            weight: 'bold'
+                                        }
+                                    },
+                                    grid: {
+                                        display: false
                                     }
                                 },
                                 y: {
                                     type: 'logarithmic',
-                                    beginAtZero: true
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(200, 200, 200, 0.3)'
+                                    },
+                                    ticks: {
+                                        font: {
+                                            weight: 'bold'
+                                        }
+                                    }
                                 }
                             }
 
@@ -265,7 +339,7 @@ block scripts
                     return;
                 }
                 new Chart(ctx, {
-                    type: 'pie',
+                    type: 'doughnut',
                     data: {
                         labels: labels, // Labels are needed for the tooltip
                         datasets: [{
@@ -277,6 +351,7 @@ block scripts
                     },
                     options: {
                         responsive: true,
+                        cutout: '50%',
                         plugins: {
                             legend: {
                                 display: false // Hide the legend labels
