@@ -3,7 +3,7 @@ extends layout
 block content
     div.row.flex-fill.d-flex.justify-content-center
         .container(style="max-width: 900px; padding: 20px;")
-            img(src="/images/overview.png", alt="BGC Atlas Overview", class="img-fluid mx-auto d-block", style="max-width: 70%; height: auto; margin-top: 20px; margin-bottom: 30px;")
+            img(src="/images/overview.png", alt="BGC Atlas Overview", class="img-fluid mx-auto d-block", style="max-width: 70%; height: auto; margin-top: 20px; margin-bottom: 30px;", loading="lazy")
             hr
             div.row.mb-5
                 div.col-md-12
@@ -16,7 +16,7 @@ block content
                     ul(style="list-style-type: none;")
                         li.mb-4
                             span
-                                img(src="/images/database.svg" width="16" height="16" alt="Database")
+                                img(src="/images/database.svg" width="16" height="16" alt="Database" loading="lazy")
                             strong Data Collection and Integration
                             ul(style="list-style-type: none;")
                                 li Metagenomic datasets are collected from publicly available repositories (MGnify).
@@ -134,4 +134,3 @@ block scripts
 
         // Decode the email and insert into the DOM
         document.getElementById('email-base64').innerHTML = '<a href="mailto:' + atob(base64Email) + '">' + atob(base64Email) + '</a>';
-
