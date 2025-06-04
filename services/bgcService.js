@@ -429,44 +429,78 @@ async function getBgcTable(options) {
     let paramIndex = 1;
 
     if (searchBuilder && searchBuilder.criteria) {
-      searchBuilder.criteria.forEach((criteria) => {
-        let data = criteria.origData;
-        let condition = criteria.condition;
-        let value = criteria.value;
-        let value1 = criteria.value1;
+      const allowedConditions = new Set([
+        '=', '!=', '<', '>', '<=', '>=',
+        'between', 'not between',
+        'contains', '!contains',
+        'starts', '!starts',
+        'ends', '!ends',
+        'null', '!null'
+      ]);
 
-        if (condition == '=') {
-          whereClauses.push(data + ' = \'' + value + '\'');
-        } else if (condition == '!=') {
-          whereClauses.push(data + ' != \'' + value + '\'');
-        } else if (condition == '<') {
-          whereClauses.push(data + ' < \'' + value + '\'');
-        } else if (condition == '>') {
-          whereClauses.push(data + ' > \'' + value + '\'');
-        } else if (condition == '<=') {
-          whereClauses.push(data + ' <= \'' + value + '\'');
-        } else if (condition == '>=') {
-          whereClauses.push(data + ' >= \'' + value + '\'');
-        } else if (condition == 'between') {
-          whereClauses.push(data + ' BETWEEN \'' + value + '\' AND \'' + value1 + '\'');
-        } else if (condition == 'not between') {
-          whereClauses.push(data + ' NOT BETWEEN \'' + value + '\' AND \'' + value1 + '\'');
-        } else if (condition == 'contains') {
-          whereClauses.push(data + ' LIKE \'%' + value + '%\'');
-        } else if (condition == '!contains') {
-          whereClauses.push(data + ' NOT LIKE \'%' + value + '%\'');
-        } else if (condition == 'starts') {
-          whereClauses.push(data + ' LIKE \'' + value + '%\'');
-        } else if (condition == '!starts') {
-          whereClauses.push(data + ' NOT LIKE \'' + value + '%\'');
-        } else if (condition == 'ends') {
-          whereClauses.push(data + ' LIKE \'%' + value + '\'');
-        } else if (condition == '!ends') {
-          whereClauses.push(data + ' NOT LIKE \'%' + value + '\'');
-        } else if (condition == 'null') {
-          whereClauses.push(data + ' IS NULL');
-        } else if (condition == '!null') {
-          whereClauses.push(data + ' IS NOT NULL');
+      searchBuilder.criteria.forEach((criteria) => {
+        const data = criteria.origData;
+        const condition = criteria.condition;
+        const value = criteria.value;
+        const value1 = criteria.value1;
+
+        if (!columns.includes(data) || !allowedConditions.has(condition)) {
+          return;
+        }
+
+        switch (condition) {
+          case '=':
+          case '!=':
+          case '<':
+          case '>':
+          case '<=':
+          case '>=':
+            whereClauses.push(`${data} ${condition} $${paramIndex}`);
+            params.push(value);
+            paramIndex++;
+            break;
+          case 'between':
+          case 'not between':
+            whereClauses.push(`${data} ${condition.toUpperCase()} $${paramIndex} AND $${paramIndex + 1}`);
+            params.push(value, value1);
+            paramIndex += 2;
+            break;
+          case 'contains':
+            whereClauses.push(`${data} LIKE $${paramIndex}`);
+            params.push(`%${value}%`);
+            paramIndex++;
+            break;
+          case '!contains':
+            whereClauses.push(`${data} NOT LIKE $${paramIndex}`);
+            params.push(`%${value}%`);
+            paramIndex++;
+            break;
+          case 'starts':
+            whereClauses.push(`${data} LIKE $${paramIndex}`);
+            params.push(`${value}%`);
+            paramIndex++;
+            break;
+          case '!starts':
+            whereClauses.push(`${data} NOT LIKE $${paramIndex}`);
+            params.push(`${value}%`);
+            paramIndex++;
+            break;
+          case 'ends':
+            whereClauses.push(`${data} LIKE $${paramIndex}`);
+            params.push(`%${value}`);
+            paramIndex++;
+            break;
+          case '!ends':
+            whereClauses.push(`${data} NOT LIKE $${paramIndex}`);
+            params.push(`%${value}`);
+            paramIndex++;
+            break;
+          case 'null':
+            whereClauses.push(`${data} IS NULL`);
+            break;
+          case '!null':
+            whereClauses.push(`${data} IS NOT NULL`);
+            break;
         }
       });
     }
