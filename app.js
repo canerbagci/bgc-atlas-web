@@ -4,7 +4,6 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const geoip = require('geoip-lite');
-const helmet = require('helmet');
 const etagMiddleware = require('./services/etagMiddleware');
 
 
@@ -14,7 +13,6 @@ require('./config/database');
 const indexRouter = require('./routes/index');
 
 const app = express();
-app.use(helmet());
 app.use(etagMiddleware);
 
 const ultraDeepSoilRouter = require('./routes/ultraDeepSoilRouter');
