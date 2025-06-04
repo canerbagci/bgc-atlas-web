@@ -169,7 +169,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 500 * 1024 * 1024 },
   fileFilter: function (req, file, cb) {
     const ext = path.extname(file.originalname).toLowerCase();
     if (ext === '.gbk' || ext === '.genbank') {
@@ -178,7 +178,7 @@ const upload = multer({
       cb(new Error('Only .gbk or .genbank files are allowed'));
     }
   }
-}).array('file', 20); // Limit to 20 files
+}).array('file', 100); // Limit to 20 files
 
 let clients = [];
 
