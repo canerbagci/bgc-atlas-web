@@ -381,7 +381,32 @@ async function getGcfTable() {
   // Use the caching service to get or fetch the data
   return cacheService.getOrFetch(cacheKey, async () => {
     try {
-      const sql = 'SELECT * FROM bigslice_gcf';
+      const sql = `
+        SELECT g.*, ct.core_taxa, at.all_taxa
+        FROM bigslice_gcf g
+        LEFT JOIN (
+          SELECT bigslice_gcf_id AS gcf_id,
+                 STRING_AGG(name || ' (' || cnt || ')', ', ' ORDER BY cnt DESC) AS core_taxa
+          FROM (
+            SELECT rt.bigslice_gcf_id, tm.name, COUNT(*) AS cnt
+            FROM regions_taxonomy rt
+              JOIN taxdump_map tm ON tm.tax_id = rt.tax_id AND tm.rank = 'genus'
+            WHERE rt.gcf_from_search = false
+            GROUP BY rt.bigslice_gcf_id, tm.name
+          ) sub
+          GROUP BY bigslice_gcf_id
+        ) ct ON g.gcf_id = ct.gcf_id
+        LEFT JOIN (
+          SELECT bigslice_gcf_id AS gcf_id,
+                 STRING_AGG(name || ' (' || cnt || ')', ', ' ORDER BY cnt DESC) AS all_taxa
+          FROM (
+            SELECT rt.bigslice_gcf_id, tm.name, COUNT(*) AS cnt
+            FROM regions_taxonomy rt
+              JOIN taxdump_map tm ON tm.tax_id = rt.tax_id AND tm.rank = 'genus'
+            GROUP BY rt.bigslice_gcf_id, tm.name
+          ) sub
+          GROUP BY bigslice_gcf_id
+        ) at ON g.gcf_id = at.gcf_id`;
       const { rows } = await pool.query(sql);
       return rows;
     } catch (error) {
