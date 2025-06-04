@@ -18,14 +18,14 @@ block content
                                 tr
                                     td(style="text-align: left;") Core BGCs
                                         span.info-icon(data-bs-toggle="tooltip" title="Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.")
-                                            img(src="/images/info.svg" width="16" height="16" alt="Info")
+                                            img(src="/images/info.svg" width="16" height="16" alt="Info" loading="lazy")
                                     td(style="text-align: left;") :
                                     td(style="text-align: left;")
                                         span.badge.badge-primary#core-count Loading...
                                 tr
                                     td(style="text-align: left;") Non-Putative BGCs
                                         span.info-icon(data-bs-toggle="tooltip" title="Non-putative BGCs are those that have a membership value less than 0.4 to their assigned GCF.")
-                                            img(src="/images/info.svg" width="16" height="16" alt="Info")
+                                            img(src="/images/info.svg" width="16" height="16" alt="Info" loading="lazy")
                                     td(style="text-align: left;") :
                                     td(style="text-align: left;")
                                         span.badge.badge-primary#non-putative-count Loading...
@@ -57,12 +57,12 @@ block content
                                 input.form-check-input.checkbox-custom(type="checkbox" id="showCoreMembers" name="showCoreMembers")
                                 label.form-check-label(for="showCoreMembers") Show only core members
                                 span.info-icon(data-bs-toggle="tooltip" title="Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.")
-                                    img(src="/images/info.svg" width="12" height="12" alt="Info")
+                                    img(src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy")
                             div.form-check.form-check-inline.ms-3
                                 input.form-check-input.checkbox-custom(type="checkbox" id="showNonPutativeMembers" name="showNonPutativeMembers")
                                 label.form-check-label(for="showNonPutativeMembers") Show only non-putative members
                                 span.info-icon(data-bs-toggle="tooltip" title="Non-putative BGCs are those that have a membership value less than 0.4 to their assigned GCF.")
-                                    img(src="/images/info.svg" width="12" height="12" alt="Info")
+                                    img(src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy")
 
                         table#bgcTable(style="width:100%;", class="stripe")
 
@@ -577,73 +577,73 @@ block scripts
                     $(thead).find('th').eq(0).html(`
                                 Region ID
                                 <span class="info-icon" data-bs-toggle="tooltip" title="Unique identifier for the region. Clicking this opens the antiSMASH viewer for this specific region.">
-                                    <img src="/images/info.svg" width="12" height="12" alt="Info" />
+                                    <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
                                 </span>
                             `);
                     $(thead).find('th').eq(1).html(`
                                 Assembly
                                 <span class="info-icon" data-bs-toggle="tooltip" title="MGnify Assembly identifier. Clicking this opens the antiSMASH viewer for the assembly.">
-                                    <img src="/images/info.svg" width="12" height="12" alt="Info" />
+                                    <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
                                 </span>
                             `);
                     $(thead).find('th').eq(2).html(`
                                 Product Category
                                 <span class="info-icon" data-bs-toggle="tooltip" title="Product category of the BGC.">
-                                    <img src="/images/info.svg" width="12" height="12" alt="Info" />
+                                    <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
                                 </span>
                             `);
                     $(thead).find('th').eq(3).html(`
                                 Product
                                 <span class="info-icon" data-bs-toggle="tooltip" title="Product type of the BGC.">
-                                    <img src="/images/info.svg" width="12" height="12" alt="Info" />
+                                    <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
                                 </span>
                             `);
                     $(thead).find('th').eq(4).html(`
                                 Biome
                                 <span class="info-icon" data-bs-toggle="tooltip" title="Biome annotation of the sample.">
-                                    <img src="/images/info.svg" width="12" height="12" alt="Info" />
+                                    <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
                                 </span>
                             `);
                     $(thead).find('th').eq(5).html(`
                                 Length
                                 <span class="info-icon" data-bs-toggle="tooltip" title="Length of the BGC.">
-                                    <img src="/images/info.svg" width="12" height="12" alt="Info" />
+                                    <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
                                 </span>
                             `);
                     $(thead).find('th').eq(6).html(`
                                 GCF
                                 <span class="info-icon" data-bs-toggle="tooltip" title="GCF identifier. Clicking this opens the GCF page.">
-                                    <img src="/images/info.svg" width="12" height="12" alt="Info" />
+                                    <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
                                 </span>
                             `);
                     $(thead).find('th').eq(7).html(`
                                 Membership Value
                                 <span class="info-icon" data-bs-toggle="tooltip" title="Membership value of the BGC to its assigned GCF. Values above 0.4 mean that the BGC is a putative member of the GCF.">
-                                    <img src="/images/info.svg" width="12" height="12" alt="Info" />
+                                    <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
                                 </span>
                             `);
                     $(thead).find('th').eq(8).html(`
                                 Core
                                 <span class="info-icon" data-bs-toggle="tooltip" title="Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.">
-                                    <img src="/images/info.svg" width="12" height="12" alt="Info" />
+                                    <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
                                 </span>
                             `);
                     $(thead).find('th').eq(9).html(`
                                 Contig Edge
                                 <span class="info-icon" data-bs-toggle="tooltip" title="Indicates whether the BGC is located at the edge of a contig.">
-                                    <img src="/images/info.svg" width="12" height="12" alt="Info" />
+                                    <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
                                 </span>
                             `);
                     $(thead).find('th').eq(10).html(`
                                 Contig
                                 <span class="info-icon" data-bs-toggle="tooltip" title="Name of the contig where the BGC is located.">
-                                    <img src="/images/info.svg" width="12" height="12" alt="Info" />
+                                    <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
                                 </span>
                             `);
                     $(thead).find('th').eq(11).html(`
                                 Region#
                                 <span class="info-icon" data-bs-toggle="tooltip" title="Region number of the BGC.">
-                                    <img src="/images/info.svg" width="12" height="12" alt="Info" />
+                                    <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
                                 </span>
                             `);
                 },
