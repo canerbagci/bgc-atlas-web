@@ -9,25 +9,20 @@ function getInfo() {
         url += `?samples=${samples}`;
     }
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.responseType = 'json';
-
-    xhr.onload = function () {
-        if (xhr.status === 200) {
-            const results = xhr.response;
-
-            document.getElementById("bgc-count").innerHTML = Number(results[0].bgc_count).toLocaleString();
-            document.getElementById("meanbgcsamples").innerHTML = results[0].meanbgcsamples;
-            document.getElementById("core-count").innerHTML = Number(results[0].core_count).toLocaleString();
-            document.getElementById("non-putative-count").innerHTML = Number(results[0].non_putative_count).toLocaleString();
+    $.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'json',
+        success: function(results) {
+            $("#bgc-count").html(Number(results[0].bgc_count).toLocaleString());
+            $("#meanbgcsamples").html(results[0].meanbgcsamples);
+            $("#core-count").html(Number(results[0].core_count).toLocaleString());
+            $("#non-putative-count").html(Number(results[0].non_putative_count).toLocaleString());
 
             // Update the header
-            const header = document.querySelector('h1');
-            header.innerHTML = gcf ? `GCF ${gcf}` : 'BGC Overview';
+            $("h1").html(gcf ? `GCF ${gcf}` : 'BGC Overview');
         }
-    }
-    xhr.send();
+    });
 }
 
 function plotProdChart() {
@@ -53,17 +48,15 @@ function plotProdChart() {
         }
     }
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.responseType = 'json';
-
-    xhr.onload = function () {
-        if (xhr.status === 200) {
-            const results = xhr.response;
+    $.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'json',
+        success: function(results) {
             const labels = results.map((row) => row.prod);
             const data = results.map((row) => row.count);
 
-            const canvas = document.getElementById('product-chart');
+            const canvas = $('#product-chart')[0];
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -152,8 +145,7 @@ function plotProdChart() {
                 },
             });
         }
-    }
-    xhr.send();
+    });
 }
 
 function plotChart() {
@@ -179,17 +171,15 @@ function plotChart() {
         }
     }
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.responseType = 'json';
-
-    xhr.onload = function () {
-        if (xhr.status === 200) {
-            const results = xhr.response;
+    $.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'json',
+        success: function(results) {
             const labels = results.map((row) => row.categories);
             const data = results.map((row) => row.count);
 
-            const canvas = document.getElementById('category-chart');
+            const canvas = $('#category-chart')[0];
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -277,8 +267,7 @@ function plotChart() {
                 },
             });
         }
-    }
-    xhr.send();
+    });
 }
 
 function drawTable() {
@@ -521,40 +510,45 @@ function downloadTableDataAsJson() {
 
     // Create a link to download the blob
     var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
 
-    // Determine the filename based on the gcf value
-    var params = new URLSearchParams(window.location.search);
-    var gcf = params.get('gcf');
-    var filename = gcf ? 'GCF_' + gcf + '.json' : 'all_bgcs.json';
-    a.download = filename;
+    // Create and trigger download using jQuery
+    var $a = $('<a>', {
+        href: url,
+        download: (function() {
+            // Determine the filename based on the gcf value
+            var params = new URLSearchParams(window.location.search);
+            var gcf = params.get('gcf');
+            return gcf ? 'GCF_' + gcf + '.json' : 'all_bgcs.json';
+        })()
+    });
 
-    a.click();
+    // Append to body, trigger click, and remove
+    $a.appendTo('body').trigger('click').remove();
 }
 
-// Initialize the page when the DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+// Initialize everything when jQuery is ready
+$(document).ready(function () {
+    // Initialize the page content
     getInfo();
     plotChart();
     plotProdChart();
     createMapGCF();
     createSunburstView('#sunburst-chart');
-});
 
-// Initialize the DataTable when jQuery is ready
-$(document).ready(function () {
+    // Initialize the DataTable
     var table = drawTable();
 
-    document.getElementById('showCoreMembers').addEventListener('change', function() {
+    // Add event listeners for checkboxes
+    $('#showCoreMembers').on('change', function() {
         $('#bgcTable').DataTable().ajax.reload();
     });
 
-    document.getElementById('showNonPutativeMembers').addEventListener('change', function() {
+    $('#showNonPutativeMembers').on('change', function() {
         $('#bgcTable').DataTable().ajax.reload();
     });
 
+    // Activate tooltips when table is redrawn
     $('#bgcTable').on('draw.dt', function () {
-        $('[data-bs-toggle="tooltip"]').tooltip(); // Activate Bootstrap tooltips
+        $('[data-bs-toggle="tooltip"]').tooltip();
     });
 });

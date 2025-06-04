@@ -1,16 +1,13 @@
 function getInfo() {
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', '/bgc-info', true);
-    xhr.responseType = 'json';
-
-    xhr.onload = function () {
-        if (xhr.status === 200) {
-            const results = xhr.response;
-            document.getElementById("gcf-count").innerHTML = "Total GCFs: " + results[0].gcf_count;
-            document.getElementById("mean-gcf").innerHTML = "Mean #BGC per GCF: " + results[0].meanbgc;
+    $.ajax({
+        url: '/bgc-info',
+        type: 'GET',
+        dataType: 'json',
+        success: function(results) {
+            $("#gcf-count").html("Total GCFs: " + results[0].gcf_count);
+            $("#mean-gcf").html("Mean #BGC per GCF: " + results[0].meanbgc);
         }
-    }
-    xhr.send()
+    });
 }
 
 function plotGCFChart() {
@@ -179,6 +176,10 @@ function plotGCFCountHist() {
     xhr.send();
 }
 
+getInfo();
+plotGCFChart();
+plotGCFCountHist();
+
 let legendLabels = new Set();
 
 // Function to map a label to a consistent color
@@ -207,11 +208,11 @@ function addToLegend(labels) {
             // Create a new legend item
             const legendItem = document.createElement('div');
             legendItem.innerHTML = `
-                <div style="display: flex; align-items: center;">
-                    <div style="width: 20px; height: 20px; background-color: ${legendLabels[label]}; margin-right: 10px;"></div>
-                    <span>${label}</span>
-                </div>
-            `;
+                        <div style="display: flex; align-items: center;">
+                            <div style="width: 20px; height: 20px; background-color: ${legendLabels[label]}; margin-right: 10px;"></div>
+                            <span>${label}</span>
+                        </div>
+                    `;
             legendContainer.appendChild(legendItem);
         }
     });
@@ -242,6 +243,7 @@ function buildHierarchy(labels, counts) {
 
     return root;
 }
+
 
 function createPieChart(canvasId, labels, counts, percentages) {
     const canvas = document.createElement('canvas');
@@ -335,14 +337,6 @@ function createPieChart(canvasId, labels, counts, percentages) {
     return canvas.outerHTML;
 }
 
-// Initialize the page when the DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    getInfo();
-    plotGCFChart();
-    plotGCFCountHist();
-});
-
-// Initialize the DataTable when jQuery is ready
 $(document).ready(function () {
     let isTextView = false; // Flag to toggle between text and chart view
 
@@ -398,8 +392,28 @@ $(document).ready(function () {
                             // Return pie chart when in chart view
                             const canvasId = `biomes-pie-chart-${row.gcf_id}`;
                             return `<div id="chart-container-${row.gcf_id}">
-                                                        <canvas id="${canvasId}" width="150" height="150"></canvas>
-                                                    </div>`;
+                                                                    <canvas id="${canvasId}" width="150" height="150"></canvas>
+                                                                </div>`;
+                        }
+                    }
+                    return data;
+                }
+            },
+            {
+                data: 'core_taxa',
+                name: 'Taxa (Core)',
+                title: 'Taxa (Core)',
+                type: 'string',
+                width: '17.5%',
+                render: function (data, type, row) {
+                    if (type === 'display') {
+                        if (isTextView) {
+                            return data;
+                        } else {
+                            const canvasId = `taxa-pie-chart-${row.gcf_id}`;
+                            return `<div id="chart-container-${row.gcf_id}">
+                                                                <canvas id="${canvasId}" width="150" height="150"></canvas>
+                                                            </div>`;
                         }
                     }
                     return data;
@@ -427,8 +441,24 @@ $(document).ready(function () {
                         const canvasId = `biomes-all-pie-chart-${row.gcf_id}`;  // Unique ID for each chart
                         // Set the width and height of the canvas
                         return `<div id="chart-container-${row.gcf_id}">
-                                                    <canvas id="${canvasId}" width="150" height="150"></canvas>
-                                                </div>`;
+                                                                <canvas id="${canvasId}" width="150" height="150"></canvas>
+                                                            </div>`;
+                    }
+                    return data;
+                }
+            },
+            {
+                data: 'all_taxa',
+                name: 'Taxa (All)',
+                title: 'Taxa (All)',
+                type: 'string',
+                width: '17.5%',
+                render: function (data, type, row) {
+                    if (type === 'display') {
+                        const canvasId = `taxa-all-pie-chart-${row.gcf_id}`;
+                        return `<div id="chart-container-${row.gcf_id}">
+                                                                <canvas id="${canvasId}" width="150" height="150"></canvas>
+                                                            </div>`;
                     }
                     return data;
                 }
@@ -500,51 +530,97 @@ $(document).ready(function () {
                     $(`#${canvasId}`).addClass('initialized');  // Mark the canvas as initialized
                     createPieChart(canvasId, labels, counts, percentages);
                 }
+
+                canvasId = `taxa-pie-chart-${rowData.gcf_id}`;
+
+                if (!$(`#${canvasId}`).hasClass('initialized')) {
+                    const taxData = rowData.core_taxa.split(',').map(item => {
+                        const [taxon, count] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
+                        return {label: taxon, count: parseInt(count) || 0};
+                    });
+
+                    const totalCount = taxData.reduce((acc, curr) => acc + curr.count, 0);
+                    const percentages = taxData.map(b => Math.round((b.count / totalCount) * 100));
+                    const counts = taxData.map(b => b.count);
+                    const labels = taxData.map(b => b.label);
+
+                    $(`#${canvasId}`).addClass('initialized');
+                    createPieChart(canvasId, labels, counts, percentages);
+                }
+
+                canvasId = `taxa-all-pie-chart-${rowData.gcf_id}`;
+
+                if (!$(`#${canvasId}`).hasClass('initialized')) {
+                    const taxData = rowData.all_taxa.split(',').map(item => {
+                        const [taxon, count] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
+                        return {label: taxon, count: parseInt(count) || 0};
+                    });
+
+                    const totalCount = taxData.reduce((acc, curr) => acc + curr.count, 0);
+                    const percentages = taxData.map(b => Math.round((b.count / totalCount) * 100));
+                    const counts = taxData.map(b => b.count);
+                    const labels = taxData.map(b => b.label);
+
+                    $(`#${canvasId}`).addClass('initialized');
+                    createPieChart(canvasId, labels, counts, percentages);
+                }
             });
         },
         headerCallback: function (thead, data, start, end, display) {
             $(thead).find('th').eq(0).html(`
-                                        GCF ID
-                                        <span class="info-icon" data-bs-toggle="tooltip" title="Unique identifier for the GCF. Clicking this opens the GCF viewer for this specific cluster.">
-                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
-                                        </span>
-                                    `);
+                                                    GCF ID
+                                                    <span class="info-icon" data-bs-toggle="tooltip" title="Unique identifier for the GCF. Clicking this opens the GCF viewer for this specific cluster.">
+                                                        <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                                    </span>
+                                                `);
             $(thead).find('th').eq(1).html(`
-                                        # Core BGCs
-                                        <span class="info-icon" data-bs-toggle="tooltip" title="Number of core BGCs in the GCF. Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.">
-                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
-                                        </span>
-                                    `);
+                                                    # Core BGCs
+                                                    <span class="info-icon" data-bs-toggle="tooltip" title="Number of core BGCs in the GCF. Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.">
+                                                        <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                                    </span>
+                                                `);
             $(thead).find('th').eq(2).html(`
-                                        Types (Core)
-                                        <span class="info-icon" data-bs-toggle="tooltip" title="Types of core BGCs in the GCF. Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.">
-                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
-                                        </span>
-                                    `);
+                                                    Types (Core)
+                                                    <span class="info-icon" data-bs-toggle="tooltip" title="Types of core BGCs in the GCF. Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.">
+                                                        <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                                    </span>
+                                                `);
             $(thead).find('th').eq(3).html(`
-                                        Biomes (Core)
-                                        <span class="info-icon" data-bs-toggle="tooltip" title="Biomes where core BGCs are found. Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.">
-                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
-                                        </span>
-                                    `);
+                                                    Biomes (Core)
+                                                    <span class="info-icon" data-bs-toggle="tooltip" title="Biomes where core BGCs are found. Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.">
+                                                        <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                                    </span>
+                                                `);
             $(thead).find('th').eq(4).html(`
-                                        # All BGCs
-                                        <span class="info-icon" data-bs-toggle="tooltip" title="Number of all BGCs in the GCF. All BGCs include both core and incomplete BGCs that are assigned to the GCF in the second step of the GCF clustering by using BiG-SLiCE's search function.">
-                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
-                                        </span>
-                                    `);
+                                                    Taxa (Core)
+                                                    <span class="info-icon" data-bs-toggle="tooltip" title="Taxonomic distribution of core BGCs. Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.">
+                                                        <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                                    </span>
+                                                `);
             $(thead).find('th').eq(5).html(`
-                                        Types (All)
-                                        <span class="info-icon" data-bs-toggle="tooltip" title="Types of all BGCs in the GCF. All BGCs include both core and incomplete BGCs that are assigned to the GCF in the second step of the GCF clustering by using BiG-SLiCE's search function.">
-                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
-                                        </span>
-                                    `);
+                                                    # All BGCs
+                                                    <span class="info-icon" data-bs-toggle="tooltip" title="Number of all BGCs in the GCF. All BGCs include both core and incomplete BGCs that are assigned to the GCF in the second step of the GCF clustering by using BiG-SLiCE's search function.">
+                                                        <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                                    </span>
+                                                `);
             $(thead).find('th').eq(6).html(`
-                                        Biomes (All)
-                                        <span class="info-icon" data-bs-toggle="tooltip" title="Biomes where all BGCs are found. All BGCs include both core and incomplete BGCs that are assigned to the GCF in the second step of the GCF clustering by using BiG-SLiCE's search function.">
-                                            <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
-                                        </span>
-                                    `);
+                                                    Types (All)
+                                                    <span class="info-icon" data-bs-toggle="tooltip" title="Types of all BGCs in the GCF. All BGCs include both core and incomplete BGCs that are assigned to the GCF in the second step of the GCF clustering by using BiG-SLiCE's search function.">
+                                                        <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                                    </span>
+                                                `);
+            $(thead).find('th').eq(7).html(`
+                                                    Biomes (All)
+                                                    <span class="info-icon" data-bs-toggle="tooltip" title="Biomes where all BGCs are found. All BGCs include both core and incomplete BGCs that are assigned to the GCF in the second step of the GCF clustering by using BiG-SLiCE's search function.">
+                                                        <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                                    </span>
+                                                `);
+            $(thead).find('th').eq(8).html(`
+                                                    Taxa (All)
+                                                    <span class="info-icon" data-bs-toggle="tooltip" title="Taxonomic distribution of all BGCs. All BGCs include both core and incomplete BGCs that are assigned to the GCF in the second step of the GCF clustering by using BiG-SLiCE's search function.">
+                                                        <img src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy" />
+                                                    </span>
+                                                `);
 
         }
     });
