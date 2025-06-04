@@ -15,52 +15,94 @@ const cacheService = require('../services/cacheService');
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('map', { title: 'BGC-Atlas', activePage: 'home' });
+  res.render('map', { 
+    title: 'Interactive Map', 
+    metaDescription: 'Explore the global distribution of biosynthetic gene clusters (BGCs) with our interactive map visualization tool.',
+    activePage: 'home' 
+  });
 });
 
 router.get('/map', (req, res) => {
-  res.render('map', { activePage: 'home' });
+  res.render('map', { 
+    title: 'Interactive Map', 
+    metaDescription: 'Explore the global distribution of biosynthetic gene clusters (BGCs) with our interactive map visualization tool.',
+    activePage: 'home' 
+  });
 });
 
 router.get('/samples', (req, res) => {
-  res.render('samples', { activePage: 'samples' });
+  res.render('samples', { 
+    title: 'Sample Database', 
+    metaDescription: 'Browse and search our comprehensive database of environmental samples containing biosynthetic gene clusters from around the world.',
+    activePage: 'samples' 
+  });
 });
 
 router.get('/bgcs', (req, res) => {
-  res.render('bgcs', { activePage: 'bgcs' });
+  res.render('bgcs', { 
+    title: 'Biosynthetic Gene Clusters', 
+    metaDescription: 'Explore our collection of biosynthetic gene clusters (BGCs) that encode for the production of secondary metabolites.',
+    activePage: 'bgcs' 
+  });
 });
 
 router.get('/gcfs', (req, res) => {
-  res.render('gcfs', { activePage: 'gcfs' });
-});
-
-router.get('/search-old', (req, res) => {
-  res.render('search', { activePage: 'search' });
+  res.render('gcfs', { 
+    title: 'Gene Cluster Families', 
+    metaDescription: 'Discover gene cluster families (GCFs) that group similar biosynthetic gene clusters based on sequence similarity and functional characteristics.',
+    activePage: 'gcfs' 
+  });
 });
 
 router.get('/search', (req, res) => {
-  res.render('search2', { activePage: 'search' });
+  res.render('search', {
+    title: 'Advanced Search', 
+    metaDescription: 'Powerful search tools to find specific biosynthetic gene clusters, samples, and gene cluster families in our database.',
+    activePage: 'search' 
+  });
 });
 
 router.get('/imprint', (req, res) => {
-  res.render('imprint', { activePage: 'imprint' });
+  res.render('imprint', { 
+    title: 'Imprint', 
+    metaDescription: 'Legal information about the BGC Atlas website, including contact details and responsible parties.',
+    activePage: 'imprint' 
+  });
 });
 
 router.get('/privacy', (req, res) => {
-  res.render('privacy', { activePage: 'privacy' });
+  res.render('privacy', { 
+    title: 'Privacy Policy', 
+    metaDescription: 'Information about how we collect, use, and protect your data when you use the BGC Atlas website.',
+    activePage: 'privacy' 
+  });
 });
 
 router.get('/antismash', (req, res) => {
   console.log("dataset:" + req.query.dataset);
-  res.render('antismash', {dataset: req.query.dataset, anchor:req.query.anchor, activePage: 'antismash'});
+  res.render('antismash', {
+    title: 'antiSMASH Analysis', 
+    metaDescription: 'View detailed antiSMASH analysis results for biosynthetic gene clusters in our database.',
+    dataset: req.query.dataset, 
+    anchor: req.query.anchor, 
+    activePage: 'antismash'
+  });
 });
 
 router.get('/downloads', (req, res) => {
-  res.render('downloads', { activePage: 'downloads' });
+  res.render('downloads', { 
+    title: 'Data Downloads', 
+    metaDescription: 'Download and analysis results from the BGC Atlas database for your research.',
+    activePage: 'downloads' 
+  });
 });
 
 router.get('/about', (req, res) => {
-  res.render('about', { activePage: 'about' });
+  res.render('about', { 
+    title: 'About BGC Atlas', 
+    metaDescription: 'Learn about the BGC Atlas project.',
+    activePage: 'about' 
+  });
 });
 
 // Cache statistics route - only available in development mode
@@ -176,12 +218,20 @@ router.get('/sitemap.xml', function (req,res) {
 //EXPERIMENTAL
 
 router.get('/body', (req, res) => {
-  res.render('body', );
+  res.render('body', {
+    title: 'Body Map Visualization',
+    metaDescription: 'Interactive visualization of biosynthetic gene clusters found in human body-associated microbiomes.',
+    activePage: 'body'
+  });
   // map.XMLtoWeb(res);
 });
 
 router.get('/test', (req, res) => {
-  res.render('test', );
+  res.render('test', {
+    title: 'Test Page',
+    metaDescription: 'Test page for development purposes.',
+    activePage: 'test'
+  });
 });
 
 router.get('/map-data-gcf', async (req, res) => {

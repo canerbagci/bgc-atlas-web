@@ -14,6 +14,9 @@ router.get('/monthly-soil/?', async (_req, res, next) => {
     const productMonths = await monthlySoilService.listMonths(PRODUCT_AS_DIR);
 
     res.render('monthlySoil', { 
+      title: 'Monthly Soil Samples',
+      metaDescription: 'Browse monthly soil sample collections with antiSMASH analysis results for biosynthetic gene clusters.',
+      activePage: 'monthlySoil',
       fullMonths, 
       productMonths 
     });
@@ -29,6 +32,9 @@ router.get('/monthly-soil/full-AS/:month/?', async (req, res, next) => {
     const datasets = await monthlySoilService.getDatasetDetails(FULL_AS_DIR, month, datasetNames);
 
     res.render('fullASMonth', {
+      title: `Full antiSMASH Analysis - ${month}`,
+      metaDescription: `Complete antiSMASH analysis results for soil samples collected in ${month}, showing all detected biosynthetic gene clusters.`,
+      activePage: 'monthlySoil',
       month,
       datasets
     });
@@ -42,6 +48,9 @@ router.get('/monthly-soil/product-AS/:month/?', async (req, res, next) => {
     const productTypesWithDatasets = await monthlySoilService.getProductTypesWithDatasets(month);
 
     res.render('productASMonth', {
+      title: `Product Analysis - ${month}`,
+      metaDescription: `Product-focused antiSMASH analysis for soil samples collected in ${month}, categorized by secondary metabolite types.`,
+      activePage: 'monthlySoil',
       month,
       productTypesWithDatasets
     });

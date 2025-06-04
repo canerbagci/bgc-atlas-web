@@ -14,7 +14,6 @@
     "express-sitemap": "^1.8.0",
     "fs-extra": "^11.3.0",
     "geoip-lite": "^1.4.7",
-    "helmet": "^8.1.0",
     "http-errors": "~1.6.3",
     "jquery": "^3.6.4",
     "leaflet": "^1.9.3",
