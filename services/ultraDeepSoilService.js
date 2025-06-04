@@ -1,7 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 
-const BASE_DIR = '/ceph/ibmi/tgm/bgc-atlas/ultra-deep-soil';
+const BASE_DIR = process.env.ULTRA_DEEP_SOIL_DIR || '/ceph/ibmi/tgm/bgc-atlas/ultra-deep-soil';
 const MAGS_DIR = path.join(BASE_DIR, 'mags');
 const META_DIR = path.join(BASE_DIR, 'metagenome');
 
