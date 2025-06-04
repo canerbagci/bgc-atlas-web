@@ -1,9 +1,9 @@
 const cacheService = require('../services/cacheService');
-const { client } = require('../config/database');
+const { client, pool } = require('../config/database');
 
 jest.mock('../config/database', () => ({
   client: { query: jest.fn() },
-  pool: {}
+  pool: { query: jest.fn() }
 }));
 
 jest.mock('../services/cacheService', () => ({
@@ -23,5 +23,33 @@ describe('bgcService.getBgcInfo', () => {
     expect(result).toEqual(rows);
     expect(client.query).toHaveBeenCalledTimes(1);
     expect(cacheService.getOrFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('bgcService.getBgcTable', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('constructs taxonomy join and returns taxon_name', async () => {
+    pool.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ region_id: 1, taxon_name: 'Bacteria' }] });
+
+    const options = {
+      draw: 1,
+      start: 0,
+      length: 10,
+      order: [],
+      searchBuilder: null
+    };
+
+    const result = await bgcService.getBgcTable(options);
+
+    expect(pool.query).toHaveBeenCalledTimes(3);
+    expect(pool.query.mock.calls[0][0]).toContain('regions_taxonomy');
+    expect(pool.query.mock.calls[0][0]).toContain('taxdump_map');
+    expect(result.data[0].taxon_name).toBe('Bacteria');
   });
 });

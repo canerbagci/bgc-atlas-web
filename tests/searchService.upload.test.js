@@ -10,6 +10,9 @@ jest.mock('child_process', () => ({
   spawn: jest.fn()
 }));
 
+process.env.SEARCH_UPLOADS_DIR = '/tmp';
+process.env.SEARCH_SCRIPT_PATH = '/bin/true';
+
 const { createTimestampedDirectory, processUploadedFiles } = require('../services/searchService');
 
 describe('createTimestampedDirectory', () => {

@@ -8,6 +8,8 @@ jest.mock('child_process', () => ({
   }))
 }));
 
+process.env.REPORTS_DIR = '/tmp';
+
 const { sanitizeDirectoryName, getMembership } = require('../services/searchService');
 const { spawn } = require('child_process');
 
