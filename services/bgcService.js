@@ -370,74 +370,121 @@ async function getGcfTableSunburst(gcfId = null, samples = null) {
   }
 }
 
+
 /**
- * Get GCF table data with pagination
- * @param {Object} options - Options for pagination
- * @param {number} options.draw - DataTables draw counter
- * @param {number} options.start - Start index for pagination
- * @param {number} options.length - Number of records to return
- * @param {Array} options.order - Sorting options
- * @returns {Promise<Object>} - Object containing GCF table data and metadata
- */
-/**
- * Return the GCF table with aggregated core- and all-taxon strings.
- * Uses the pre-computed materialised view `region_genus_count`,
- * so the query is fast.  Results are cached for 1 hour.
+ * Get paginated GCF table data.
+ * Uses the pre-computed `region_genus_count` materialised view instead of the
+ * expensive recursive CTE and logs the exact SQL sent to PostgreSQL.
  *
- * If you occasionally need “live” data, refresh the view first:
- *   await pool.query('REFRESH MATERIALIZED VIEW CONCURRENTLY region_genus_count');
+ * @param {Object}  options
+ * @param {number}  options.draw   DataTables draw counter
+ * @param {number}  options.start  Start index
+ * @param {number}  options.length Page size
+ * @param {Array}   options.order  [{ column: 0, dir: 'asc' | 'desc' }, …]
+ * @returns {Promise<Object>}
  */
-async function getGcfTable() {
-  const cacheKey = 'gcfTable';
+async function getGcfTable(options = {}) {
+  try {
+    const {
+      draw   = 1,
+      start  = 0,
+      length = 10,
+      order  = []
+    } = options;
 
-  return cacheService.getOrFetch(
-      cacheKey,
-      async () => {
-        try {
-          // ──────────────────────────────────────────────────────────────
-          // Fast aggregation: each join hits the view, not raw tables
-          // ──────────────────────────────────────────────────────────────
-          const sql = `
-          SELECT
-            g.*,
-            core.core_taxa,
-            allx.all_taxa
-          FROM bigslice_gcf g
-          /*  core taxa (exclude regions from search) */
-          LEFT JOIN (
-            SELECT
-              bigslice_gcf_id,
-              STRING_AGG(
-                genus_name || ' (' || cnt || ')',
-                ', ' ORDER BY cnt DESC
-              ) AS core_taxa
-            FROM region_genus_count
-            WHERE gcf_from_search = false
-            GROUP BY bigslice_gcf_id
-          ) core ON core.bigslice_gcf_id = g.gcf_id
-          /*  all taxa (all regions) */
-          LEFT JOIN (
-            SELECT
-              bigslice_gcf_id,
-              STRING_AGG(
-                genus_name || ' (' || cnt || ')',
-                ', ' ORDER BY cnt DESC
-              ) AS all_taxa
-            FROM region_genus_count
-            GROUP BY bigslice_gcf_id
-          ) allx ON allx.bigslice_gcf_id = g.gcf_id;
-        `;
+    /* ──────────────────────────────────────────────────────────────
+       Base (fast) SQL – no params yet
+       ────────────────────────────────────────────────────────────── */
+    const baseSQL = `
+      SELECT
+        g.*,
+        core.core_taxa,
+        allx.all_taxa
+      FROM bigslice_gcf g
+      /* core = regions that are NOT from search results */
+      LEFT JOIN (
+        SELECT
+          bigslice_gcf_id,
+          STRING_AGG(genus_name || ' (' || cnt || ')', ', ' ORDER BY cnt DESC) AS core_taxa
+        FROM region_genus_count
+        WHERE gcf_from_search = false
+        GROUP BY bigslice_gcf_id
+      ) AS core ON core.bigslice_gcf_id = g.gcf_id
+      /* all = every region */
+      LEFT JOIN (
+        SELECT
+          bigslice_gcf_id,
+          STRING_AGG(genus_name || ' (' || cnt || ')', ', ' ORDER BY cnt DESC) AS all_taxa
+        FROM region_genus_count
+        GROUP BY bigslice_gcf_id
+      ) AS allx ON allx.bigslice_gcf_id = g.gcf_id
+    `;
 
-          const { rows } = await pool.query(sql);
-          return rows;
-        } catch (error) {
-          console.error('Error getting GCF table:', error);
-          throw error;
-        }
-      },
-      3600 // cache for 1 hour
-  );
+    /* ───────────────
+       ORDER BY logic
+       ─────────────── */
+    let orderByClause = '';
+    if (order.length) {
+      const selectable = [
+        'gcf_id',            // 0
+        'num_core_regions',  // 1
+        'core_products',     // 2
+        'core_biomes',       // 3
+        'core_taxa',         // 4
+        'num_all_regions',   // 5
+        'all_products',      // 6
+        'all_biomes',        // 7
+        'all_taxa'           // 8
+      ];
+      orderByClause =
+          'ORDER BY ' +
+          order
+              .map(({ column, dir }) =>
+                  `${selectable[Number(column)]} ${dir === 'asc' ? 'ASC' : 'DESC'}`
+              )
+              .join(', ');
+    } else {
+      orderByClause = 'ORDER BY num_core_regions DESC, gcf_id DESC';
+    }
+
+    /* ────────────────────────────────────
+       Final SQL with pagination placeholders
+       ──────────────────────────────────── */
+    const paginatedSQL = `
+      ${baseSQL}
+      ${orderByClause}
+      LIMIT $1 OFFSET $2
+    `;
+
+    // Optional: log the SQL *with* actual limit/offset values
+    console.log(
+        'GCF table query:',
+        paginatedSQL.replace('$1', length).replace('$2', start)
+    );
+
+    /* ───────────────
+       Execute queries
+       ─────────────── */
+    const countRes = await pool.query('SELECT COUNT(*) FROM bigslice_gcf;');
+    const recordsTotal = Number(countRes.rows[0].count);
+
+    const { rows } = await pool.query(paginatedSQL, [length, start]);
+
+    /* ──────────────────────
+       Return DataTables shape
+       ────────────────────── */
+    return {
+      draw: Number(draw),
+      recordsTotal,
+      recordsFiltered: recordsTotal, // no additional filtering yet
+      data: rows
+    };
+  } catch (err) {
+    console.error('Error getting GCF table:', err);
+    throw err;
+  }
 }
+
 
 /**
  * Get BGC table data with filtering and pagination
