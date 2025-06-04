@@ -31,7 +31,7 @@ client.connect((err) => {
     if (err) {
         console.error('Error connecting to PostgreSQL:', err.stack);
     } else {
-        console.log('Connected to PostgreSQL database');
+        console.log(`[${new Date().toISOString()}] Connected to PostgreSQL database`);
     }
 });
 
