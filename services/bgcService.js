@@ -350,10 +350,9 @@ async function getGcfTableSunburst(gcfId = null, samples = null) {
 
     // Handle the samples query parameter
     if (samples && samples.length > 0) {
-      let samplesStr = Array.isArray(samples) 
-        ? samples.map(sample => `'${sample.trim()}'`).join(', ')
-        : samples.split(',').map(sample => `'${sample.trim()}'`).join(', ');
-      filters.push(`assembly IN (${samplesStr})`);
+      let samplesArray = Array.isArray(samples) ? samples : samples.split(',').map(sample => sample.trim());
+      filters.push(`assembly IN (${samplesArray.map((_, idx) => `$${params.length + idx + 1}`).join(', ')})`);
+      params.push(...samplesArray);
     }
 
     // If there are filters, append them to the SQL query
@@ -426,6 +425,8 @@ async function getBgcTable(options) {
     }
 
     let whereClauses = [];
+    let params = [];
+    let paramIndex = 1;
 
     if (searchBuilder && searchBuilder.criteria) {
       searchBuilder.criteria.forEach((criteria) => {
@@ -471,14 +472,21 @@ async function getBgcTable(options) {
     }
 
     if (gcf) {
-      whereClauses.push('bigslice_gcf_id = ' + gcf);
+      let gcfIdNum = parseInt(gcf, 10);
+      if (isNaN(gcfIdNum)) {
+        throw new Error('Invalid gcf parameter');
+      }
+      whereClauses.push(`bigslice_gcf_id = $${paramIndex}`);
+      params.push(gcfIdNum);
+      paramIndex++;
     }
 
     if (samples) {
-      // Split the samples string into an array, and wrap each sample in single quotes
-      let sampleList = samples.split(',').map(sample => `'${sample.trim()}'`).join(', ');
-      // Add the clause with the correctly formatted sample list
-      whereClauses.push(`assembly IN (${sampleList})`);
+      let samplesArray = Array.isArray(samples) ? samples : samples.split(',').map(sample => sample.trim());
+      let placeholders = samplesArray.map((_, idx) => `$${paramIndex + idx}`).join(', ');
+      whereClauses.push(`assembly IN (${placeholders})`);
+      params.push(...samplesArray);
+      paramIndex += samplesArray.length;
     }
 
     if (showCoreMembers) {
@@ -494,11 +502,16 @@ async function getBgcTable(options) {
     let totalCountQuery = 'SELECT COUNT(*) FROM regions ' + whereClause;
     let filterCountQuery = 'SELECT COUNT(*) FROM regions ' + whereClause;
 
-    const totalCountResult = await pool.query(totalCountQuery);
-    const filterCountResult = await pool.query(filterCountQuery);
+    const totalCountResult = await pool.query(totalCountQuery, params);
+    const filterCountResult = await pool.query(filterCountQuery, params);
 
-    const sql = 'SELECT * FROM regions ' + whereClause + ' ' + orderByClause + ' LIMIT ' + length + ' OFFSET ' + start + ';';
-    const { rows } = await pool.query(sql);
+    let dataParams = params.slice();
+    const limitPlaceholder = `$${dataParams.length + 1}`;
+    dataParams.push(length);
+    const offsetPlaceholder = `$${dataParams.length + 1}`;
+    dataParams.push(start);
+    const sql = `SELECT * FROM regions ${whereClause} ${orderByClause} LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder};`;
+    const { rows } = await pool.query(sql, dataParams);
 
     return {
       draw: draw,
