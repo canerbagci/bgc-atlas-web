@@ -12,6 +12,9 @@ jest.mock('child_process', () => ({
 
 const { createTimestampedDirectory, processUploadedFiles } = require('../services/searchService');
 
+process.env.SEARCH_UPLOADS_DIR = '/tmp/uploads';
+process.env.SEARCH_SCRIPT_PATH = '/bin/echo';
+
 describe('createTimestampedDirectory', () => {
   beforeEach(() => {
     jest.spyOn(Date, 'now').mockReturnValue(1234567890000);

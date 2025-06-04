@@ -11,6 +11,8 @@ jest.mock('child_process', () => ({
 const { sanitizeDirectoryName, getMembership } = require('../services/searchService');
 const { spawn } = require('child_process');
 
+process.env.REPORTS_DIR = '/vol/compl_bgcs_bigslice_def_t300/reports';
+
 describe('sanitizeDirectoryName', () => {
   it('allows valid names', () => {
     expect(sanitizeDirectoryName('abc123')).toBe('abc123');
