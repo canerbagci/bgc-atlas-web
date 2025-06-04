@@ -1,18 +1,32 @@
 extends layout
 
 block content
-    div.row.flex-fill.d-flex.justify-content-start(style="height: inherit;")
-        .container(height="100%")
-            iframe#contentFrame(src="https://bgc-atlas.cs.uni-tuebingen.de/datasets/" + dataset + "/antismash/index.html#" + anchor width="100%" height="100%" style="border:none; display: block;")
+    div.row.flex-fill.d-flex.justify-content-start(style="height: 100%;")
+        .container-fluid(style="padding: 0; display: flex; flex-direction: column; height: 100%;")
+            iframe#contentFrame(src="https://bgc-atlas.cs.uni-tuebingen.de/datasets/" + dataset + "/antismash/index.html#" + anchor)
 
 block styles
     style.
-        body {
-            display: block;
+        /* Override content-container padding for antismash page */
+        .content-container {
+            padding: 0;
+        }
+
+        /* These styles are now handled by the global CSS */
+        #contentFrame {
+            width: 100%;
+            border: none;
         }
 
         #overview {
             display: block;
+        }
+
+        #contentFrame {
+            flex: 1;
+            border: none;
+            width: 100%;
+            height: 100%;
         }
 
 block scripts
@@ -20,27 +34,42 @@ block scripts
         console.log("antismash - pug script");
         function adjustIframeHeight() {
             console.log("adjusting iframe height");
-            function modifyIframeContent() {
-                var iframe = document.getElementById('contentFrame');
-                if (iframe && iframe.contentWindow && iframe.contentWindow.document) {
-                    var iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+            var iframe = document.getElementById('contentFrame');
+            if (iframe) {
+                // Calculate available height (viewport height minus navbar and footer)
+                var viewportHeight = window.innerHeight;
+                var navbarHeight = 56; // From CSS
+                var footerHeight = 40; // From CSS
+                var availableHeight = viewportHeight - navbarHeight - footerHeight;
 
-                    // Inject CSS to make sure the iframe's content takes the full height
-                    var style = iframeDocument.createElement('style');
-                    style.type = 'text/css';
-                    style.innerHTML = `
-                        html, body {
-                            height: 100%;
-                            margin: 0;
-                            padding: 0;
-                        }
-                        .container, .your-main-container {
-                            height: 100%; /* Ensure any containers inside use full height */
-                            display: flex;
-                            flex-direction: column;
-                        }
-                    `;
-                    iframeDocument.head.appendChild(style);
+                // Set iframe height to fill available space
+                iframe.style.height = availableHeight + 'px';
+
+                // Also inject CSS into iframe content if possible
+                if (iframe.contentWindow && iframe.contentWindow.document) {
+                    try {
+                        var iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+
+                        // Inject CSS to make sure the iframe's content takes the full height
+                        var style = iframeDocument.createElement('style');
+                        style.type = 'text/css';
+                        style.innerHTML = `
+                            html, body {
+                                height: 100%;
+                                margin: 0;
+                                padding: 0;
+                                overflow: auto;
+                            }
+                            .container, .your-main-container {
+                                height: 100%; /* Ensure any containers inside use full height */
+                                display: flex;
+                                flex-direction: column;
+                            }
+                        `;
+                        iframeDocument.head.appendChild(style);
+                    } catch (e) {
+                        console.error("Error modifying iframe content:", e);
+                    }
                 }
             }
         }
@@ -114,18 +143,18 @@ block scripts
             }
         }
 
-        // // Handle the iframe load event
-        // document.getElementById('contentFrame').addEventListener('load', function () {
-        //     adjustIframeHeight(); // Adjust the height once the iframe is loaded
-        // });
-        //
-        // // Optionally handle window resize if iframe content may change size
-        // window.addEventListener('resize', adjustIframeHeight);
+        // Call adjustIframeHeight immediately when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            adjustIframeHeight();
+        });
 
-        //
-        document.getElementById('contentFrame').addEventListener('load', function() {
-            // adjustIframeHeight();
+        // Handle the iframe load event
+        document.getElementById('contentFrame').addEventListener('load', function () {
+            adjustIframeHeight(); // Adjust the height once the iframe is loaded
             modifyIframeContent("#{dataset}");
         });
-        //
-        // // window.addEventListener('resize', adjustIframeHeight);
+
+        // Handle window resize to dynamically adjust iframe height
+        window.addEventListener('resize', function() {
+            adjustIframeHeight();
+        });

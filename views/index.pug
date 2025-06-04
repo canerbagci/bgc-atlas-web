@@ -1,23 +1,70 @@
 extends layout.pug
 
+block head
+  link(rel="stylesheet", href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css")
+  link(rel="stylesheet", href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css")
+  link(rel="stylesheet", href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css")
+  link(rel="stylesheet", href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css")
+
+  script(src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js")
+  script(src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js")
+  script(src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js")
+  script(src="/javascripts/map.js")
+
 block content
-  .container
-    #sample-info.col-md-4
-      p Sample info content goes here.
-    #map.col-md-8
-      p Map content goes here.
+  .container.d-flex.flex-column.h-100
+    .row.flex-grow-1
+      #sample-info.col-md-4
+        h3 Sample Information
+        p
+          strong Total Samples: 
+          span#samples-count Loading...
+        p
+          strong Analyzed: 
+          span#analyzed-count Loading...
+        p
+          strong Running: 
+          span#running-count Loading...
+        p
+          strong BGCs: 
+          span#bgcs-count Loading...
+        p
+          strong Complete BGCs: 
+          span#compl-bgcs Loading...
+      #map.col-md-8
+
+block scripts
+  script.
+    document.addEventListener("DOMContentLoaded", function() {
+      createMap();
+      getSampleInfo();
+    });
 
 block styles
   style.
     /* Custom styles for the sample-info and map divs */
     #sample-info {
       background-color: #f2f2f2;
-      height: 200px;
+      height: 100%;
+      padding: 15px;
+      overflow-y: auto;
     }
 
     #map {
       background-color: #ccc;
-      height: 200px;
+      height: 100%;
+    }
+
+    /* Make sure the container takes full height of the content area */
+    .container.d-flex.flex-column.h-100 {
+      height: 100% !important;
+      min-height: 100%;
+    }
+
+    /* Make sure the row takes full height */
+    .row.flex-grow-1 {
+      height: 100%;
+      flex: 1;
     }
 
     /* Media queries to stack divs vertically on mobile devices */
@@ -25,5 +72,12 @@ block styles
       #sample-info,
       #map {
         width: 100% !important;
+        height: 50%; /* Split the height on mobile */
       }
+    }
+
+    /* Leaflet custom styles */
+    .leaflet-container {
+      height: 100%;
+      width: 100%;
     }
