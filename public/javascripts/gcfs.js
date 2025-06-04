@@ -11,17 +11,15 @@ function getInfo() {
 }
 
 function plotGCFChart() {
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', '/gcf-category-count', true);
-    xhr.responseType = 'json';
-
-    xhr.onload = function () {
-        if (xhr.status === 200) {
-            const results = xhr.response;
+    $.ajax({
+        url: '/gcf-category-count',
+        type: 'GET',
+        dataType: 'json',
+        success: function(results) {
             const labels = results.map((row) => row.bgc_type);
             const data = results.map((row) => row.unique_families);
 
-            const canvas = document.getElementById('gcf-category-chart');
+            const canvas = $('#gcf-category-chart')[0];
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -82,23 +80,19 @@ function plotGCFChart() {
                 },
             });
         }
-    }
-    xhr.send();
+    });
 }
 
 function plotGCFCountHist() {
-    const xhr = new XMLHttpRequest();
-
-    xhr.open('GET', '/gcf-count-hist', true);
-    xhr.responseType = 'json';
-
-    xhr.onload = function () {
-        if (xhr.status === 200) {
-            const results = xhr.response;
+    $.ajax({
+        url: '/gcf-count-hist',
+        type: 'GET',
+        dataType: 'json',
+        success: function(results) {
             const labels = results.map((row) => row.bucket_range);
             const data = results.map((row) => row.count_in_bucket);
 
-            const canvas = document.getElementById('gcf-count-hist-chart');
+            const canvas = $('#gcf-count-hist-chart')[0];
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -168,17 +162,11 @@ function plotGCFCountHist() {
                             }
                         }
                     }
-
                 },
             });
         }
-    }
-    xhr.send();
+    });
 }
-
-getInfo();
-plotGCFChart();
-plotGCFCountHist();
 
 let legendLabels = new Set();
 
@@ -338,6 +326,11 @@ function createPieChart(canvasId, labels, counts, percentages) {
 }
 
 $(document).ready(function () {
+    // Initialize the page content
+    getInfo();
+    plotGCFChart();
+    plotGCFCountHist();
+
     let isTextView = false; // Flag to toggle between text and chart view
 
     $('#toggleViewButton').on('click', function () {
@@ -534,10 +527,12 @@ $(document).ready(function () {
                 canvasId = `taxa-pie-chart-${rowData.gcf_id}`;
 
                 if (!$(`#${canvasId}`).hasClass('initialized')) {
-                    const taxData = rowData.core_taxa.split(',').map(item => {
-                        const [taxon, count] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
-                        return {label: taxon, count: parseInt(count) || 0};
-                    });
+                    const taxData = (rowData.core_taxa || '')
+                        .split(',')
+                        .map(item => {
+                            const [taxon, count] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
+                            return { label: taxon, count: parseInt(count) || 0 };
+                        });
 
                     const totalCount = taxData.reduce((acc, curr) => acc + curr.count, 0);
                     const percentages = taxData.map(b => Math.round((b.count / totalCount) * 100));
@@ -550,7 +545,7 @@ $(document).ready(function () {
 
                 canvasId = `taxa-all-pie-chart-${rowData.gcf_id}`;
 
-                if (!$(`#${canvasId}`).hasClass('initialized')) {
+                if (!$(`#${canvasId}`).hasClass('initialized') && rowData.all_taxa) {
                     const taxData = rowData.all_taxa.split(',').map(item => {
                         const [taxon, count] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
                         return {label: taxon, count: parseInt(count) || 0};
