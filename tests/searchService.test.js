@@ -8,6 +8,8 @@ jest.mock('child_process', () => ({
   }))
 }));
 
+process.env.REPORTS_DIR = '/tmp';
+
 const { sanitizeDirectoryName, getMembership } = require('../services/searchService');
 const { spawn } = require('child_process');
 
@@ -32,7 +34,7 @@ describe('getMembership', () => {
 
   it('spawns sqlite3 with sanitized path', async () => {
     await getMembership('validID');
-    const expected = path.join('/vol/compl_bgcs_bigslice_def_t300/reports', 'validID', 'data.db');
+    const expected = path.join(process.env.REPORTS_DIR, 'validID', 'data.db');
     expect(spawn).toHaveBeenCalledWith('sqlite3', [expected, expect.any(String)]);
   });
 });

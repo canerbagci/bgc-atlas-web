@@ -411,7 +411,7 @@ async function getBgcTable(options) {
       searchBuilder
     } = options;
 
-    const columns = ['region_id', 'assembly', 'product_categories', 'products', 'longest_biome', 'start', 'bigslice_gcf_id', 'membership_value',
+    const columns = ['region_id', 'assembly', 'taxon_name', 'product_categories', 'products', 'longest_biome', 'start', 'bigslice_gcf_id', 'membership_value',
       'contig_edge', 'contig_name', 'region_num'];
 
     let orderByClause = '';
@@ -533,8 +533,10 @@ async function getBgcTable(options) {
 
     let whereClause = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
 
-    let totalCountQuery = 'SELECT COUNT(*) FROM regions ' + whereClause; //NEEDS TO BE LIKE THIS
-    let filterCountQuery = 'SELECT COUNT(*) FROM regions ' + whereClause;
+    const joinClause = 'FROM regions LEFT JOIN regions_taxonomy USING (region_id) LEFT JOIN taxdump_map ON regions_taxonomy.tax_id = taxdump_map.tax_id';
+
+    let totalCountQuery = `SELECT COUNT(*) ${joinClause} ${whereClause}`;
+    let filterCountQuery = `SELECT COUNT(*) ${joinClause} ${whereClause}`;
 
     const totalCountResult = await pool.query(totalCountQuery, params);
     const filterCountResult = await pool.query(filterCountQuery, params);
@@ -544,7 +546,11 @@ async function getBgcTable(options) {
     dataParams.push(length);
     const offsetPlaceholder = `$${dataParams.length + 1}`;
     dataParams.push(start);
-    const sql = `SELECT * FROM regions ${whereClause} ${orderByClause} LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder};`;
+    const sql = `SELECT regions.*, taxdump_map.name AS taxon_name
+      FROM regions
+      LEFT JOIN regions_taxonomy USING (region_id)
+      LEFT JOIN taxdump_map ON regions_taxonomy.tax_id = taxdump_map.tax_id
+      ${whereClause} ${orderByClause} LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder};`;
     const { rows } = await pool.query(sql, dataParams);
 
     return {
