@@ -109,8 +109,8 @@ function createMap() {
                     var sampleIdsParam = containedIDs.join(','); // Join the IDs with commas
                     var fullUrl = baseUrl + encodeURIComponent(sampleIdsParam);
 
-                    // Open the URL in a new tab or redirect
-                    window.open(fullUrl, '_blank'); // Opens in a new tab
+                    // Open the URL in a new tab using "noopener" for security
+                    window.open(fullUrl, '_blank', 'noopener'); // Opens in a new tab
                     // Alternatively, you can use window.location.href = fullUrl; to redirect in the same tab
                 } else {
                     alert("Please use the rectangle tool on the left-side to select a region for inspection.");
