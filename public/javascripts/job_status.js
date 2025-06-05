@@ -443,58 +443,54 @@ async function fetchBiomeData(gcfIds) {
     }
 }
 
-// Function to process biome data by hierarchy level
-function processBiomeDataByLevel(data, level) {
-    console.log(`Processing biome data for level ${level}`);
+/**
+ * Group biome records by a chosen hierarchy level and return
+ * an array like [{ biome: "Human", count: 123 }, ...] sorted by count ↓.
+ *
+ * @param {Array<{biome: string, count: string|number}>} data
+ * @param {number|string} [level=1] – 1-based depth in the “:” hierarchy
+ * @returns {Array<{biome: string, count: number}>}
+ */
+function processBiomeDataByLevel(
+    data,
+    level = 1,
+    topN = 15
+) {
+    const targetLevel = Number(level) >= 1 ? Number(level) : 1;
+    const grouped     = new Map();                     // Map<levelName, numericCount>
 
-    // Default to level 1 if invalid level is provided
-    const hierarchyLevel = parseInt(level, 10) || 1;
+    for (const { biome, count } of data) {
+        const parts   = biome.split(':');
+        const idx     = Math.min(targetLevel - 1, parts.length - 1);
+        let   keyName = (parts[idx] ?? '').trim() || 'Unknown';
 
-    // Create a map to store grouped data
-    const groupedData = new Map();
-
-    // Process each biome entry
-    data.forEach(item => {
-        // Split the biome name by colon to get hierarchy parts
-        const biomeParts = item.biome.split(':');
-
-        // Get the part at the specified level (if it exists)
-        let levelName = '';
-        if (hierarchyLevel <= biomeParts.length) {
-            levelName = biomeParts[hierarchyLevel - 1];
-        } else {
-            // If the requested level is deeper than what's available,
-            // use the deepest available level
-            levelName = biomeParts[biomeParts.length - 1];
+        // Flag missing depths, e.g. "Aquatic:undefined"
+        if (targetLevel > parts.length) {
+            keyName += ':undefined';
         }
 
-        // Trim any whitespace
-        levelName = levelName.trim();
+        const nCount = Number(count) || 0;
+        grouped.set(keyName, (grouped.get(keyName) || 0) + nCount);
+    }
 
-        // If empty, use "Unknown"
-        if (!levelName) {
-            levelName = "Unknown";
+    // Sorted array of { biome, count }
+    const sorted = [...grouped.entries()]
+        .map(([biome, count]) => ({ biome, count }))
+        .sort((a, b) => b.count - a.count);
+
+    // Collapse the long tail into "Others"
+    if (sorted.length > topN) {
+        const top    = sorted.slice(0, topN);
+        const others = sorted.slice(topN)
+            .reduce((sum, { count }) => sum + count, 0);
+
+        if (others > 0) {
+            top.push({ biome: 'Others', count: others });  // always the last element
         }
+        return top;
+    }
 
-        // Add or update the count in the grouped data
-        if (groupedData.has(levelName)) {
-            groupedData.set(levelName, groupedData.get(levelName) + item.count);
-        } else {
-            groupedData.set(levelName, item.count);
-        }
-    });
-
-    // Convert the map to an array of objects
-    const result = Array.from(groupedData.entries()).map(([biome, count]) => ({
-        biome,
-        count
-    }));
-
-    // Sort by count in descending order
-    result.sort((a, b) => b.count - a.count);
-
-    console.log(`Processed ${result.length} unique biomes at level ${level}`);
-    return result;
+    return sorted;   // fewer than topN rows → return as-is
 }
 
 // Function to create and update the biome chart
@@ -522,12 +518,17 @@ async function updateBiomeChart(gcfIds, level) {
         return;
     }
 
+    console.log(rawBiomeData);
+
     // Process the biome data by the selected level
     const processedData = processBiomeDataByLevel(rawBiomeData, level);
 
     // Prepare data for the chart
     const labels = processedData.map(item => item.biome);
     const counts = processedData.map(item => item.count);
+
+    console.log(labels);
+    console.log(counts);
 
     // Get the canvas element
     const ctx = document.getElementById('biomeChart');
