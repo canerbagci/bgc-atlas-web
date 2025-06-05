@@ -20,7 +20,10 @@ router.get('/monthly-soil/?', async (_req, res, next) => {
       fullMonths, 
       productMonths 
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
 });
 
 // 2. Full-AS month index page
@@ -38,7 +41,10 @@ router.get('/monthly-soil/full-AS/:month/?', async (req, res, next) => {
       month,
       datasets
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
 });
 
 // 3. Product-AS month index page
@@ -54,7 +60,10 @@ router.get('/monthly-soil/product-AS/:month/?', async (req, res, next) => {
       month,
       productTypesWithDatasets
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
 });
 
 // Note: Product-AS product type index page route removed

@@ -4,7 +4,7 @@ const bgcService = require('../services/bgcService');
 
 /* ───────────────────────────── BGC Routes ─────────────────────────────── */
 
-router.get('/bgc-info', async (req, res) => {
+router.get('/bgc-info', async (req, res, next) => {
   try {
     const gcfId = req.query.gcf ? parseInt(req.query.gcf, 10) : null;
     if (req.query.gcf && isNaN(gcfId)) {
@@ -16,11 +16,11 @@ router.get('/bgc-info', async (req, res) => {
     res.json(bgcInfo);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Database query error' });
+    next(error);
   }
 });
 
-router.get('/pc-category-count', async (req, res) => {
+router.get('/pc-category-count', async (req, res, next) => {
   try {
     const gcfId = req.query.gcf ? parseInt(req.query.gcf, 10) : null;
     if (req.query.gcf && isNaN(gcfId)) {
@@ -32,21 +32,21 @@ router.get('/pc-category-count', async (req, res) => {
     res.json(categoryCount);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Database query error' });
+    next(error);
   }
 });
 
-router.get('/gcf-category-count', async (req, res) => {
+router.get('/gcf-category-count', async (req, res, next) => {
   try {
     const catInfo = await bgcService.getGcfCategoryCounts();
     res.json(catInfo);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Database query error' });
+    next(error);
   }
 });
 
-router.get('/pc-product-count', async (req, res) => {
+router.get('/pc-product-count', async (req, res, next) => {
   try {
     const gcfId = req.query.gcf ? parseInt(req.query.gcf, 10) : null;
     if (req.query.gcf && isNaN(gcfId)) {
@@ -58,11 +58,11 @@ router.get('/pc-product-count', async (req, res) => {
     res.json(productCount);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Database query error' });
+    next(error);
   }
 });
 
-router.get('/bgc-table', async (req, res) => {
+router.get('/bgc-table', async (req, res, next) => {
   try {
     const options = {
       gcf: req.query.gcf,
@@ -81,7 +81,7 @@ router.get('/bgc-table', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 });
 
