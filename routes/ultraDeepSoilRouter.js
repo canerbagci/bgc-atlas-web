@@ -14,7 +14,10 @@ router.get('/ultra-deep-soil/?', async (_req, res, next) => {
     const magCount = dirs.length;
     const html = ultraDeepSoilService.generateIndexHtml(magCount);
     res.type('html').send(html);
-  } catch (err) { next(err); }
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
 });
 
 // 2. MAGs index page
@@ -23,7 +26,10 @@ router.get('/ultra-deep-soil/mags/?', async (_req, res, next) => {
     const dirs = await ultraDeepSoilService.listMagDirectories();
     const html = ultraDeepSoilService.generateMagListHtml(dirs);
     res.type('html').send(html);
-  } catch (err) { next(err); }
+  } catch (err) {
+    console.error(err);
+    next(err);
+  }
 });
 
 // 3a. Serve /ultra-deep-soil/metagenome/***  (raw antiSMASH output)

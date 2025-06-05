@@ -65,7 +65,7 @@ function sendEvent(message) {
 }
 
 // Upload route
-router.post('/upload', (req, res) => {
+router.post('/upload', (req, res, next) => {
   sendEvent({ status: 'Uploading' });
 
   upload(req, res, async (err) => {
@@ -80,7 +80,7 @@ router.post('/upload', (req, res) => {
       res.json(records);
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: error.message });
+      next(error);
     }
   });
 });

@@ -4,7 +4,7 @@ const mapService = require('../services/mapService');
 
 /* ───────────────────────────── Map Routes ─────────────────────────────── */
 
-router.get('/map-data-gcf', async (req, res) => {
+router.get('/map-data-gcf', async (req, res, next) => {
   try {
     const gcfId = req.query.gcf ? parseInt(req.query.gcf, 10) : null;
     if (req.query.gcf && isNaN(gcfId)) {
@@ -16,48 +16,48 @@ router.get('/map-data-gcf', async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Database query error' });
+    next(error);
   }
 });
 
-router.get('/map-data', async (req, res) => {
+router.get('/map-data', async (req, res, next) => {
   try {
     const data = await mapService.getMapData();
     res.json(data);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Database query error' });
+    next(error);
   }
 });
 
-router.get('/body-map-data', async (req, res) => {
+router.get('/body-map-data', async (req, res, next) => {
   try {
     const data = await mapService.getBodyMapData();
     res.json(data);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Database query error' });
+    next(error);
   }
 });
 
-router.get('/filter/:column', async (req, res) => {
+router.get('/filter/:column', async (req, res, next) => {
   try {
     const data = await mapService.getFilteredMapData(req.params.column);
     res.json(data);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Database query error' });
+    next(error);
   }
 });
 
-router.get('/column-values/:column', async (req, res) => {
+router.get('/column-values/:column', async (req, res, next) => {
   try {
     const column = req.params.column;
     const data = await mapService.getColumnValues(column);
     res.json(data);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Database query error' });
+    next(error);
   }
 });
 

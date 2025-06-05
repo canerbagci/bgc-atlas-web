@@ -4,17 +4,17 @@ const bgcService = require('../services/bgcService');
 
 /* ───────────────────────────── GCF Routes ─────────────────────────────── */
 
-router.get('/gcf-count-hist', async (req, res) => {
+router.get('/gcf-count-hist', async (req, res, next) => {
   try {
     const bgcInfo = await bgcService.getGcfCountHistogram();
     res.json(bgcInfo);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Database query error' });
+    next(error);
   }
 });
 
-router.get('/gcf-table-sunburst', async (req, res) => {
+router.get('/gcf-table-sunburst', async (req, res, next) => {
   try {
     const gcfId = req.query.gcf ? parseInt(req.query.gcf, 10) : null;
     if (req.query.gcf && isNaN(gcfId)) {
@@ -26,11 +26,11 @@ router.get('/gcf-table-sunburst', async (req, res) => {
     res.json(sunburstData);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Database query error' });
+    next(error);
   }
 });
 
-router.get('/gcf-table', async (req, res) => {
+router.get('/gcf-table', async (req, res, next) => {
   try {
     // Extract pagination parameters from the request
     const options = {
@@ -47,7 +47,7 @@ router.get('/gcf-table', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 });
 

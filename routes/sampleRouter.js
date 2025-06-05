@@ -4,28 +4,28 @@ const sampleService = require('../services/sampleService');
 
 /* ───────────────────────────── Sample Routes ─────────────────────────────── */
 
-router.get('/getBgcId', async (req, res) => {
+router.get('/getBgcId', async (req, res, next) => {
   try {
     const { dataset, anchor } = req.query;
     const result = await sampleService.getBgcId(dataset, anchor);
     res.json(result);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Database query failed" });
+    next(error);
   }
 });
 
-router.get('/sample-info', async (req, res) => {
+router.get('/sample-info', async (req, res, next) => {
   try {
     const sampleInfo = await sampleService.getSampleInfo();
     res.json(sampleInfo);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Database query error' });
+    next(error);
   }
 });
 
-router.get('/sample-data', async (req, res) => {
+router.get('/sample-data', async (req, res, next) => {
   try {
     // Extract pagination parameters from the request
     const options = {
@@ -53,17 +53,17 @@ router.get('/sample-data', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 });
 
-router.get('/sample-data-2', async (req, res) => {
+router.get('/sample-data-2', async (req, res, next) => {
   try {
     const rows = await sampleService.getSampleData2();
     res.json({ data: rows });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Internal server error' });
+    next(error);
   }
 });
 
