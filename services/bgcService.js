@@ -1,5 +1,6 @@
 const { pool } = require('../config/database');
 const cacheService = require('./cacheService');
+const debug = require('debug')('bgc-atlas:bgcService');
 
 /**
  * Validates a GCF ID parameter
@@ -566,7 +567,7 @@ async function getGcfTable(options = {}) {
     `;
 
     // Optional: log the SQL *with* actual limit/offset values
-    console.log(
+    debug(
         'GCF table query:',
         paginatedSQL.replace('$1', validatedLength).replace('$2', validatedStart)
     );

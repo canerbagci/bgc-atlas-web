@@ -241,8 +241,6 @@ function createPieChart(canvasId, labels, counts, percentages) {
 
     const data = buildHierarchy(labels, counts);
 
-    console.log("Building hierarchy for pie chart:", data);
-
     const ctx = document.getElementById(canvasId)?.getContext('2d');
     if (!ctx) {
         console.error(`Canvas with ID ${canvasId} not found.`);
@@ -347,13 +345,11 @@ function handleLazyLoad() {
 
     // Load charts if they're in viewport and not already loaded
     if (gcfCategoryChart && !gcfCategoryChart.classList.contains('chart-loaded') && isElementInViewport(gcfCategoryChart)) {
-        console.log('Lazy loading GCF category chart');
         plotGCFChart();
         gcfCategoryChart.classList.add('chart-loaded');
     }
 
     if (gcfCountHistChart && !gcfCountHistChart.classList.contains('chart-loaded') && isElementInViewport(gcfCountHistChart)) {
-        console.log('Lazy loading GCF count histogram chart');
         plotGCFCountHist();
         gcfCountHistChart.classList.add('chart-loaded');
     }
@@ -584,7 +580,6 @@ $(document).ready(function () {
                 const labels = itemData.map(b => b.label);
 
                 // Mark the canvas as initialized and create the chart
-                console.log(`Lazy loading chart: ${canvasId}`);
                 $canvas.addClass('initialized');
                 createPieChart(canvasId, labels, counts, percentages);
             }
