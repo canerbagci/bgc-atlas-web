@@ -10,6 +10,7 @@ const mockQueue = {
 };
 
 jest.mock('bull', () => jest.fn().mockImplementation(() => mockQueue));
+jest.mock('../config/database', () => ({ pool: { query: jest.fn() } }));
 
 const originalEnv = process.env.NODE_ENV;
 let schedulerService;

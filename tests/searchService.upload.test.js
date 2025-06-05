@@ -2,6 +2,7 @@ const EventEmitter = require('events');
 const fs = require('fs-extra');
 const path = require('path');
 const { spawn } = require('child_process');
+jest.mock('../config/database', () => ({ pool: { query: jest.fn() } }));
 const jobService = require('../services/jobService');
 
 jest.mock('fs-extra', () => {
