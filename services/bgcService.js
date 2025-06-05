@@ -915,7 +915,6 @@ async function getTaxonomicCounts(gcfId = null, samples = null) {
       ORDER BY is_others, count DESC;
     `;
 
-    console.debug('Genus-count SQL:', sql, params);
     const { rows } = await pool.query(sql, params);
     return rows;
   } catch (err) {

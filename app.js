@@ -6,6 +6,8 @@ const logger = require('morgan');
 const geoip = require('geoip-lite');
 const compression = require('compression');
 const etagMiddleware = require('./services/etagMiddleware');
+const csrf = require('csurf');
+const helmet = require('helmet');
 require('dotenv').config();
 
 
@@ -28,18 +30,29 @@ const app = express();
 app.use(compression()); // Add compression middleware for faster JSON responses
 app.use(etagMiddleware);
 
-// Mount all routers
-app.use('/', pageRouter);
-app.use('/', cacheRouter);
-app.use('/', mapRouter);
-app.use('/', sampleRouter);
-app.use('/', bgcRouter);
-app.use('/', gcfRouter);
-app.use('/', uploadRouter);
-app.use('/', sitemapRouter);
-app.use('/', experimentalRouter);
-app.use('/', ultraDeepSoilRouter);
-app.use('/', monthlySoilRouter);
+// Configure helmet for security headers including CSP
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "code.jquery.com", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "cdn.datatables.net", "unpkg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "cdn.datatables.net", "stackpath.bootstrapcdn.com", "unpkg.com"],
+      styleSrcElem: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "cdn.datatables.net", "stackpath.bootstrapcdn.com", "unpkg.com"],
+      imgSrc: ["'self'", "data:", "*.basemaps.cartocdn.com", "unpkg.com", "cdnjs.cloudflare.com"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'self'"],
+    },
+  },
+  xssFilter: true,
+  noSniff: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+}));
+
+// Setup CSRF protection
+const csrfProtection = csrf({ cookie: true });
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -102,6 +115,36 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Apply CSRF protection to all routes
+app.use(function(req, res, next) {
+  // Skip CSRF for GET, HEAD, OPTIONS requests
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return next();
+  }
+
+  // Apply CSRF protection to POST requests
+  csrfProtection(req, res, next);
+});
+
+// Make CSRF token available to all views
+app.use(function(req, res, next) {
+  res.locals.csrfToken = req.csrfToken ? req.csrfToken() : '';
+  next();
+});
+
+// Mount all routers
+app.use('/', pageRouter);
+app.use('/', cacheRouter);
+app.use('/', mapRouter);
+app.use('/', sampleRouter);
+app.use('/', bgcRouter);
+app.use('/', gcfRouter);
+app.use('/', uploadRouter);
+app.use('/', sitemapRouter);
+app.use('/', experimentalRouter);
+app.use('/', ultraDeepSoilRouter);
+app.use('/', monthlySoilRouter);
 
 app.get('/AS/:dataset', (req, res) => {
   const dataset = req.params.dataset;
