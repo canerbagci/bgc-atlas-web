@@ -46,7 +46,8 @@ The Download section provides access to the raw data (GenBank files for BGCs, th
 
 ## Installation
 
-To set up a local instance of BGC Atlas, follow these steps:
+To set up a local instance of BGC Atlas, follow these steps. The project
+requires **Node.js 18** or later:
 
 1. Clone the repository:
    ```
@@ -57,6 +58,7 @@ To set up a local instance of BGC Atlas, follow these steps:
 2. Install dependencies:
    ```
    npm install
+   npm run build-css  # or npm run watch-css for development
    ```
 
 3. Configure environment variables:
@@ -65,12 +67,15 @@ To set up a local instance of BGC Atlas, follow these steps:
    PORT=3000
    APP_URL=http://localhost:3000
    DATABASE_URL=postgres://username:password@localhost:5432/bgcatlas
+   REDIS_HOST=127.0.0.1  # Redis host for Bull queue
+   REDIS_PORT=6379       # Redis port for Bull queue
    MONTHLY_SOIL_BASE_DIR=/path/to/monthly-soil  # Optional: Path to monthly soil data directory
    ULTRA_DEEP_SOIL_DIR=/path/to/ultra-deep-soil  # Optional: Path to ultra-deep soil data directory
    SEARCH_UPLOADS_DIR=/path/to/search/uploads  # Optional: Path to store uploaded files for search
-   SEARCH_SCRIPT_PATH=/path/to/search/script.py  # Required: Path to the search script
-   REPORTS_DIR=/path/to/reports  # Required: Path to store search reports
-   SSL_CERT_PATH=/path/to/ssl/certs  # Optional: Path to SSL certificates
+    SEARCH_SCRIPT_PATH=/path/to/search/script.py  # Required: Path to the search script
+    REPORTS_DIR=/path/to/reports  # Required: Path to store search reports
+    ENABLE_SSL=true  # Set to false to disable HTTPS
+    SSL_CERT_PATH=/path/to/ssl/certs  # Optional: Path to SSL certificates
    ```
 
 4. Set up the database:
@@ -98,6 +103,16 @@ BGC Atlas is built with the following main dependencies:
 - [Node.js](https://nodejs.org/) - JavaScript runtime
 
 For a complete list of dependencies, see the `package.json` file.
+
+## Running Tests
+
+Automated tests are written with [Jest](https://jestjs.io/). Ensure Node.js 18 or later is installed and run `npm install` to install dev dependencies. Then execute:
+
+```
+npm test
+```
+
+This command runs all test suites in the `tests` directory.
 
 ## Frontend Components
 

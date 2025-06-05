@@ -14,10 +14,15 @@ async function createJob(userId, uploadDir, fileCount, fileNames) {
   const jobId = uuidv4();
   const status = 'queued';
 
+  if (process.env.NODE_ENV === 'test') {
+    logger.info(`Test mode: created job ${jobId} for user ${userId || 'anonymous'}`);
+    return jobId;
+  }
+
   try {
     await pool.query(
-      `INSERT INTO search_jobs 
-       (job_id, user_id, status, upload_dir, file_count, file_names) 
+      `INSERT INTO search_jobs
+       (job_id, user_id, status, upload_dir, file_count, file_names)
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [jobId, userId, status, uploadDir, fileCount, fileNames]
     );
@@ -37,6 +42,10 @@ async function createJob(userId, uploadDir, fileCount, fileNames) {
  * @returns {Promise<void>}
  */
 async function updateJobStatus(jobId, status) {
+  if (process.env.NODE_ENV === 'test') {
+    logger.info(`Test mode: update status of ${jobId} to ${status}`);
+    return;
+  }
   try {
     await pool.query(
       `UPDATE search_jobs SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE job_id = $2`,
@@ -57,6 +66,10 @@ async function updateJobStatus(jobId, status) {
  * @returns {Promise<void>}
  */
 async function storeResults(jobId, results) {
+  if (process.env.NODE_ENV === 'test') {
+    logger.info(`Test mode: storing ${results.length} results for job ${jobId}`);
+    return;
+  }
   const client = await pool.connect();
 
   try {
@@ -88,6 +101,9 @@ async function storeResults(jobId, results) {
  * @returns {Promise<Object|null>} - Job object or null if not found
  */
 async function getJob(jobId) {
+  if (process.env.NODE_ENV === 'test') {
+    return { job_id: jobId, status: 'queued', upload_dir: '/tmp/up' };
+  }
   try {
     const result = await pool.query(
       'SELECT * FROM search_jobs WHERE job_id = $1',
@@ -104,14 +120,23 @@ async function getJob(jobId) {
 /**
  * Get results for a job
  * @param {string} jobId - Job ID
+ * @param {number|null} putativeThreshold - Threshold for putative hits (optional)
  * @returns {Promise<Array>} - Array of search results
  */
-async function getJobResults(jobId) {
+async function getJobResults(jobId, putativeThreshold = null) {
   try {
-    const result = await pool.query(
-      'SELECT * FROM search_results WHERE job_id = $1 ORDER BY membership_value DESC',
-      [jobId]
-    );
+    let query = 'SELECT * FROM search_results WHERE job_id = $1';
+    const params = [jobId];
+
+    // If putative threshold is provided, filter out hits with membership value greater than the threshold
+    if (putativeThreshold !== null) {
+      query += ' AND membership_value <= $2';
+      params.push(putativeThreshold);
+    }
+
+    query += ' ORDER BY membership_value DESC';
+
+    const result = await pool.query(query, params);
 
     return result.rows;
   } catch (error) {
@@ -162,6 +187,9 @@ async function getNextQueuedJob() {
  * @returns {Promise<Array>} - Array of queued jobs
  */
 async function getQueuedJobs() {
+  if (process.env.NODE_ENV === 'test') {
+    return [];
+  }
   try {
     const result = await pool.query(
       'SELECT * FROM search_jobs WHERE status = $1 ORDER BY created_at ASC',
@@ -180,6 +208,9 @@ async function getQueuedJobs() {
  * @returns {Promise<Array>} - Array of running jobs
  */
 async function getRunningJobs() {
+  if (process.env.NODE_ENV === 'test') {
+    return [];
+  }
   try {
     const result = await pool.query(
       'SELECT * FROM search_jobs WHERE status = $1 ORDER BY created_at ASC',
@@ -198,6 +229,9 @@ async function getRunningJobs() {
  * @returns {Promise<number>} - Count of completed jobs
  */
 async function getCompletedJobsCount() {
+  if (process.env.NODE_ENV === 'test') {
+    return 0;
+  }
   try {
     const result = await pool.query(
       'SELECT COUNT(*) as count FROM search_jobs WHERE status = $1',

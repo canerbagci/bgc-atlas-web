@@ -12,8 +12,20 @@ describe('validateSSLCertPath', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cert-'));
     fs.writeFileSync(path.join(dir, 'privkey.pem'), 'key');
     fs.writeFileSync(path.join(dir, 'fullchain.pem'), 'cert');
+    fs.writeFileSync(path.join(dir, 'chain.pem'), 'intermediate');
 
     expect(() => validateSSLCertPath(dir)).not.toThrow();
+
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('throws when a required file is missing', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cert-'));
+    fs.writeFileSync(path.join(dir, 'privkey.pem'), 'key');
+    fs.writeFileSync(path.join(dir, 'fullchain.pem'), 'cert');
+    // chain.pem is intentionally missing
+
+    expect(() => validateSSLCertPath(dir)).toThrow('Missing SSL certificate file');
 
     fs.rmSync(dir, { recursive: true, force: true });
   });

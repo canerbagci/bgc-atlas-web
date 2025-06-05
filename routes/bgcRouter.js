@@ -3,6 +3,7 @@ const router = express.Router();
 const bgcService = require('../services/bgcService');
 const { defaultRateLimiter } = require('../services/rateLimitMiddleware');
 const logger = require('../utils/logger');
+const { sanitizeMessage } = require('../utils/sanitize');
 
 /* ───────────────────────────── BGC Routes ─────────────────────────────── */
 
@@ -27,7 +28,7 @@ router.get('/bgc-info', async (req, res, next) => {
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {
-      return res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: sanitizeMessage(error.message) });
     }
 
     next(error);
@@ -47,7 +48,7 @@ router.get('/pc-category-count', async (req, res, next) => {
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {
-      return res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: sanitizeMessage(error.message) });
     }
 
     next(error);
@@ -77,7 +78,7 @@ router.get('/pc-product-count', async (req, res, next) => {
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {
-      return res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: sanitizeMessage(error.message) });
     }
 
     next(error);
@@ -97,7 +98,7 @@ router.get('/pc-taxonomic-count', async (req, res, next) => {
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {
-      return res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: sanitizeMessage(error.message) });
     }
 
     next(error);
@@ -130,7 +131,7 @@ router.get('/bgc-table', async (req, res, next) => {
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {
-      return res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: sanitizeMessage(error.message) });
     }
 
     next(error);

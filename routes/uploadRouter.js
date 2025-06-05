@@ -5,6 +5,8 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const searchService = require('../services/searchService');
 const logger = require('../utils/logger');
+const { sanitizeMessage } = require('../utils/sanitize');
+const { defaultRateLimiter } = require('../services/rateLimitMiddleware');
 const csrf = require('csurf');
 
 /* ───────────────────────────── Upload Routes ─────────────────────────────── */
@@ -22,6 +24,18 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     let safeName = path.basename(file.originalname);
     safeName = safeName.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+    // Check if the file ends with the pattern "regionXXX.gbk"
+    const regionPattern = /region\d+\.gbk$/i;
+    if (!regionPattern.test(safeName)) {
+      // If it doesn't match, rename it to include "regionXXX.gbk"
+      // Extract the base name without extension
+      const baseName = safeName.replace(/\.[^/.]+$/, "");
+      // Generate a random 3-digit number for XXX
+      const randomNum = Math.floor(Math.random() * 900) + 100; // 100-999
+      safeName = `${baseName}_region${randomNum}.gbk`;
+    }
+
     const uniqueName = `${uuidv4()}_${safeName}`;
     cb(null, uniqueName);
   }
@@ -43,8 +57,18 @@ const upload = multer({
 // Store connected SSE clients
 const clients = new Map();
 
+// Periodically prune disconnected SSE clients
+setInterval(() => {
+  clients.forEach((client, id) => {
+    if (client.writableEnded || client.finished) {
+      clients.delete(id);
+      console.log(`Pruned client ${id}, total clients: ${clients.size}`);
+    }
+  });
+}, 30000);
+
 // SSE route
-router.get('/events', (req, res) => {
+router.get('/events', defaultRateLimiter, (req, res) => {
   console.log('New SSE client connected');
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -54,17 +78,26 @@ router.get('/events', (req, res) => {
   clients.set(clientId, res);
   console.log(`Client ${clientId} connected, total clients: ${clients.size}`);
 
+  res.on('error', (err) => {
+    console.error(`SSE stream error for client ${clientId}:`, err);
+    clients.delete(clientId);
+    console.log(`Total clients after error: ${clients.size}`);
+  });
+
   // Send a test event to confirm connection and include queue status
   const schedulerService = require('../services/schedulerService');
-  const queuedJobs = schedulerService.getQueuedJobs();
-  res.write(`data: ${JSON.stringify({ 
-    type: 'connection', 
-    message: 'Connected to SSE',
-    queueStatus: {
-      totalJobs: queuedJobs.length,
-      isProcessing: queuedJobs.length > 0
-    }
-  })}\n\n`);
+  schedulerService.getQueuedJobs().then(queuedJobs => {
+    res.write(`data: ${JSON.stringify({
+      type: 'connection',
+      message: 'Connected to SSE',
+      queueStatus: {
+        totalJobs: queuedJobs.length,
+        isProcessing: queuedJobs.length > 0
+      }
+    })}\n\n`);
+  }).catch(err => {
+    console.error('Error retrieving queued jobs for SSE:', err);
+  });
 
   req.on('close', () => {
     console.log(`Client ${clientId} disconnected`);
@@ -76,11 +109,18 @@ router.get('/events', (req, res) => {
 // Function to send events to clients
 function sendEvent(message) {
   console.log(`Sending SSE event to ${clients.size} clients:`, message);
-  clients.forEach(client => {
+  clients.forEach((client, id) => {
+    if (client.writableEnded || client.finished) {
+      clients.delete(id);
+      console.log(`Removed ended SSE client ${id}, total clients: ${clients.size}`);
+      return;
+    }
     try {
       client.write(`data: ${JSON.stringify(message)}\n\n`);
     } catch (error) {
       console.error('Error sending SSE event:', error);
+      clients.delete(id);
+      console.log(`Total clients after write error: ${clients.size}`);
     }
   });
 }
@@ -106,9 +146,10 @@ router.post('/upload', (req, res, next) => {
   // First process the file upload with multer
   upload(req, res, async (err) => {
     if (err) {
-      sendEvent({ status: 'Error', message: err.message });
+      const sanitized = sanitizeMessage(err.message);
+      sendEvent({ status: 'Error', message: sanitized });
       const status = err.message.includes('.gbk') || err.message.includes('.genbank') ? 400 : 500;
-      return res.status(status).json({ error: err.message });
+      return res.status(status).json({ error: sanitized });
     }
 
     // Then validate the CSRF token

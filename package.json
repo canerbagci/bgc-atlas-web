@@ -12,7 +12,7 @@
     "watch-css": "sass --watch --no-source-map scss/style.scss public/stylesheets/style.css"
   },
   "dependencies": {
-    "bree": "^9.2.2",
+    "bull": "^4.16.5",
     "compression": "^1.7.4",
     "cookie-parser": "~1.4.4",
     "csurf": "^1.11.0",
