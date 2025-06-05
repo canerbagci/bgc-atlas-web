@@ -26,7 +26,8 @@
         nameCell.textContent = item.bgc_name;
 
         const gcfLink = document.createElement('a');
-        gcfLink.href = `https://bgc-atlas.cs.uni-tuebingen.de/bgcs?gcf=${item.gcf_id}`;
+        const base = (window.APP_URL || '');
+        gcfLink.href = `${base}/bgcs?gcf=${item.gcf_id}`;
         gcfLink.textContent = item.gcf_id;
         gcfLink.target = '_blank';
         idCell.appendChild(gcfLink);
