@@ -23,6 +23,18 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     let safeName = path.basename(file.originalname);
     safeName = safeName.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+    // Check if the file ends with the pattern "regionXXX.gbk"
+    const regionPattern = /region\d+\.gbk$/i;
+    if (!regionPattern.test(safeName)) {
+      // If it doesn't match, rename it to include "regionXXX.gbk"
+      // Extract the base name without extension
+      const baseName = safeName.replace(/\.[^/.]+$/, "");
+      // Generate a random 3-digit number for XXX
+      const randomNum = Math.floor(Math.random() * 900) + 100; // 100-999
+      safeName = `${baseName}_region${randomNum}.gbk`;
+    }
+
     const uniqueName = `${uuidv4()}_${safeName}`;
     cb(null, uniqueName);
   }
