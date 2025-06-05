@@ -34,6 +34,7 @@ const monthlySoilRouter = require('./routes/monthlySoilRouter');
 const jobRouter = require('./routes/jobRouter');
 
 const app = express();
+app.locals.APP_URL = process.env.APP_URL || '';
 app.use(compression()); // Add compression middleware for faster JSON responses
 app.use(etagMiddleware);
 app.use(cookieParser());

@@ -104,7 +104,7 @@ function createMap() {
             L.DomEvent.on(btn, 'click', function() {
                 if (containedIDs.length > 0) {
                     // Construct the URL with the sample IDs
-                    var baseUrl = 'https://bgc-atlas.cs.uni-tuebingen.de/bgcs?samples=';
+                    var baseUrl = (window.APP_URL || '') + '/bgcs?samples=';
                     var sampleIdsParam = containedIDs.join(','); // Join the IDs with commas
                     var fullUrl = baseUrl + encodeURIComponent(sampleIdsParam);
 

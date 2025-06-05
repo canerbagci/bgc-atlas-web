@@ -505,11 +505,12 @@ function drawTable() {
                 biomeCell.html(biomeCell.html().replaceAll('root:', ''));
                 var assemblyCell = $(row).find('td').eq(1);
                 var assemblyID = assemblyCell.html();
-                assemblyCell.html('<a href="https://bgc-atlas.cs.uni-tuebingen.de/antismash?dataset=' + assemblyCell.html() + '" target="_blank">' + assemblyCell.html() + '</a>');
+                var base = (window.APP_URL || '');
+                assemblyCell.html('<a href="' + base + '/antismash?dataset=' + assemblyCell.html() + '" target="_blank">' + assemblyCell.html() + '</a>');
 
                 // assemblyCell.html('<a href="https://bgc-atlas.ziemertlab.com/datasets/' + assemblyCell.html() + '/antismash/index.html" target="_blank">' + assemblyCell.html() + '</a>');
                 var bgcCell = $(row).find('td').eq(0);
-                bgcCell.html('<a href="https://bgc-atlas.cs.uni-tuebingen.de/antismash?dataset=' + assemblyID + '&anchor=' + data.anchor + '" target="_blank">' + bgcCell.html() + '</a>');
+                bgcCell.html('<a href="' + base + '/antismash?dataset=' + assemblyID + '&anchor=' + data.anchor + '" target="_blank">' + bgcCell.html() + '</a>');
 
                 //bgcCell.html('<a href="https://bgc-atlas.ziemertlab.com/datasets/' + data.assembly + '/antismash/index.html#' + data.anchor + '" target="_blank">' + bgcCell.html() + '</a>');
                 var gcfCell = $(row).find('td').eq(7);
