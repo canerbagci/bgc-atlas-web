@@ -1,8 +1,10 @@
 const path = require('path');
 const fs = require('fs-extra');
-const { spawn } = require('child_process');
+const { EventEmitter } = require('events');
 const debug = require('debug')('bgc-atlas:searchService');
 const logger = require('../utils/logger');
+const jobService = require('./jobService');
+const schedulerService = require('./schedulerService');
 require('dotenv').config();
 
 // Allowed pattern for directory names (alphanumeric, underscores and hyphens)
@@ -37,86 +39,54 @@ function createTimestampedDirectory(basePath) {
 }
 
 /**
- * Process uploaded files and run the search script
+ * Process uploaded files and create a job
  * @param {Object} req - The request object containing uploaded files
  * @param {Function} sendEvent - Function to send SSE events to clients
- * @returns {Promise<Array>} - Array of search results
+ * @returns {Promise<string>} - Job ID
  */
 async function processUploadedFiles(req, sendEvent) {
-  return new Promise((resolve, reject) => {
-    sendEvent({ status: 'Running' });
-
-    // Process files and generate results here
+  try {
+    // Extract file information
     const files = req.files.map(file => ({
       name: file.originalname,
       id: file.filename,
-      value: 'Sample Value', // Replace with actual logic
       path: path.relative(process.env.SEARCH_UPLOADS_DIR, file.path) // Relative path to the file
     }));
 
     const uploadDir = req.uploadDir;
+    const fileNames = files.map(file => file.name);
 
-    // Execute the script
-    const scriptPath = process.env.SEARCH_SCRIPT_PATH;
-    const scriptArgs = [uploadDir];
+    // Create a job
+    const userId = req.user ? req.user.id : null;
+    const jobId = await jobService.createJob(userId, uploadDir, files.length, fileNames);
 
-    // Validate script path existence and safety
-    const resolvedScript = path.resolve(scriptPath);
-    if (!fs.existsSync(resolvedScript)) {
-      return reject(new Error('Search script not found'));
-    }
+    // Create an event emitter for this job
+    const jobEmitter = new EventEmitter();
 
-    const safeDir = path.resolve(process.env.SEARCH_UPLOADS_DIR || '', '..');
-    if (!resolvedScript.startsWith(safeDir + path.sep)) {
-      return reject(new Error('Invalid search script path'));
-    }
-
-    const scriptProcess = spawn(resolvedScript, scriptArgs, { shell: false });
-
-    let scriptOutput = '';
-
-    scriptProcess.stdout.on('data', (data) => {
-      scriptOutput += data.toString();
+    // Set up event listeners
+    jobEmitter.on('status', (data) => {
+      sendEvent(data);
     });
 
-    scriptProcess.stderr.on('data', (data) => {
-      logger.error(`Script stderr: ${data}`);
-      scriptOutput += data.toString();
+    jobEmitter.on('complete', (data) => {
+      sendEvent(data);
     });
 
-    scriptProcess.on('close', (code) => {
-      debug('close, scriptOutput: %s', scriptOutput);
-      if (code !== 0) {
-        sendEvent({ status: 'Error', message: `Script exited with code ${code}`, output: scriptOutput });
-        return reject(new Error(`Script exited with code ${code}: ${scriptOutput}`));
-      }
-
-      const regex = /^gcf_membership.*/gm;
-      const matches = scriptOutput.match(regex);
-
-      if (!matches) {
-        sendEvent({ status: 'Error', message: 'No membership lines found' });
-        return reject(new Error('No membership lines found'));
-      }
-
-      const records = [];
-
-      matches.forEach((line) => {
-        const splitArray = line.substring(line.indexOf("\t") + 1).trim().split("|");
-
-        const record = {
-          bgc_name: splitArray[6],
-          gcf_id: splitArray[7],
-          membership_value: splitArray[8]
-        };
-
-        records.push(record);
-      });
-
-      sendEvent({ status: 'Complete', records: records });
-      resolve(records);
+    jobEmitter.on('error', (data) => {
+      sendEvent(data);
     });
-  });
+
+    // Schedule the job
+    await schedulerService.scheduleJob(jobId, jobEmitter);
+
+    // Send initial status
+    sendEvent({ status: 'Queued', jobId });
+
+    return jobId;
+  } catch (error) {
+    logger.error(`Error processing uploaded files: ${error.message}`);
+    throw error;
+  }
 }
 
 /**

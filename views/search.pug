@@ -8,11 +8,10 @@ block content
                 +card('Upload GenBank Files')
                     span.info-icon(data-bs-toggle="tooltip" title="The search function accepts antiSMASH compatible GenBank files. Please upload one or more GenBank files to search for similar BGCs in the database.")
                         img(src="/images/info.svg" width="16" height="16" alt="Info", loading = "lazy")
-                    form(id='uploadForm' action='/upload' method='post' enctype='multipart/form-data' onsubmit='registerFiles(event)')
+                    form(id='uploadForm' action='/upload' method='post' enctype='multipart/form-data')
                         input(type='hidden' name='_csrf' value=csrfToken)
                         .mb-3
                             input.form-control(type='file' id='formFile' name='file' multiple aria-label='GenBank file upload')
-                            //label(for='formFile') Input GenBank files...
                             button#uploadButton.btn.btn-primary.mt-2(type='submit') Upload
                 +card('Selected Files')
                     table.table.table-bordered.mt-3
@@ -23,8 +22,19 @@ block content
                             tr
                                 td.colspan-4.text-center No files selected
                 +card()
-                    button#submitButton.btn.btn-primary(type='button' onclick='submitFiles()' aria-describedby='status') Submit
+                    button#submitButton.btn.btn-primary(type='button' aria-describedby='status') Submit
                     p#status(role='status' aria-live='polite') <strong>Status:</strong> Idle
+
+                    .alert.alert-info.mt-3.d-none#jobIdContainer
+                        p Your job ID: <strong id="jobIdDisplay"></strong>
+                        p Save this ID to check your results later.
+
+                +card('Look Up Previous Results')
+                    form#jobLookupForm
+                        .input-group
+                            input.form-control#jobIdInput(type='text' placeholder='Enter Job ID' aria-label='Job ID')
+                            button.btn.btn-outline-secondary(type='submit') Look Up
+
                 +card('Results')
                     table.table.table-bordered.mt-3
                         thead

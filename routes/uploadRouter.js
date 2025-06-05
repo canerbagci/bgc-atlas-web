@@ -5,6 +5,7 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const searchService = require('../services/searchService');
 const logger = require('../utils/logger');
+const csrf = require('csurf');
 
 /* ───────────────────────────── Upload Routes ─────────────────────────────── */
 
@@ -28,7 +29,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 500 * 1024 * 1024 },
+  limits: { fileSize: 5000 * 1024 * 1024 },
   fileFilter: function (req, file, cb) {
     const ext = path.extname(file.originalname).toLowerCase();
     if (ext === '.gbk' || ext === '.genbank') {
@@ -40,7 +41,7 @@ const upload = multer({
 }).array('file', 100); // Limit to 100 files
 
 // Store connected SSE clients
-let clients = [];
+const clients = new Map();
 
 // SSE route
 router.get('/events', (req, res) => {
@@ -49,26 +50,37 @@ router.get('/events', (req, res) => {
   res.setHeader('Connection', 'keep-alive');
 
   const clientId = Date.now();
-  const newClient = {
-    id: clientId,
-    res
-  };
-  clients.push(newClient);
+  clients.set(clientId, res);
 
   req.on('close', () => {
-    clients = clients.filter(client => client.id !== clientId);
+    clients.delete(clientId);
   });
 });
 
 // Function to send events to clients
 function sendEvent(message) {
-  clients.forEach(client => client.res.write(`data: ${JSON.stringify(message)}\n\n`));
+  clients.forEach(client => client.write(`data: ${JSON.stringify(message)}\n\n`));
 }
+
+// Create a separate CSRF middleware for the upload route
+// This will be applied after multer processes the request
+const uploadCsrfProtection = csrf({ 
+  cookie: true,
+  ignoreMethods: ['GET', 'HEAD', 'OPTIONS'],
+  value: req => {
+    return req.headers['x-csrf-token'] || 
+           req.headers['csrf-token'] || 
+           req.headers['x-xsrf-token'] ||
+           req.headers['xsrf-token'] ||
+           req.query._csrf;
+  }
+});
 
 // Upload route
 router.post('/upload', (req, res, next) => {
   sendEvent({ status: 'Uploading' });
 
+  // First process the file upload with multer
   upload(req, res, async (err) => {
     if (err) {
       sendEvent({ status: 'Error', message: err.message });
@@ -76,13 +88,22 @@ router.post('/upload', (req, res, next) => {
       return res.status(status).json({ error: err.message });
     }
 
-    try {
-      const records = await searchService.processUploadedFiles(req, sendEvent);
-      res.json(records);
-    } catch (error) {
-      logger.error(error);
-      next(error);
-    }
+    // Then validate the CSRF token
+    uploadCsrfProtection(req, res, async (csrfErr) => {
+      if (csrfErr) {
+        logger.error('CSRF error in upload route:', csrfErr);
+        sendEvent({ status: 'Error', message: 'Invalid CSRF token' });
+        return res.status(403).json({ error: 'Invalid CSRF token' });
+      }
+
+      try {
+        const jobId = await searchService.processUploadedFiles(req, sendEvent);
+        res.json({ jobId });
+      } catch (error) {
+        logger.error(error);
+        next(error);
+      }
+    });
   });
 });
 

@@ -77,13 +77,35 @@ function submitFiles() {
     const formData = new FormData();
     selectedFiles.forEach(file => formData.append('file', file));
 
+    // Get CSRF token from the hidden input field
+    const csrfToken = document.querySelector('input[name="_csrf"]').value;
+
     fetch('/upload', {
         method: 'POST',
-        body: formData
+        headers: {
+            'x-csrf-token': csrfToken
+        },
+        body: formData,
+        credentials: 'include'
     })
-        .catch(error => {
-            console.error('Error:', error);
-        });
+    .then(response => response.json())
+    .then(data => {
+        // Store job ID in local storage
+        if (data.jobId) {
+            localStorage.setItem('currentJobId', data.jobId);
+
+            // Update URL with job ID for bookmarking
+            const url = new URL(window.location);
+            url.searchParams.set('jobId', data.jobId);
+            window.history.pushState({}, '', url);
+
+            // Update job ID display
+            updateJobIdDisplay(data.jobId);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
 }
 
 function displayResults(data) {
@@ -135,26 +157,127 @@ function toggleSubmitButton() {
     }
 }
 
+function updateJobIdDisplay(jobId) {
+    const jobIdDisplay = document.getElementById('jobIdDisplay');
+    if (jobIdDisplay) {
+        jobIdDisplay.textContent = jobId;
+        jobIdDisplay.parentElement.classList.remove('d-none');
+    }
+}
+
+function loadJobResults(jobId) {
+    fetch(`/jobs/${jobId}/results`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            displayResults(data);
+            updateJobIdDisplay(jobId);
+        })
+        .catch(error => {
+            console.error('Error loading job results:', error);
+            const status = document.getElementById('status');
+            status.innerHTML = `<strong>Status:</strong> Error loading results`;
+        });
+}
+
+function checkJobStatus(jobId) {
+    fetch(`/jobs/${jobId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(job => {
+            const status = document.getElementById('status');
+            status.innerHTML = `<strong>Status:</strong> ${job.status}`;
+
+            if (job.status === 'completed') {
+                loadJobResults(jobId);
+            } else if (job.status === 'queued' || job.status === 'running') {
+                // Check again in 5 seconds
+                setTimeout(() => checkJobStatus(jobId), 5000);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking job status:', error);
+        });
+}
+
 // Initialize event listeners when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize the Submit button state
     toggleSubmitButton();
-    
+
     // Initialize tooltips
     if (typeof $ !== 'undefined' && $.fn.tooltip) {
         $('[data-bs-toggle="tooltip"]').tooltip();
     }
-    
+
+    // Add event listener for form submission
+    const uploadForm = document.getElementById('uploadForm');
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', registerFiles);
+    }
+
+    // Add event listener for submit button
+    const submitButton = document.getElementById('submitButton');
+    if (submitButton) {
+        submitButton.addEventListener('click', submitFiles);
+    }
+
+    // Check for job ID in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const jobId = urlParams.get('jobId') || localStorage.getItem('currentJobId');
+
+    if (jobId) {
+        // Update job ID display
+        updateJobIdDisplay(jobId);
+
+        // Check job status
+        checkJobStatus(jobId);
+    }
+
     // Listen for server-sent events
     const eventSource = new EventSource('/events');
     eventSource.onmessage = function (event) {
         const data = JSON.parse(event.data);
         const status = document.getElementById('status');
 
-        if (data.status === 'Complete') {
+        if (data.status === 'Complete' && data.records) {
             displayResults(data.records);
         }
 
         status.innerHTML = `<strong>Status:</strong> ${data.status}`;
+
+        // Store job ID if provided
+        if (data.jobId) {
+            localStorage.setItem('currentJobId', data.jobId);
+            updateJobIdDisplay(data.jobId);
+        }
     };
+
+    // Add job ID lookup form handler
+    const lookupForm = document.getElementById('jobLookupForm');
+    if (lookupForm) {
+        lookupForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const jobIdInput = document.getElementById('jobIdInput');
+            const jobId = jobIdInput.value.trim();
+
+            if (jobId) {
+                // Update URL
+                const url = new URL(window.location);
+                url.searchParams.set('jobId', jobId);
+                window.history.pushState({}, '', url);
+
+                // Check job status and load results
+                checkJobStatus(jobId);
+            }
+        });
+    }
 });
