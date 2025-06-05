@@ -659,6 +659,79 @@ async function getBgcTable(options) {
   }
 }
 
+/**
+ * Get taxonomic counts for the top 15 genera and "Others"
+ * @param gcfId
+ * @param samples
+ * @returns {Promise<*>}
+ */
+async function getTaxonomicCounts(gcfId = null, samples = null) {
+  try {
+    const params = [];
+    const where  = [];                 // filters applied to region_genus
+
+    /* 1. optional GCF filter --------------------------------------- */
+    if (gcfId !== null && gcfId !== undefined) {
+      const id = Number.parseInt(gcfId, 10);
+      if (Number.isNaN(id)) throw new Error('Invalid gcf parameter');
+      where.push(`bigslice_gcf_id = $${params.length + 1}`);
+      params.push(id);
+    }
+
+    /* 2. optional assembly filter ---------------------------------- */
+    if (samples && samples.length) {
+      const list = Array.isArray(samples)
+          ? samples
+          : samples.split(',').map(s => s.trim());
+
+      const ph = list.map((_, i) => `$${params.length + i + 1}`).join(', ');
+      where.push(`assembly IN (${ph})`);
+      params.push(...list);
+    }
+
+    const wc = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    /* 3. fast genus count using materialised view ------------------ */
+    const sql = `
+      WITH ranked AS (
+        SELECT
+          genus_name                             AS taxon,
+          COUNT(*)                               AS count,
+        ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC) AS rn
+      FROM region_genus
+        ${wc}
+      GROUP BY genus_name
+        ),
+        top_15 AS (
+      SELECT taxon, count, 0 AS is_others      -- flag = 0
+      FROM   ranked
+      WHERE  rn <= 15
+        ),
+        others AS (
+      SELECT 'Others' AS taxon,
+        COALESCE(SUM(count), 0) AS count,
+        1 AS is_others          -- flag = 1
+      FROM   ranked
+      WHERE  rn > 15
+        )
+      SELECT taxon, count
+      FROM (
+             SELECT * FROM top_15
+             UNION ALL
+             SELECT * FROM others
+           ) AS final
+      ORDER BY is_others, count DESC;
+    `;
+
+    console.debug('Genus-count SQL:', sql, params);
+    const { rows } = await pool.query(sql, params);
+    return rows;
+  } catch (err) {
+    console.error('Error getting taxonomic counts:', err);
+    throw err;
+  }
+}
+
 module.exports = {
   getBgcInfo,
   getProductCategoryCounts,
@@ -667,5 +740,6 @@ module.exports = {
   getGcfCountHistogram,
   getGcfTableSunburst,
   getGcfTable,
-  getBgcTable
+  getBgcTable,
+  getTaxonomicCounts
 };

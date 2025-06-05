@@ -62,6 +62,22 @@ router.get('/pc-product-count', async (req, res) => {
   }
 });
 
+router.get('/pc-taxonomic-count', async (req, res) => {
+  try {
+    const gcfId = req.query.gcf ? parseInt(req.query.gcf, 10) : null;
+    if (req.query.gcf && isNaN(gcfId)) {
+      return res.status(400).json({ error: 'Invalid gcf parameter' });
+    }
+
+    const samples = req.query.samples ? req.query.samples.split(',') : null;
+    const taxonomicCount = await bgcService.getTaxonomicCounts(gcfId, samples);
+    res.json(taxonomicCount);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database query error' });
+  }
+});
+
 router.get('/bgc-table', async (req, res) => {
   try {
     const options = {

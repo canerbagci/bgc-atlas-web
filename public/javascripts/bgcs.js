@@ -148,6 +148,129 @@ function plotProdChart() {
     });
 }
 
+function plotTaxonomicChart() {
+    // Parse the URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Get the gcf and samples query parameters
+    const gcf = urlParams.get('gcf');
+    const samples = urlParams.get('samples');
+
+    // Construct the base URL
+    let url = '/pc-taxonomic-count';
+
+    // Append query parameters if they exist
+    if (gcf || samples) {
+        url += '?';
+        if (gcf) {
+            url += `gcf=${gcf}`;
+        }
+        if (samples) {
+            // Append '&' if gcf already exists
+            url += gcf ? `&samples=${samples}` : `samples=${samples}`;
+        }
+    }
+
+    $.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'json',
+        success: function(results) {
+            const labels = results.map((row) => row.taxon);
+            const data = results.map((row) => row.count);
+
+            const canvas = $('#taxonomic-chart')[0];
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Create a gradient color scheme with a smoother transition
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(66, 165, 245, 0.9)');    // light blue
+            gradient.addColorStop(1, 'rgba(30, 136, 229, 0.7)');     // dark blue
+
+            const chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Regions by Taxonomy',
+                            data: data,
+                            backgroundColor: gradient,
+                            borderColor: 'rgba(25, 118, 210, 1)',
+                            borderWidth: 2,
+                            borderRadius: 5,
+                            hoverBackgroundColor: 'rgba(66, 165, 245, 1)',
+                            hoverBorderColor: 'rgba(13, 71, 161, 1)',
+                            hoverBorderWidth: 2,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(51, 51, 51, 0.9)',
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `Count: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                autoSkip: false,
+                                font: {
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(200, 200, 200, 0.3)'
+                            },
+                            ticks: {
+                                font: {
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+                },
+            });
+        }
+    });
+}
+
 function plotChart() {
     // Parse the URL parameters
     const urlParams = new URLSearchParams(window.location.search);
@@ -532,6 +655,7 @@ $(document).ready(function () {
     getInfo();
     plotChart();
     plotProdChart();
+    plotTaxonomicChart();
     createMapGCF();
     createSunburstView('#sunburst-chart');
 
