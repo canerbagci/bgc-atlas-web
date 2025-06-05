@@ -29,7 +29,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5000 * 1024 * 1024 },
+  limits: { fileSize: 500 * 1024 * 1024 },
   fileFilter: function (req, file, cb) {
     const ext = path.extname(file.originalname).toLowerCase();
     if (ext === '.gbk' || ext === '.genbank') {
