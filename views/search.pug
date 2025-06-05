@@ -6,7 +6,7 @@ block content
             .col-12
                 h2 Upload GenBank Files
                     span.info-icon(data-bs-toggle="tooltip" title="The search function accepts antiSMASH compatible GenBank files. Please upload one or more GenBank files to search for similar BGCs in the database.")
-                        img(src="/images/info.svg" width="16" height="16" alt="Info")
+                        img(src="/images/info.svg" width="16" height="16" alt="Info", loading = "lazy")
                 form(id='uploadForm' action='/upload' method='post' enctype='multipart/form-data' onsubmit='registerFiles(event)')
                     input(type='hidden' name='_csrf' value=csrfToken)
                     .mb-3

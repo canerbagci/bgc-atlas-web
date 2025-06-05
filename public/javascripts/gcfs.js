@@ -509,7 +509,11 @@ $(document).ready(function () {
                 var biomeCell = $(row).find('td').eq(3);
                 biomeCell.html(biomeCell.html().replaceAll('root:', ''));
                 var famNumCell = $(row).find('td').eq(0);
-                famNumCell.html('<a href="/bgcs?gcf=' + famNumCell.html() + '" target="_blank">' + famNumCell.html() + '</a>');
+                const gcfId = famNumCell.html();
+                famNumCell.html(
+                  '<a href="/bgcs?gcf=' + gcfId + '" target="_blank">' + gcfId + '</a> ' +
+                  '<a href="/gcf-gene-view?gcf=' + gcfId + '" class="btn btn-sm btn-info" title="View gene organization">Genes</a>'
+                );
             }
         },
         "initComplete": function (settings, json) {
