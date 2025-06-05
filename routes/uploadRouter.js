@@ -56,6 +56,16 @@ const upload = multer({
 // Store connected SSE clients
 const clients = new Map();
 
+// Periodically prune disconnected SSE clients
+setInterval(() => {
+  clients.forEach((client, id) => {
+    if (client.writableEnded || client.finished) {
+      clients.delete(id);
+      console.log(`Pruned client ${id}, total clients: ${clients.size}`);
+    }
+  });
+}, 30000);
+
 // SSE route
 router.get('/events', (req, res) => {
   console.log('New SSE client connected');
@@ -66,6 +76,12 @@ router.get('/events', (req, res) => {
   const clientId = Date.now();
   clients.set(clientId, res);
   console.log(`Client ${clientId} connected, total clients: ${clients.size}`);
+
+  res.on('error', (err) => {
+    console.error(`SSE stream error for client ${clientId}:`, err);
+    clients.delete(clientId);
+    console.log(`Total clients after error: ${clients.size}`);
+  });
 
   // Send a test event to confirm connection and include queue status
   const schedulerService = require('../services/schedulerService');
@@ -92,11 +108,18 @@ router.get('/events', (req, res) => {
 // Function to send events to clients
 function sendEvent(message) {
   console.log(`Sending SSE event to ${clients.size} clients:`, message);
-  clients.forEach(client => {
+  clients.forEach((client, id) => {
+    if (client.writableEnded || client.finished) {
+      clients.delete(id);
+      console.log(`Removed ended SSE client ${id}, total clients: ${clients.size}`);
+      return;
+    }
     try {
       client.write(`data: ${JSON.stringify(message)}\n\n`);
     } catch (error) {
       console.error('Error sending SSE event:', error);
+      clients.delete(id);
+      console.log(`Total clients after write error: ${clients.size}`);
     }
   });
 }
