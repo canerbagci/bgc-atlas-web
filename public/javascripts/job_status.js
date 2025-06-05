@@ -16,6 +16,20 @@ let biomeChart = null;
 // Store the raw biome data
 let rawBiomeData = [];
 
+// Function to clear the biome chart completely
+function clearBiomeChart() {
+    console.log('Clearing biome chart');
+
+    // Clear the chart if it exists
+    if (biomeChart) {
+        biomeChart.destroy();
+        biomeChart = null;
+    }
+
+    // Clear the raw biome data
+    rawBiomeData = [];
+}
+
 // Function to display results in the table
 function displayResults(data, filterPutative = false) {
     // Store the original data
@@ -82,9 +96,23 @@ function updateJobIdDisplay(jobId) {
 // Function to load job results
 function loadJobResults(jobId) {
     console.log(`Loading results for job ${jobId}`);
+
+    // Check if the hide putative toggle is checked
+    const hidePutativeToggle = document.getElementById('hidePutativeToggle');
+    const filterPutative = hidePutativeToggle ? hidePutativeToggle.checked : false;
+
     // Add cache-busting parameter to prevent caching
     const timestamp = new Date().getTime();
-    fetch(`/jobs/${jobId}/results?_=${timestamp}`)
+
+    // Build the URL with query parameters
+    let url = `/jobs/${jobId}/results?_=${timestamp}`;
+
+    // If putative hits should be filtered, add the putativeThreshold parameter
+    if (filterPutative) {
+        url += `&putativeThreshold=${PUTATIVE_THRESHOLD}`;
+    }
+
+    fetch(url)
         .then(response => {
             console.log(`Response status: ${response.status}`);
             if (!response.ok) {
@@ -95,15 +123,14 @@ function loadJobResults(jobId) {
         .then(data => {
             console.log(`Received ${data.length} results:`, data);
 
-            // Check if the hide putative toggle is checked
-            const hidePutativeToggle = document.getElementById('hidePutativeToggle');
-            const filterPutative = hidePutativeToggle ? hidePutativeToggle.checked : false;
+            // Store the original data (already filtered if needed)
+            originalResults = [...data];
 
-            // Display results with or without filtering
-            displayResults(data, filterPutative);
+            // Display results (no client-side filtering needed as it's done server-side)
+            displayResults(data, false);
 
             // Update the map with the results
-            updateMapWithResults(data, filterPutative);
+            updateMapWithResults(data, false);
 
             // Hide loading indicator
             const loadingIndicator = document.getElementById('loadingIndicator');
@@ -209,21 +236,17 @@ function handleHidePutativeToggle() {
     const hidePutativeToggle = document.getElementById('hidePutativeToggle');
     if (hidePutativeToggle) {
         hidePutativeToggle.addEventListener('change', function() {
-            // Re-display results with or without filtering
-            displayResults(originalResults, this.checked);
+            console.log("change")
+            // Get the current job ID
+            const jobIdDisplay = document.getElementById('jobIdDisplay');
+            const jobId = jobIdDisplay ? jobIdDisplay.textContent : null;
 
-            // Update the map with the filtered results
-            updateMapWithResults(originalResults, this.checked);
-
-            // Update the biome chart with the filtered results
-            const gcfIds = collectGcfIds(originalResults, this.checked);
-
-            // Get the current selected level from the dropdown
-            const biomeLevelSelect = document.getElementById('biomeLevelSelect');
-            const level = biomeLevelSelect ? biomeLevelSelect.value : '1';
-
-            // Update the biome chart with the current level
-            updateBiomeChart(gcfIds, level);
+            if (jobId) {
+                // Re-fetch results from the server with the new filter setting
+                loadJobResults(jobId);
+            } else {
+                console.error('No job ID found');
+            }
         });
     }
 }
@@ -290,48 +313,68 @@ function initializeMap() {
 }
 
 // Function to collect GCF IDs from the results
-function collectGcfIds(results, filterPutative = false) {
-    // Filter results if needed
-    let filteredResults = results;
-    if (filterPutative) {
-        filteredResults = results.filter(item => parseFloat(item.membership_value) <= PUTATIVE_THRESHOLD);
-    }
-
-    // Extract unique GCF IDs
-    const gcfIds = [...new Set(filteredResults.map(item => item.gcf_id))];
+function collectGcfIds(results) {
+    // Extract unique GCF IDs (no client-side filtering)
+    const gcfIds = [...new Set(results.map(item => item.gcf_id))];
 
     console.log(`Collected ${gcfIds.length} unique GCF IDs`);
     return gcfIds;
 }
 
 // Function to fetch geographical data for GCF IDs
-async function fetchGeographicalData(gcfIds) {
+async function fetchGeographicalData(gcfIds, jobId = null, filterPutative = false) {
     console.log(`Fetching geographical data for ${gcfIds.length} GCF IDs`);
 
     // Create an array to store all marker data
     let allMarkerData = [];
 
-    // Fetch data for each GCF ID
-    for (const gcfId of gcfIds) {
+    // If we have a job ID, we can fetch all data at once using the job ID and putative threshold
+    if (jobId) {
         try {
-            // Extract the numeric part of the GCF ID if it's in the format "GCF_123"
-            let gcfIdParam = gcfId;
-            if (typeof gcfId === 'string' && gcfId.startsWith('GCF_')) {
-                gcfIdParam = gcfId.substring(4); // Remove "GCF_" prefix
+            // Build the URL with query parameters
+            let url = `/map-data-gcf?jobId=${jobId}`;
+
+            // If putative hits should be filtered, add the putativeThreshold parameter
+            if (filterPutative) {
+                url += `&putativeThreshold=${PUTATIVE_THRESHOLD}`;
             }
 
-            const response = await fetch(`/map-data-gcf?gcf=${gcfIdParam}`);
+            const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
 
             const data = await response.json();
-            console.log(`Received ${data.length} geographical points for GCF ${gcfId}`);
+            console.log(`Received ${data.length} geographical points for job ${jobId}`);
 
-            // Add the data to the array
-            allMarkerData = allMarkerData.concat(data);
+            // Use the data directly
+            allMarkerData = data;
         } catch (error) {
-            console.error(`Error fetching geographical data for GCF ${gcfId}:`, error);
+            console.error(`Error fetching geographical data for job ${jobId}:`, error);
+        }
+    } else {
+        // Fallback to fetching data for each GCF ID individually
+        for (const gcfId of gcfIds) {
+            try {
+                // Extract the numeric part of the GCF ID if it's in the format "GCF_123"
+                let gcfIdParam = gcfId;
+                if (typeof gcfId === 'string' && gcfId.startsWith('GCF_')) {
+                    gcfIdParam = gcfId.substring(4); // Remove "GCF_" prefix
+                }
+
+                const response = await fetch(`/map-data-gcf?gcf=${gcfIdParam}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log(`Received ${data.length} geographical points for GCF ${gcfId}`);
+
+                // Add the data to the array
+                allMarkerData = allMarkerData.concat(data);
+            } catch (error) {
+                console.error(`Error fetching geographical data for GCF ${gcfId}:`, error);
+            }
         }
     }
 
@@ -391,41 +434,61 @@ function displayGeographicalData(data) {
 }
 
 // Function to update the map with results
-async function updateMapWithResults(results, filterPutative = false) {
+async function updateMapWithResults(results) {
     console.log('Updating map with results');
 
     // Initialize the map if not already initialized
     initializeMap();
 
-    // Collect GCF IDs from the results
-    const gcfIds = collectGcfIds(results, filterPutative);
+    // Collect GCF IDs from the results (no client-side filtering)
+    const gcfIds = collectGcfIds(results);
 
     // If no GCF IDs, clear the map and return
     if (gcfIds.length === 0) {
         markers.clearLayers();
+        clearBiomeChart();
         return;
     }
 
+    // Get the current job ID and putative threshold setting
+    const jobIdDisplay = document.getElementById('jobIdDisplay');
+    const jobId = jobIdDisplay ? jobIdDisplay.textContent : null;
+    const hidePutativeToggle = document.getElementById('hidePutativeToggle');
+    const filterPutative = hidePutativeToggle ? hidePutativeToggle.checked : false;
+
     // Fetch geographical data for the GCF IDs
-    const geographicalData = await fetchGeographicalData(gcfIds);
+    const geographicalData = await fetchGeographicalData(gcfIds, jobId, filterPutative);
 
     // Display the geographical data on the map
     displayGeographicalData(geographicalData);
-
-    // Update the biome chart with the same GCF IDs
-    updateBiomeChart(gcfIds);
+    // Update the biome chart with the same GCF IDs and job ID
+    updateBiomeChart(gcfIds, null, jobId, filterPutative);
 }
 
 // Function to fetch biome data for GCF IDs
-async function fetchBiomeData(gcfIds) {
+async function fetchBiomeData(gcfIds, jobId = null, filterPutative = false) {
     console.log(`Fetching biome data for ${gcfIds.length} GCF IDs`);
 
     try {
-        // Convert GCF IDs to a comma-separated string
-        const gcfIdsParam = gcfIds.join(',');
+        // Build the URL with query parameters
+        let url = '';
+
+        if (jobId) {
+            // If we have a job ID, use it
+            url = `/biome-data-gcfs?jobId=${jobId}`;
+
+            // If putative hits should be filtered, add the putativeThreshold parameter
+            if (filterPutative) {
+                url += `&putativeThreshold=${PUTATIVE_THRESHOLD}`;
+            }
+        } else {
+            // Otherwise, use the GCF IDs
+            const gcfIdsParam = gcfIds.join(',');
+            url = `/biome-data-gcfs?gcfs=${encodeURIComponent(gcfIdsParam)}`;
+        }
 
         // Fetch biome data from the API
-        const response = await fetch(`/biome-data-gcfs?gcfs=${encodeURIComponent(gcfIdsParam)}`);
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
@@ -494,7 +557,7 @@ function processBiomeDataByLevel(
 }
 
 // Function to create and update the biome chart
-async function updateBiomeChart(gcfIds, level) {
+async function updateBiomeChart(gcfIds, level, jobId = null, filterPutative = false) {
     console.log('Updating biome chart');
 
     // Get the selected level from the dropdown if not provided
@@ -503,10 +566,8 @@ async function updateBiomeChart(gcfIds, level) {
         level = biomeLevelSelect ? biomeLevelSelect.value : '1';
     }
 
-    // Fetch biome data if not already available
-    if (!rawBiomeData.length) {
-        await fetchBiomeData(gcfIds);
-    }
+    // Always fetch fresh biome data with the current filter settings
+    await fetchBiomeData(gcfIds, jobId, filterPutative);
 
     if (rawBiomeData.length === 0) {
         console.log('No biome data available');
@@ -607,13 +668,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const level = this.value;
             console.log(`Biome level changed to ${level}`);
 
-            // Get the current GCF IDs from the results
+            // Get the current job ID and putative threshold setting
+            const jobIdDisplay = document.getElementById('jobIdDisplay');
+            const jobId = jobIdDisplay ? jobIdDisplay.textContent : null;
             const hidePutativeToggle = document.getElementById('hidePutativeToggle');
             const filterPutative = hidePutativeToggle ? hidePutativeToggle.checked : false;
-            const gcfIds = collectGcfIds(originalResults, filterPutative);
 
-            // Update the chart with the new level
-            updateBiomeChart(gcfIds, level);
+            // Get the current GCF IDs from the results (no client-side filtering)
+            const gcfIds = collectGcfIds(originalResults);
+
+            // Update the chart with the new level, job ID, and putative threshold
+            updateBiomeChart(gcfIds, level, jobId, filterPutative);
         });
     }
 

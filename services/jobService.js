@@ -120,14 +120,23 @@ async function getJob(jobId) {
 /**
  * Get results for a job
  * @param {string} jobId - Job ID
+ * @param {number|null} putativeThreshold - Threshold for putative hits (optional)
  * @returns {Promise<Array>} - Array of search results
  */
-async function getJobResults(jobId) {
+async function getJobResults(jobId, putativeThreshold = null) {
   try {
-    const result = await pool.query(
-      'SELECT * FROM search_results WHERE job_id = $1 ORDER BY membership_value DESC',
-      [jobId]
-    );
+    let query = 'SELECT * FROM search_results WHERE job_id = $1';
+    const params = [jobId];
+
+    // If putative threshold is provided, filter out hits with membership value greater than the threshold
+    if (putativeThreshold !== null) {
+      query += ' AND membership_value <= $2';
+      params.push(putativeThreshold);
+    }
+
+    query += ' ORDER BY membership_value DESC';
+
+    const result = await pool.query(query, params);
 
     return result.rows;
   } catch (error) {

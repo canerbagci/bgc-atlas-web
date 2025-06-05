@@ -16,13 +16,28 @@ router.use('/biome-data-gcfs', defaultRateLimiter);
 
 router.get('/map-data-gcf', async (req, res, next) => {
   try {
+    // Parse GCF ID from query parameter
     const gcfId = req.query.gcf ? parseInt(req.query.gcf, 10) : null;
     if (req.query.gcf && isNaN(gcfId)) {
       return res.status(400).json({ error: 'Invalid gcf parameter' });
     }
 
+    // Parse samples from query parameter
     const samples = req.query.samples ? req.query.samples.split(',') : null;
-    const data = await mapService.getMapDataForGcf(gcfId, samples);
+
+    // Parse job ID from query parameter
+    const jobId = req.query.jobId || null;
+
+    // Parse putative threshold from query parameter
+    const putativeThreshold = req.query.putativeThreshold ? parseFloat(req.query.putativeThreshold) : null;
+
+    // Validate putative threshold if provided
+    if (req.query.putativeThreshold && (isNaN(putativeThreshold) || putativeThreshold < 0 || putativeThreshold > 1)) {
+      return res.status(400).json({ error: 'Invalid putativeThreshold parameter. Must be a number between 0 and 1.' });
+    }
+
+    // Get map data
+    const data = await mapService.getMapDataForGcf(gcfId, samples, jobId, putativeThreshold);
     res.json(data);
   } catch (error) {
     logger.error(error);

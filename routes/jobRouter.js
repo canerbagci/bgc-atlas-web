@@ -53,13 +53,21 @@ router.get('/:jobId/results', async (req, res, next) => {
       });
     }
 
+    // Parse putative threshold from query parameter
+    const putativeThreshold = req.query.putativeThreshold ? parseFloat(req.query.putativeThreshold) : null;
+
+    // Validate putative threshold if provided
+    if (req.query.putativeThreshold && (isNaN(putativeThreshold) || putativeThreshold < 0 || putativeThreshold > 1)) {
+      return res.status(400).json({ error: 'Invalid putativeThreshold parameter. Must be a number between 0 and 1.' });
+    }
+
     // Set no-cache headers to prevent caching
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.setHeader('Surrogate-Control', 'no-store');
 
-    const results = await jobService.getJobResults(jobId);
+    const results = await jobService.getJobResults(jobId, putativeThreshold);
     res.json(results);
   } catch (error) {
     logger.error(error);
