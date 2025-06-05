@@ -104,6 +104,16 @@ BGC Atlas is built with the following main dependencies:
 
 For a complete list of dependencies, see the `package.json` file.
 
+## Running Tests
+
+Automated tests are written with [Jest](https://jestjs.io/). Ensure Node.js 18 or later is installed and run `npm install` to install dev dependencies. Then execute:
+
+```
+npm test
+```
+
+This command runs all test suites in the `tests` directory.
+
 ## Frontend Components
 
 The user interface is built with Pug templates. Reusable pieces of markup live in the `views/components` directory as mixins. Core elements such as the navigation bar and footer are defined once and included across all pages. Additional components, like a generic card, can be composed to simplify future UI work.
