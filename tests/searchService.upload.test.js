@@ -107,4 +107,33 @@ describe('processUploadedFiles', () => {
     expect(sendEvent).toHaveBeenLastCalledWith({ status: 'completed', records: result });
     expect(result).toEqual([{ bgc_name: 'bgc', gcf_id: '123', membership_value: '0.9' }]);
   });
+
+  it('uses first IP from x-forwarded-for header', async () => {
+    const stdout = new EventEmitter();
+    const proc = new EventEmitter();
+    proc.stdout = stdout;
+    proc.stderr = new EventEmitter();
+    spawn.mockReturnValue(proc);
+
+    const tmpDir = fs.mkdtempSync('/tmp/gbk-');
+    const filePath = path.join(tmpDir, 'f.txt');
+    fs.writeFileSync(filePath, 'LOCUS TEST');
+    const req = {
+      files: [{ originalname: 'f.txt', filename: 'f.txt', path: filePath }],
+      uploadDir: '/tmp/up',
+      headers: { 'x-forwarded-for': '5.5.5.5, 6.6.6.6' }
+    };
+    const createJobSpy = jest.spyOn(jobService, 'createJob');
+    const sendEvent = jest.fn();
+    const promise = processUploadedFiles(req, sendEvent);
+
+    stdout.emit('data', Buffer.from('gcf_membership\t0|1|2|3|4|5|bgc|123|0.9\n'));
+    proc.emit('close', 0);
+
+    await promise;
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+
+    expect(createJobSpy).toHaveBeenCalledWith('5.5.5.5', '/tmp/up', 1, ['f.txt']);
+  });
 });
