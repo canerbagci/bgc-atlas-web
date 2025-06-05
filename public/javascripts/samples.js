@@ -29,10 +29,23 @@ $(document).ready(function () {
             {data: 'latitude', name: 'Latitude', title: 'Latitude', type: 'num'},
             {data: 'envbiome', name: 'Environment (biome)', title: 'Environment (biome)', type: 'string'},
             {data: 'envfeat', name: 'Environment (feature)', title: 'Environment (feature)', type: 'string'},
-            {data: 'collectdate', name: 'Collection date', title: 'Collection date', type: 'string'},
+            {
+                data: 'collectdate', 
+                name: 'Collection date', 
+                title: 'Collection date', 
+                type: 'string',
+                render: function(data, type, row) {
+                    if (data) {
+                        const date = new Date(data);
+                        const day = date.getDate().toString().padStart(2, '0');
+                        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                        const year = date.getFullYear();
+                        return `${day}.${month}.${year}`;
+                    }
+                    return data;
+                }
+            },
             {data: 'biosample', name: 'Sample', title: 'Sample', type: 'string'},
-            {data: 'species', name: 'Species', title: 'Species', type: 'string'},
-            {data: 'hosttaxid', name: 'Host tax id', title: 'Host tax id', type: 'num'},
         ],
         order: [[0, 'desc'], [4, 'desc']],
         createdRow: function (row, data, dataIndex) {

@@ -215,7 +215,7 @@ async function getPaginatedSampleData(options) {
     const columns = [
       'status', 'sampleacc', 'assembly', 'longest_biome', 'submittedseqs',
       'protocluster_count', 'longitude', 'latitude', 'envbiome', 'envfeat',
-      'collectdate', 'biosample', 'species', 'hosttaxid'
+      'collectdate', 'biosample'
     ];
 
     // Validate order parameters
@@ -281,7 +281,6 @@ async function getPaginatedSampleData(options) {
         OR ma.envbiome ILIKE $1
         OR ma.envfeat ILIKE $1
         OR ma.biosample ILIKE $1
-        OR ma.species ILIKE $1
       `;
       searchParams.push(`%${validatedSearchValue}%`);
     }
