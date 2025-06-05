@@ -62,26 +62,26 @@ setInterval(() => {
   clients.forEach((client, id) => {
     if (client.writableEnded || client.finished) {
       clients.delete(id);
-      console.log(`Pruned client ${id}, total clients: ${clients.size}`);
+      logger.info(`Pruned client ${id}, total clients: ${clients.size}`);
     }
   });
 }, 30000);
 
 // SSE route
 router.get('/events', defaultRateLimiter, (req, res) => {
-  console.log('New SSE client connected');
+  logger.info('New SSE client connected');
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
   const clientId = Date.now();
   clients.set(clientId, res);
-  console.log(`Client ${clientId} connected, total clients: ${clients.size}`);
+  logger.info(`Client ${clientId} connected, total clients: ${clients.size}`);
 
   res.on('error', (err) => {
-    console.error(`SSE stream error for client ${clientId}:`, err);
+    logger.error(`SSE stream error for client ${clientId}:`, err);
     clients.delete(clientId);
-    console.log(`Total clients after error: ${clients.size}`);
+    logger.info(`Total clients after error: ${clients.size}`);
   });
 
   // Send a test event to confirm connection and include queue status
@@ -96,31 +96,31 @@ router.get('/events', defaultRateLimiter, (req, res) => {
       }
     })}\n\n`);
   }).catch(err => {
-    console.error('Error retrieving queued jobs for SSE:', err);
+    logger.error('Error retrieving queued jobs for SSE:', err);
   });
 
   req.on('close', () => {
-    console.log(`Client ${clientId} disconnected`);
+    logger.info(`Client ${clientId} disconnected`);
     clients.delete(clientId);
-    console.log(`Total clients after disconnect: ${clients.size}`);
+    logger.info(`Total clients after disconnect: ${clients.size}`);
   });
 });
 
 // Function to send events to clients
 function sendEvent(message) {
-  console.log(`Sending SSE event to ${clients.size} clients:`, message);
+  logger.info(`Sending SSE event to ${clients.size} clients:`, message);
   clients.forEach((client, id) => {
     if (client.writableEnded || client.finished) {
       clients.delete(id);
-      console.log(`Removed ended SSE client ${id}, total clients: ${clients.size}`);
+      logger.info(`Removed ended SSE client ${id}, total clients: ${clients.size}`);
       return;
     }
     try {
       client.write(`data: ${JSON.stringify(message)}\n\n`);
     } catch (error) {
-      console.error('Error sending SSE event:', error);
+      logger.error('Error sending SSE event:', error);
       clients.delete(id);
-      console.log(`Total clients after write error: ${clients.size}`);
+      logger.info(`Total clients after write error: ${clients.size}`);
     }
   });
 }
