@@ -57,15 +57,6 @@ const upload = multer({
 // Store connected SSE clients
 const clients = new Map();
 
-// Periodically prune disconnected SSE clients
-setInterval(() => {
-  clients.forEach((client, id) => {
-    if (client.writableEnded || client.finished) {
-      clients.delete(id);
-      logger.info(`Pruned client ${id}, total clients: ${clients.size}`);
-    }
-  });
-}, 30000);
 
 // SSE route
 router.get('/events', defaultRateLimiter, (req, res) => {
@@ -78,11 +69,20 @@ router.get('/events', defaultRateLimiter, (req, res) => {
   clients.set(clientId, res);
   logger.info(`Client ${clientId} connected, total clients: ${clients.size}`);
 
-  res.on('error', (err) => {
-    logger.error(`SSE stream error for client ${clientId}:`, err);
+  const cleanup = (label, err) => {
+    if (err) {
+      logger.error(`${label} for client ${clientId}:`, err);
+    } else {
+      console.log(`${label} for client ${clientId}`);
+    }
     clients.delete(clientId);
-    logger.info(`Total clients after error: ${clients.size}`);
-  });
+    logger.info(`Total clients after ${label}: ${clients.size}`);
+  };
+
+  res.on('close', () => cleanup('response close'));
+  res.on('error', err => cleanup('SSE stream error', err));
+  req.on('close', () => cleanup('request close'));
+  req.on('error', err => cleanup('request error', err));
 
   // Send a test event to confirm connection and include queue status
   const schedulerService = require('../services/schedulerService');
@@ -99,11 +99,6 @@ router.get('/events', defaultRateLimiter, (req, res) => {
     logger.error('Error retrieving queued jobs for SSE:', err);
   });
 
-  req.on('close', () => {
-    logger.info(`Client ${clientId} disconnected`);
-    clients.delete(clientId);
-    logger.info(`Total clients after disconnect: ${clients.size}`);
-  });
 });
 
 // Function to send events to clients
@@ -172,3 +167,7 @@ router.post('/upload', (req, res, next) => {
 });
 
 module.exports = router;
+
+if (process.env.NODE_ENV === 'test') {
+  module.exports._clients = clients;
+}
