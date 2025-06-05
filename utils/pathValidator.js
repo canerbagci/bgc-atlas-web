@@ -6,7 +6,7 @@ function validateSSLCertPath(certDir) {
   if (!fs.existsSync(certDir)) {
     throw new Error(`SSL certificate directory not found: ${certDir}`);
   }
-  const required = ['privkey.pem', 'fullchain.pem'];
+  const required = ['privkey.pem', 'fullchain.pem', 'chain.pem'];
   required.forEach(f => {
     const p = path.join(certDir, f);
     if (!fs.existsSync(p)) {
