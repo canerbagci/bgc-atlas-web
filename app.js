@@ -2,7 +2,8 @@ const createError = require('http-errors');
 const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
-const logger = require('morgan');
+const morgan = require('morgan');
+const logger = require('./utils/logger');
 const geoip = require('geoip-lite');
 const compression = require('compression');
 const etagMiddleware = require('./services/etagMiddleware');
@@ -60,7 +61,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 
 // Create a custom token for geolocation
-logger.token('geolocation', function (req, res) {
+morgan.token('geolocation', function (req, res) {
   const ip = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || '';
   // Remove IPv6 prefix if present
   const cleanIp = ip.replace(/^::ffff:/, '');
@@ -84,7 +85,7 @@ const isBot = (userAgent) => {
 };
 
 // Create a custom format function that wraps the output in italic if it's a bot
-logger.format('botAware', function(tokens, req, res) {
+morgan.format('botAware', function(tokens, req, res) {
   const userAgent = req.headers['user-agent'] || '';
   const isUserBot = isBot(userAgent);
 
@@ -110,8 +111,8 @@ logger.format('botAware', function(tokens, req, res) {
   return logEntry;
 });
 
-// Use the custom format
-app.use(logger('botAware'));
+// Use the custom format and direct output to winston
+app.use(morgan('botAware', { stream: logger.stream }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
@@ -167,6 +168,8 @@ app.use(function(err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
+
+  logger.error('Unhandled error', err);
 
   // render the error page
   res.status(err.status || 500);

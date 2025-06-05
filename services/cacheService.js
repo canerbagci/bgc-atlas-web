@@ -1,4 +1,5 @@
 const NodeCache = require('node-cache');
+const logger = require('../utils/logger');
 
 // Create a cache instance with default settings
 // stdTTL: time to live in seconds for every generated cache element (default: 0 - unlimited)
@@ -34,7 +35,7 @@ async function getOrFetch(key, fetchFunction, ttl = 3600) {
     return data;
   } catch (error) {
     // If fetching fails, don't cache the error
-    console.error(`Error fetching data for key ${key}:`, error);
+    logger.error(`Error fetching data for key ${key}:`, error);
     throw error;
   }
 }

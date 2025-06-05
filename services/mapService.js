@@ -1,4 +1,5 @@
 const { pool } = require('../config/database');
+const logger = require('../utils/logger');
 
 /**
  * Get map data for all samples with geographic coordinates
@@ -37,7 +38,7 @@ async function getMapData() {
     
     return result.rows;
   } catch (error) {
-    console.error('Error getting map data:', error);
+    logger.error('Error getting map data:', error);
     throw error;
   }
 }
@@ -105,7 +106,7 @@ async function getMapDataForGcf(gcfId = null, samples = null) {
     const result = await pool.query(sql, params);
     return result.rows;
   } catch (error) {
-    console.error('Error getting map data for GCF:', error);
+    logger.error('Error getting map data for GCF:', error);
     throw error;
   }
 }
@@ -123,7 +124,7 @@ async function getBodyMapData() {
     
     return result.rows;
   } catch (error) {
-    console.error('Error getting body map data:', error);
+    logger.error('Error getting body map data:', error);
     throw error;
   }
 }
@@ -153,7 +154,7 @@ async function getFilteredMapData(column) {
     
     return result.rows;
   } catch (error) {
-    console.error(`Error getting filtered map data for column ${column}:`, error);
+    logger.error(`Error getting filtered map data for column ${column}:`, error);
     throw error;
   }
 }
@@ -174,7 +175,7 @@ async function getColumnValues(column) {
     
     return result.rows;
   } catch (error) {
-    console.error(`Error getting column values for ${column}:`, error);
+    logger.error(`Error getting column values for ${column}:`, error);
     throw error;
   }
 }

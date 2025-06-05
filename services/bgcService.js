@@ -1,6 +1,7 @@
 const { pool } = require('../config/database');
 const cacheService = require('./cacheService');
 const debug = require('debug')('bgc-atlas:bgcService');
+const logger = require('../utils/logger');
 
 /**
  * Validates a GCF ID parameter
@@ -205,12 +206,12 @@ async function getBgcInfo(gcfId = null, samples = null) {
         const { rows } = await pool.query(sql, params); // use pooled client
         return rows;
       } catch (err) {
-        console.error('Error getting BGC info:', err);
+        logger.error('Error getting BGC info:', err);
         throw err;
       }
     }, 3600); // cache 1 h
   } catch (error) {
-    console.error('Error validating inputs for BGC info:', error);
+    logger.error('Error validating inputs for BGC info:', error);
     throw error;
   }
 }
@@ -263,7 +264,7 @@ async function getProductCategoryCounts(gcfId = null, samples = null) {
     const result = await pool.query(sql, params);
     return result.rows;
   } catch (error) {
-    console.error('Error getting product category counts:', error);
+    logger.error('Error getting product category counts:', error);
     throw error;
   }
 }
@@ -287,7 +288,7 @@ async function getGcfCategoryCounts() {
 
       return result.rows;
     } catch (error) {
-      console.error('Error getting GCF category counts:', error);
+      logger.error('Error getting GCF category counts:', error);
       throw error;
     }
   }, 3600); // Cache for 1 hour
@@ -366,7 +367,7 @@ async function getProductCounts(gcfId = null, samples = null) {
     const result = await pool.query(sql, params);
     return result.rows;
   } catch (error) {
-    console.error('Error getting product counts:', error);
+    logger.error('Error getting product counts:', error);
     throw error;
   }
 }
@@ -413,7 +414,7 @@ async function getGcfCountHistogram() {
       const result = await pool.query(sql);
       return result.rows;
     } catch (error) {
-      console.error('Error getting GCF count histogram:', error);
+      logger.error('Error getting GCF count histogram:', error);
       throw error;
     }
   }, 3600); // Cache for 1 hour
@@ -462,7 +463,7 @@ async function getGcfTableSunburst(gcfId = null, samples = null) {
     const result = await pool.query(sql, params);
     return result.rows;
   } catch (error) {
-    console.error('Error getting GCF table sunburst:', error);
+    logger.error('Error getting GCF table sunburst:', error);
     throw error;
   }
 }
@@ -590,7 +591,7 @@ async function getGcfTable(options = {}) {
       data: rows
     };
   } catch (err) {
-    console.error('Error getting GCF table:', err);
+    logger.error('Error getting GCF table:', err);
     throw err;
   }
 }
@@ -848,7 +849,7 @@ async function getBgcTable(options) {
       data: rows
     };
   } catch (error) {
-    console.error('Error getting BGC table:', error);
+    logger.error('Error getting BGC table:', error);
     throw error;
   }
 }
@@ -918,7 +919,7 @@ async function getTaxonomicCounts(gcfId = null, samples = null) {
     const { rows } = await pool.query(sql, params);
     return rows;
   } catch (err) {
-    console.error('Error getting taxonomic counts:', err);
+    logger.error('Error getting taxonomic counts:', err);
     throw err;
   }
 }

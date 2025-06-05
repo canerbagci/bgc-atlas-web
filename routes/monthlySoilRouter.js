@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const monthlySoilService = require('../services/monthlySoilService');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 const { BASE_DIR, FULL_AS_DIR, PRODUCT_AS_DIR, NAME_REGEX } = monthlySoilService;
@@ -21,7 +22,7 @@ router.get('/monthly-soil/?', async (_req, res, next) => {
       productMonths 
     });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     next(err);
   }
 });
@@ -45,7 +46,7 @@ router.get('/monthly-soil/full-AS/:month/?', async (req, res, next) => {
       datasets
     });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     next(err);
   }
 });
@@ -67,7 +68,7 @@ router.get('/monthly-soil/product-AS/:month/?', async (req, res, next) => {
       productTypesWithDatasets
     });
   } catch (err) {
-    console.error(err);
+    logger.error(err);
     next(err);
   }
 });

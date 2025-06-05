@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mapService = require('../services/mapService');
 const { defaultRateLimiter } = require('../services/rateLimitMiddleware');
+const logger = require('../utils/logger');
 
 /* ───────────────────────────── Map Routes ─────────────────────────────── */
 
@@ -23,7 +24,7 @@ router.get('/map-data-gcf', async (req, res, next) => {
     const data = await mapService.getMapDataForGcf(gcfId, samples);
     res.json(data);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     next(error);
   }
 });
@@ -33,7 +34,7 @@ router.get('/map-data', async (req, res, next) => {
     const data = await mapService.getMapData();
     res.json(data);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     next(error);
   }
 });
@@ -43,7 +44,7 @@ router.get('/body-map-data', async (req, res, next) => {
     const data = await mapService.getBodyMapData();
     res.json(data);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     next(error);
   }
 });
@@ -53,7 +54,7 @@ router.get('/filter/:column', async (req, res, next) => {
     const data = await mapService.getFilteredMapData(req.params.column);
     res.json(data);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     next(error);
   }
 });
@@ -64,7 +65,7 @@ router.get('/column-values/:column', async (req, res, next) => {
     const data = await mapService.getColumnValues(column);
     res.json(data);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     next(error);
   }
 });

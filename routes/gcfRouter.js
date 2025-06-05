@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bgcService = require('../services/bgcService');
 const { defaultRateLimiter } = require('../services/rateLimitMiddleware');
+const logger = require('../utils/logger');
 
 /* ───────────────────────────── GCF Routes ─────────────────────────────── */
 
@@ -15,7 +16,7 @@ router.get('/gcf-count-hist', async (req, res, next) => {
     const bgcInfo = await bgcService.getGcfCountHistogram();
     res.json(bgcInfo);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     next(error);
   }
 });
@@ -31,7 +32,7 @@ router.get('/gcf-table-sunburst', async (req, res, next) => {
     const sunburstData = await bgcService.getGcfTableSunburst(gcfId, samples);
     res.json(sunburstData);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     next(error);
   }
 });
@@ -52,7 +53,7 @@ router.get('/gcf-table', async (req, res, next) => {
     // Return the result directly (it's already in the format expected by DataTables)
     res.json(result);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     next(error);
   }
 });

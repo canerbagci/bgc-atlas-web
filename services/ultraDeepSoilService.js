@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
+const logger = require('../utils/logger');
 
 const BASE_DIR = process.env.ULTRA_DEEP_SOIL_DIR || '/ceph/ibmi/tgm/bgc-atlas/ultra-deep-soil';
 const MAGS_DIR = path.join(BASE_DIR, 'mags');
@@ -14,7 +15,7 @@ async function listMagDirectories() {
     const entries = await fs.readdir(MAGS_DIR, { withFileTypes: true });
     return entries.filter(e => e.isDirectory()).map(e => e.name).sort();
   } catch (err) {
-    console.error(`Error reading MAG directories:`, err);
+    logger.error(`Error reading MAG directories:`, err);
     return [];
   }
 }

@@ -12,6 +12,7 @@ var https = require('https');
 var fs = require('fs');
 var path = require('path');
 var { validateSSLCertPath, validateRequiredPaths } = require('../utils/pathValidator');
+var logger = require('../utils/logger');
 
 
 const certDir = process.env.SSL_CERT_PATH || '/etc/letsencrypt/live/bgc-atlas.cs.uni-tuebingen.de';
@@ -19,7 +20,7 @@ try {
   validateSSLCertPath(certDir);
   validateRequiredPaths();
 } catch (err) {
-  console.error(err.message);
+  logger.error(err.message);
   process.exit(1);
 }
 
@@ -95,15 +96,15 @@ function onError(error) {
   // handle specific listen errors with friendly messages
   switch (error.code) {
     case 'EACCES':
-      console.error(bind + ' requires elevated privileges');
+      logger.error(bind + ' requires elevated privileges');
       process.exit(1);
       break;
     case 'EADDRINUSE':
-      console.error(bind + ' is already in use');
+      logger.error(bind + ' is already in use');
       process.exit(1);
       break;
     default:
-      console.error('Error occurred while starting HTTPS server:', error);
+      logger.error('Error occurred while starting HTTPS server:', error);
       process.exit(1);
   }
 }
@@ -118,4 +119,5 @@ function onListening() {
     ? 'pipe ' + addr
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
+  logger.info('Listening on ' + bind);
 }

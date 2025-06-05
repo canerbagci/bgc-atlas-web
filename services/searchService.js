@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs-extra');
 const { spawn } = require('child_process');
 const debug = require('debug')('bgc-atlas:searchService');
+const logger = require('../utils/logger');
 require('dotenv').config();
 
 // Allowed pattern for directory names (alphanumeric, underscores and hyphens)
@@ -79,7 +80,7 @@ async function processUploadedFiles(req, sendEvent) {
     });
 
     scriptProcess.stderr.on('data', (data) => {
-      console.error(`Script stderr: ${data}`);
+      logger.error(`Script stderr: ${data}`);
       scriptOutput += data.toString();
     });
 
@@ -159,7 +160,7 @@ function getMembership(reportId) {
         debug('membership: ' + membershipString);
         resolve(membershipString);
       } else {
-        console.error(`SQLite process exited with code ${code}.`);
+        logger.error(`SQLite process exited with code ${code}.`);
         reject(`SQLite process exited with code ${code}`);
       }
     });

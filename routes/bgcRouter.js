@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bgcService = require('../services/bgcService');
 const { defaultRateLimiter } = require('../services/rateLimitMiddleware');
+const logger = require('../utils/logger');
 
 /* ───────────────────────────── BGC Routes ─────────────────────────────── */
 
@@ -22,7 +23,7 @@ router.get('/bgc-info', async (req, res, next) => {
     const bgcInfo = await bgcService.getBgcInfo(gcfId, samples);
     res.json(bgcInfo);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {
@@ -42,7 +43,7 @@ router.get('/pc-category-count', async (req, res, next) => {
     const categoryCount = await bgcService.getProductCategoryCounts(gcfId, samples);
     res.json(categoryCount);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {
@@ -58,7 +59,7 @@ router.get('/gcf-category-count', async (req, res, next) => {
     const catInfo = await bgcService.getGcfCategoryCounts();
     res.json(catInfo);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     next(error);
   }
 });
@@ -72,7 +73,7 @@ router.get('/pc-product-count', async (req, res, next) => {
     const productCount = await bgcService.getProductCounts(gcfId, samples);
     res.json(productCount);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {
@@ -92,7 +93,7 @@ router.get('/pc-taxonomic-count', async (req, res, next) => {
     const taxonomicCount = await bgcService.getTaxonomicCounts(gcfId, samples);
     res.json(taxonomicCount);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {
@@ -125,7 +126,7 @@ router.get('/bgc-table', async (req, res, next) => {
     const result = await bgcService.getBgcTable(options);
     res.json(result);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {

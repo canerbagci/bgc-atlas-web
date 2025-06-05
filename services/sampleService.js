@@ -1,5 +1,6 @@
 const { pool } = require('../config/database');
 const cacheService = require('./cacheService');
+const logger = require('../utils/logger');
 
 /**
  * Validates a dataset parameter
@@ -140,7 +141,7 @@ async function getSampleInfo() {
 
       return result.rows;
     } catch (error) {
-      console.error('Error getting sample info:', error);
+      logger.error('Error getting sample info:', error);
       throw error;
     }
   }, 3600); // Cache for 1 hour
@@ -181,7 +182,7 @@ async function getSampleData() {
 
       return rows;
     } catch (error) {
-      console.error('Error getting sample data:', error);
+      logger.error('Error getting sample data:', error);
       throw error;
     }
   }, 3600); // Cache for 1 hour
@@ -364,7 +365,7 @@ async function getPaginatedSampleData(options) {
       data: rows
     };
   } catch (error) {
-    console.error('Error getting paginated sample data:', error);
+    logger.error('Error getting paginated sample data:', error);
     throw error;
   }
 }
@@ -391,7 +392,7 @@ async function getSampleData2() {
 
       return rows;
     } catch (error) {
-      console.error('Error getting sample data 2:', error);
+      logger.error('Error getting sample data 2:', error);
       throw error;
     }
   }, 3600); // Cache for 1 hour
@@ -424,12 +425,12 @@ async function getBgcId(dataset, anchor) {
           return { bgcId: 'Not Found' };
         }
       } catch (error) {
-        console.error('Error getting BGC ID:', error);
+        logger.error('Error getting BGC ID:', error);
         throw error;
       }
     }, 3600); // Cache for 1 hour
   } catch (error) {
-    console.error('Error validating inputs for BGC ID:', error);
+    logger.error('Error validating inputs for BGC ID:', error);
     throw error;
   }
 }
