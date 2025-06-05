@@ -65,7 +65,7 @@ requires **Node.js 18** or later:
    Create a `.env` file in the root directory with the following variables:
    ```
    PORT=3000
-   APP_URL=http://localhost:3000
+   APP_URL=http://localhost:3000  # Base URL used to build links in the UI
    DATABASE_URL=postgres://username:password@localhost:5432/bgcatlas
    REDIS_HOST=127.0.0.1  # Redis host for Bull queue
    REDIS_PORT=6379       # Redis port for Bull queue
