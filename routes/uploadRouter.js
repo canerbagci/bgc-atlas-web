@@ -56,15 +56,18 @@ router.get('/events', (req, res) => {
 
   // Send a test event to confirm connection and include queue status
   const schedulerService = require('../services/schedulerService');
-  const queuedJobs = schedulerService.getQueuedJobs();
-  res.write(`data: ${JSON.stringify({ 
-    type: 'connection', 
-    message: 'Connected to SSE',
-    queueStatus: {
-      totalJobs: queuedJobs.length,
-      isProcessing: queuedJobs.length > 0
-    }
-  })}\n\n`);
+  schedulerService.getQueuedJobs().then(queuedJobs => {
+    res.write(`data: ${JSON.stringify({
+      type: 'connection',
+      message: 'Connected to SSE',
+      queueStatus: {
+        totalJobs: queuedJobs.length,
+        isProcessing: queuedJobs.length > 0
+      }
+    })}\n\n`);
+  }).catch(err => {
+    console.error('Error retrieving queued jobs for SSE:', err);
+  });
 
   req.on('close', () => {
     console.log(`Client ${clientId} disconnected`);

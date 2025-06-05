@@ -18,7 +18,7 @@ router.get('/:jobId', async (req, res, next) => {
 
     // Get queue information if job is queued
     if (job.status === 'queued') {
-      const queueInfo = schedulerService.getQueueInfo(jobId);
+      const queueInfo = await schedulerService.getQueueInfo(jobId);
       job.queueInfo = queueInfo;
     }
 
@@ -82,7 +82,7 @@ router.get('/user/:userId', async (req, res, next) => {
 // Get queue status
 router.get('/queue/status', async (req, res) => {
   try {
-    const queuedJobs = schedulerService.getQueuedJobs();
+    const queuedJobs = await schedulerService.getQueuedJobs();
     const runningJobs = await jobService.getRunningJobs();
     const completedJobsCount = await jobService.getCompletedJobsCount();
 
