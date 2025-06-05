@@ -73,9 +73,7 @@ block scripts
         }
 
         function modifyIframeContent(dataset) {
-            console.log("modifying iframe content");
             var iframe = document.getElementById('contentFrame');
-            console.log(iframe);
 
             if (iframe && iframe.contentWindow && iframe.contentWindow.document) {
                 var iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
@@ -97,8 +95,6 @@ block scripts
                 var script = iframeDocument.createElement('script');
                 script.src = "https://code.jquery.com/jquery-3.6.0.min.js"; // Use the jQuery CDN
                 iframeDocument.head.appendChild(script);
-
-                console.log(iframeDocument.head);
 
                 // Wait for jQuery to load, then inject the custom script
                 script.onload = function () {

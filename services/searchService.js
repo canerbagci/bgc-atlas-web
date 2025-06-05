@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs-extra');
 const { spawn } = require('child_process');
+const debug = require('debug')('bgc-atlas:searchService');
 require('dotenv').config();
 
 // Allowed pattern for directory names (alphanumeric, underscores and hyphens)
@@ -72,7 +73,7 @@ async function processUploadedFiles(req, sendEvent) {
     });
 
     scriptProcess.on('close', (code) => {
-      console.log("close, scriptOutput: ", scriptOutput);
+      debug('close, scriptOutput: %s', scriptOutput);
       if (code !== 0) {
         sendEvent({ status: 'Error', message: `Script exited with code ${code}`, output: scriptOutput });
         return reject(new Error(`Script exited with code ${code}: ${scriptOutput}`));
@@ -133,18 +134,18 @@ function getMembership(reportId) {
     let membershipString = '';
 
     getReportIdProc.stderr.on('data', function(data) {
-      console.log(data.toString());
+      debug(data.toString());
     });
 
     getReportIdProc.stdout.on('data', function(data) {
-      console.log('membership string: ' + data.toString());
+      debug('membership string: ' + data.toString());
       membershipString = data.toString();
     });
 
     getReportIdProc.on('close', function(code) {
       if (code === 0) {
-        console.log('SQLite process exited successfully.');
-        console.log("membership: " + membershipString);
+        debug('SQLite process exited successfully.');
+        debug('membership: ' + membershipString);
         resolve(membershipString);
       } else {
         console.error(`SQLite process exited with code ${code}.`);

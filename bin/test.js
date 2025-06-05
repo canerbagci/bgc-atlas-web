@@ -1,6 +1,7 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const debug = require('debug')('bgc-atlas:test');
 const app = require('../app');
 
 const certDir = process.env.SSL_CERT_PATH || '/etc/letsencrypt/live/bgc-atlas.cs.uni-tuebingen.de';
@@ -17,5 +18,5 @@ const port = 3000; // Use a different port than 443 for local testing
 const server = https.createServer(credentials, app);
 
 server.listen(port, () => {
-    console.log(`Server running locally on port ${port}`);
+    debug(`Server running locally on port ${port}`);
 });

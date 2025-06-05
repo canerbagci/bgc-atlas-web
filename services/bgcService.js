@@ -1,5 +1,6 @@
 const { pool } = require('../config/database');
 const cacheService = require('./cacheService');
+const debug = require('debug')('bgc-atlas:bgcService');
 
 /**
  * Get BGC information including counts of BGCs, success runs, GCFs, etc.
@@ -456,7 +457,7 @@ async function getGcfTable(options = {}) {
     `;
 
     // Optional: log the SQL *with* actual limit/offset values
-    console.log(
+    debug(
         'GCF table query:',
         paginatedSQL.replace('$1', length).replace('$2', start)
     );
