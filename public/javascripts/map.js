@@ -1,119 +1,153 @@
-async function createMap() {
-    const map = initBaseMap();
-    const { clusterGroup, markerIds } = await loadMarkers(map);
-    initDrawTools(map, clusterGroup, markerIds);
-    initInspectButton(map, markerIds);
-}
+function createMap() {
+    var map = L.map('map').setView({lat: 0, lng: 0}, 2.5);
 
-/* ---------- helpers ---------- */
+    const southWest = L.latLng(-90, -180);
+    const northEast = L.latLng(90, 180);
+    const bounds = L.latLngBounds(southWest, northEast);
 
-function initBaseMap() {
-    const map = L.map("map", {
-        center: [0, 0],
-        zoom: 2,
-        maxBounds: [[-90, -180], [90, 180]],
-        worldCopyJump: true,
-        zoomSnap: 0.5,
+    map.setMaxBounds(bounds);
+    map.on('drag', function () {
+        map.panInsideBounds(bounds, {animate: false});
     });
 
-    L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-        {
-            minZoom: 2,
-            maxZoom: 9,
-            attribution:
-                "© Carto, © OpenStreetMap contributors",
-        },
-    ).addTo(map);
-
-    L.control.scale({ imperial: true, metric: true }).addTo(map);
-    return map;
-}
-
-async function loadMarkers(map) {
-    const clusterGroup = L.markerClusterGroup();
-    const markerIds = new Map();          // marker → assembly ID
-
-    try {
-        const response = await fetch("/map-data");
-        const points = await response.json();
-
-        points
-            .filter(
-                ({ latitude, longitude }) =>
-                    Number.isFinite(latitude) && Number.isFinite(longitude),
-            )
-            .forEach(({ latitude, longitude, assembly }) => {
-                const marker = L.marker([latitude, longitude]).bindPopup(
-                    `<a href="/antismash?dataset=${assembly}" target="_blank">${assembly}</a>`,
-                );
-                markerIds.set(marker, assembly);
-                clusterGroup.addLayer(marker);
-            });
-
-        map.addLayer(clusterGroup);
-
-        // Fit once everything is on the map (skip if empty)
-        if (clusterGroup.getLayers().length) {
-            map.fitBounds(clusterGroup.getBounds(), { padding: [20, 20] });
-        }
-    } catch (err) {
-        console.error(err);
-        alert("⚠️  Couldn’t load marker data.");
-    }
-
-    return { clusterGroup, markerIds };
-}
-
-function initDrawTools(map, clusterGroup, markerIds) {
-    const drawnItems = new L.FeatureGroup().addTo(map);
-
-    new L.Control.Draw({
-        draw: {
-            rectangle: true,
-            polyline: polygon = circle = marker = circlemarker = false,
-        },
-        edit: { featureGroup: drawnItems },
+    // add the OpenStreetMap tiles
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
+        minZoom: 2,
+        maxZoom: 9,
+        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>',
     }).addTo(map);
 
-    map.on("draw:created", ({ layer }) => {
-        const bounds = layer.getBounds();
-        const selected = [];
-        clusterGroup.eachLayer((m) => {
-            if (bounds.contains(m.getLatLng())) selected.push(markerIds.get(m));
-        });
-        layer._selectedIds = selected;      // stash for the inspect button
-        drawnItems.clearLayers().addLayer(layer);
+    // show the scale bar on the lower left corner
+    L.control.scale({imperial: true, metric: true}).addTo(map);
+
+    const markers = L.markerClusterGroup();
+    const markerList = [];
+
+    $.ajax({
+        url: '/map-data',
+        type: 'GET',
+        dataType: 'json',
+        success: function(results) {
+            for (var i = 0; i < results.length; i++) {
+                if (typeof results[i].longitude === 'number' && typeof results[i].latitude === 'number') {
+                    const marker = L.marker({
+                        lon: parseFloat(results[i].longitude),
+                        lat: parseFloat(results[i].latitude)
+                    }).bindPopup("<a href=\"/antismash?dataset=" + results[i].assembly + " \" target='_blank'> " + results[i].assembly + "</a>");
+
+                    // Store marker and its associated data
+                    markerList.push({
+                        marker: marker,
+                        id: results[i].assembly
+                    });
+
+                    markers.addLayer(marker);
+                }
+            }
+        },
+        complete: function() {
+            map.addLayer(markers);
+        }
     });
-}
 
-function initInspectButton(map, markerIds) {
-    const InspectControl = L.Control.extend({
-        onAdd() {
-            const btn = L.DomUtil.create(
-                "button",
-                "leaflet-control-inspect leaflet-bar",
-            );
-            btn.textContent = "Inspect";
+    // Add drawing controls
+    var drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
 
-            L.DomEvent.on(btn, "click", () => {
-                // Gather selected IDs from drawn layers
-                const ids = [];
-                map.eachLayer((l) => {
-                    if (Array.isArray(l._selectedIds)) ids.push(...l._selectedIds);
-                });
+    var drawControl = new L.Control.Draw({
+        draw: {
+            polyline: false,
+            polygon: false,
+            circle: false,
+            marker: false,
+            circlemarker: false,
+            rectangle: true // Enable rectangle drawing
+        },
+        edit: {
+            featureGroup: drawnItems
+        }
+    });
+    map.addControl(drawControl);
 
-                if (ids.length) {
-                    const url = `https://bgc-atlas.cs.uni-tuebingen.de/bgcs?samples=${encodeURIComponent(ids.join(","))}`;
-                    window.open(url, "_blank");
+    let containedIDs = [];
+
+    // Handle the rectangle draw event
+    map.on('draw:created', function (e) {
+        var type = e.layerType,
+            layer = e.layer;
+
+        if (type === 'rectangle') {
+            var bounds = layer.getBounds(); // Get the bounds of the drawn rectangle
+
+            var containedMarkers = markerList.filter(function(item) {
+                return bounds.contains(item.marker.getLatLng()); // Check if marker is within the bounds
+            });
+
+            containedIDs = containedMarkers.map(function(item) {
+                return item.id; // Get the IDs of the contained markers
+            });
+        }
+
+        drawnItems.addLayer(layer);
+    });
+
+    // Add an "Analyze" button to the map
+    L.Control.AnalyzeButton = L.Control.extend({
+        onAdd: function(map) {
+            var btn = L.DomUtil.create('button', 'leaflet-bar leaflet-control leaflet-control-custom');
+            btn.innerHTML = 'Inspect';
+            btn.style.backgroundColor = '#fff';
+            btn.style.padding = '5px';
+            btn.style.cursor = 'pointer';
+
+            // Handle button click event
+            L.DomEvent.on(btn, 'click', function() {
+                if (containedIDs.length > 0) {
+                    // Construct the URL with the sample IDs
+                    var baseUrl = 'https://bgc-atlas.cs.uni-tuebingen.de/bgcs?samples=';
+                    var sampleIdsParam = containedIDs.join(','); // Join the IDs with commas
+                    var fullUrl = baseUrl + encodeURIComponent(sampleIdsParam);
+
+                    // Open the URL in a new tab or redirect
+                    window.open(fullUrl, '_blank'); // Opens in a new tab
+                    // Alternatively, you can use window.location.href = fullUrl; to redirect in the same tab
                 } else {
-                    alert("Draw a rectangle first.");
+                    alert("Please use the rectangle tool on the left-side to select a region for inspection.");
                 }
             });
 
             return btn;
         },
+
+        onRemove: function(map) {
+            // Nothing to clean up here
+        }
     });
 
-    new InspectControl({ position: "topright" }).addTo(map);
+    // Add the "Analyze" button to the top-left corner of the map
+    L.control.analyzeButton = function(opts) {
+        return new L.Control.AnalyzeButton(opts);
+    }
+    L.control.analyzeButton({ position: 'topright' }).addTo(map);
 }
+
+function getSampleInfo() {
+    $.ajax({
+        url: '/sample-info',
+        type: 'GET',
+        dataType: 'json',
+        success: function(results) {
+            $("#samples-count").html(results[0].sample_count);
+            $("#analyzed-count").html(results[0].success);
+            $("#running-count").html(results[0].running);
+            $("#bgcs-count").html(results[0].protoclusters);
+            $("#compl-bgcs").html(results[0].complbgcscount);
+        }
+    });
+}
+
+// Initialize the map when jQuery is ready
+$(document).ready(function() {
+    getSampleInfo();
+    createMap();
+});
