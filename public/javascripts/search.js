@@ -94,13 +94,8 @@ function submitFiles() {
         if (data.jobId) {
             localStorage.setItem('currentJobId', data.jobId);
 
-            // Update URL with job ID for bookmarking
-            const url = new URL(window.location);
-            url.searchParams.set('jobId', data.jobId);
-            window.history.pushState({}, '', url);
-
-            // Update job ID display
-            updateJobIdDisplay(data.jobId);
+            // Redirect to job status page
+            window.location.href = `/job/${data.jobId}`;
         }
     })
     .catch(error => {
@@ -208,6 +203,29 @@ function checkJobStatus(jobId) {
         });
 }
 
+// Function to fetch and display queue status
+function fetchQueueStatus() {
+    fetch('/jobs/queue/status')
+        .then(response => response.json())
+        .then(data => {
+            const queueStatusContainer = document.getElementById('queueStatusContainer');
+            const queuedJobsCount = document.getElementById('queuedJobsCount');
+
+            if (queueStatusContainer && queuedJobsCount) {
+                queuedJobsCount.textContent = data.totalJobs;
+
+                if (data.totalJobs > 0) {
+                    queueStatusContainer.classList.remove('d-none');
+                } else {
+                    queueStatusContainer.classList.add('d-none');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching queue status:', error);
+        });
+}
+
 // Initialize event listeners when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize the Submit button state
@@ -217,6 +235,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof $ !== 'undefined' && $.fn.tooltip) {
         $('[data-bs-toggle="tooltip"]').tooltip();
     }
+
+    // Fetch queue status on page load
+    fetchQueueStatus();
+
+    // Fetch queue status every 30 seconds
+    setInterval(fetchQueueStatus, 30000);
 
     // Add event listener for form submission
     const uploadForm = document.getElementById('uploadForm');
@@ -258,6 +282,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data.jobId) {
             localStorage.setItem('currentJobId', data.jobId);
             updateJobIdDisplay(data.jobId);
+        }
+
+        // Update queue status if this is a connection event or if queue information changed
+        if (data.type === 'connection' || data.queuePosition) {
+            fetchQueueStatus();
         }
     };
 

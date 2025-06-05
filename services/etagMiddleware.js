@@ -67,6 +67,11 @@ function etagMiddleware(req, res, next) {
     return next();
   }
 
+  // Skip for job-related endpoints to ensure fresh data
+  if (req.path.startsWith('/jobs/')) {
+    return next();
+  }
+
   // Store the original methods
   const originalJson = res.json;
   const originalSend = res.send;

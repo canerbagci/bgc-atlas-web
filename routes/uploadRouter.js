@@ -45,21 +45,44 @@ const clients = new Map();
 
 // SSE route
 router.get('/events', (req, res) => {
+  console.log('New SSE client connected');
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
   const clientId = Date.now();
   clients.set(clientId, res);
+  console.log(`Client ${clientId} connected, total clients: ${clients.size}`);
+
+  // Send a test event to confirm connection and include queue status
+  const schedulerService = require('../services/schedulerService');
+  const queuedJobs = schedulerService.getQueuedJobs();
+  res.write(`data: ${JSON.stringify({ 
+    type: 'connection', 
+    message: 'Connected to SSE',
+    queueStatus: {
+      totalJobs: queuedJobs.length,
+      isProcessing: queuedJobs.length > 0
+    }
+  })}\n\n`);
 
   req.on('close', () => {
+    console.log(`Client ${clientId} disconnected`);
     clients.delete(clientId);
+    console.log(`Total clients after disconnect: ${clients.size}`);
   });
 });
 
 // Function to send events to clients
 function sendEvent(message) {
-  clients.forEach(client => client.write(`data: ${JSON.stringify(message)}\n\n`));
+  console.log(`Sending SSE event to ${clients.size} clients:`, message);
+  clients.forEach(client => {
+    try {
+      client.write(`data: ${JSON.stringify(message)}\n\n`);
+    } catch (error) {
+      console.error('Error sending SSE event:', error);
+    }
+  });
 }
 
 // Create a separate CSRF middleware for the upload route

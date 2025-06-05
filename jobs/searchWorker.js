@@ -140,7 +140,11 @@ parentPort.postMessage({ type: 'ready' });
     });
 
     // Signal successful completion
+    logger.info(`Job ${jobId} completed successfully, sending 'done' message to parent`);
     parentPort.postMessage({ type: 'done', jobId });
+
+    // Wait a moment to ensure the message is sent before closing
+    await new Promise(resolve => setTimeout(resolve, 100));
 
   } catch (error) {
     logger.error(`Error in search worker: ${error.message}`);
@@ -149,6 +153,7 @@ parentPort.postMessage({ type: 'ready' });
     try {
       if (jobId) {
         await jobService.updateJobStatus(jobId, 'failed');
+        logger.info(`Job ${jobId} failed, sending 'error' message to parent`);
         parentPort.postMessage({ 
           type: 'error', 
           jobId, 
@@ -160,9 +165,14 @@ parentPort.postMessage({ type: 'ready' });
     }
 
     // Signal error to parent
+    logger.info(`Sending general error message to parent`);
     parentPort.postMessage({ type: 'error', error: error.message });
+
+    // Wait a moment to ensure the message is sent before closing
+    await new Promise(resolve => setTimeout(resolve, 100));
   } finally {
     // Always signal completion to parent
+    logger.info(`Worker for job ${jobId} is closing communication channel`);
     if (parentPort) {
       parentPort.close();
     }

@@ -29,6 +29,11 @@ block content
                         p Your job ID: <strong id="jobIdDisplay"></strong>
                         p Save this ID to check your results later.
 
+                    .alert.alert-info.mt-3.d-none#queueStatusContainer
+                        h5 Queue Status
+                        p There are currently <strong id="queuedJobsCount">0</strong> jobs in the queue.
+                        p Your job will be processed as soon as possible.
+
                 +card('Look Up Previous Results')
                     form#jobLookupForm
                         .input-group
@@ -67,7 +72,7 @@ append head
         }
 
         .putative-bgc {
-            background-color: #e63946 !important;
+            background-color: #ffcccb !important;
             color: white !important;
         }
 

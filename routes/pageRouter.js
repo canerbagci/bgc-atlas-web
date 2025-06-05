@@ -54,6 +54,16 @@ router.get('/search', (req, res) => {
   });
 });
 
+router.get('/job/:jobId', (req, res) => {
+  const jobId = req.params.jobId;
+  res.render('job_status', {
+    title: 'Job Status',
+    metaDescription: 'View the status and results of your search job.',
+    activePage: 'search',
+    jobId: jobId
+  });
+});
+
 router.get('/imprint', (req, res) => {
   res.render('imprint', { 
     title: 'Imprint', 

@@ -13,7 +13,7 @@ const logger = require('../utils/logger');
 async function createJob(userId, uploadDir, fileCount, fileNames) {
   const jobId = uuidv4();
   const status = 'queued';
-  
+
   try {
     await pool.query(
       `INSERT INTO search_jobs 
@@ -21,7 +21,7 @@ async function createJob(userId, uploadDir, fileCount, fileNames) {
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [jobId, userId, status, uploadDir, fileCount, fileNames]
     );
-    
+
     logger.info(`Created job ${jobId} for user ${userId || 'anonymous'}`);
     return jobId;
   } catch (error) {
@@ -42,7 +42,7 @@ async function updateJobStatus(jobId, status) {
       `UPDATE search_jobs SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE job_id = $2`,
       [status, jobId]
     );
-    
+
     logger.info(`Updated job ${jobId} status to ${status}`);
   } catch (error) {
     logger.error(`Error updating job status: ${error.message}`);
@@ -58,10 +58,10 @@ async function updateJobStatus(jobId, status) {
  */
 async function storeResults(jobId, results) {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     for (const result of results) {
       await client.query(
         `INSERT INTO search_results 
@@ -70,7 +70,7 @@ async function storeResults(jobId, results) {
         [jobId, result.bgc_name, result.gcf_id, result.membership_value]
       );
     }
-    
+
     await client.query('COMMIT');
     logger.info(`Stored ${results.length} results for job ${jobId}`);
   } catch (error) {
@@ -93,7 +93,7 @@ async function getJob(jobId) {
       'SELECT * FROM search_jobs WHERE job_id = $1',
       [jobId]
     );
-    
+
     return result.rows[0] || null;
   } catch (error) {
     logger.error(`Error getting job: ${error.message}`);
@@ -112,7 +112,7 @@ async function getJobResults(jobId) {
       'SELECT * FROM search_results WHERE job_id = $1 ORDER BY membership_value DESC',
       [jobId]
     );
-    
+
     return result.rows;
   } catch (error) {
     logger.error(`Error getting job results: ${error.message}`);
@@ -131,7 +131,7 @@ async function getUserJobs(userId) {
       'SELECT * FROM search_jobs WHERE user_id = $1 ORDER BY created_at DESC',
       [userId]
     );
-    
+
     return result.rows;
   } catch (error) {
     logger.error(`Error getting user jobs: ${error.message}`);
@@ -149,10 +149,28 @@ async function getNextQueuedJob() {
       'SELECT * FROM search_jobs WHERE status = $1 ORDER BY created_at ASC LIMIT 1',
       ['queued']
     );
-    
+
     return result.rows[0] || null;
   } catch (error) {
     logger.error(`Error getting next queued job: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Get all queued jobs
+ * @returns {Promise<Array>} - Array of queued jobs
+ */
+async function getQueuedJobs() {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM search_jobs WHERE status = $1 ORDER BY created_at ASC',
+      ['queued']
+    );
+
+    return result.rows;
+  } catch (error) {
+    logger.error(`Error getting queued jobs: ${error.message}`);
     throw error;
   }
 }
@@ -164,5 +182,6 @@ module.exports = {
   getJob,
   getJobResults,
   getUserJobs,
-  getNextQueuedJob
+  getNextQueuedJob,
+  getQueuedJobs
 };
