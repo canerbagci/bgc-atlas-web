@@ -103,47 +103,7 @@ function submitFiles() {
     });
 }
 
-function displayResults(data) {
-    const results = document.getElementById('results');
-    results.innerHTML = '';
-
-    if (data.length > 0) {
-        data.forEach(item => {
-            const row = document.createElement('tr');
-            const nameCell = document.createElement('td');
-            const idCell = document.createElement('td');
-            const valueCell = document.createElement('td');
-
-            nameCell.textContent = item.bgc_name;
-
-            // Create a link for the GCF ID
-            const gcfLink = document.createElement('a');
-            gcfLink.href = `https://bgc-atlas.cs.uni-tuebingen.de/bgcs?gcf=${item.gcf_id}`;
-            gcfLink.textContent = item.gcf_id;
-            gcfLink.target = '_blank';
-            idCell.appendChild(gcfLink);
-
-            valueCell.textContent = item.membership_value;
-
-            // Add putative-bgc class if membership value is less than 0.405
-            if (parseFloat(item.membership_value) > 0.405) {
-                row.classList.add('putative-bgc');
-            }
-
-            row.appendChild(nameCell);
-            row.appendChild(idCell);
-            row.appendChild(valueCell);
-            results.appendChild(row);
-        });
-    } else {
-        const row = document.createElement('tr');
-        const cell = document.createElement('td');
-        cell.className = 'colspan-3 text-center';
-        cell.textContent = 'No results to display';
-        row.appendChild(cell);
-        results.appendChild(row);
-    }
-}
+// displayResults function removed as results are now shown on the job status page
 
 function toggleSubmitButton() {
     const submitButton = document.getElementById('submitButton');
@@ -160,25 +120,6 @@ function updateJobIdDisplay(jobId) {
     }
 }
 
-function loadJobResults(jobId) {
-    fetch(`/jobs/${jobId}/results`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            displayResults(data);
-            updateJobIdDisplay(jobId);
-        })
-        .catch(error => {
-            console.error('Error loading job results:', error);
-            const status = document.getElementById('status');
-            status.innerHTML = `<strong>Status:</strong> Error loading results`;
-        });
-}
-
 function checkJobStatus(jobId) {
     fetch(`/jobs/${jobId}`)
         .then(response => {
@@ -191,12 +132,16 @@ function checkJobStatus(jobId) {
             const status = document.getElementById('status');
             status.innerHTML = `<strong>Status:</strong> ${job.status}`;
 
-            if (job.status === 'completed') {
-                loadJobResults(jobId);
+            if (job.status === 'completed' || job.status === 'Complete') {
+                // Redirect to job status page
+                window.location.href = `/job/${jobId}`;
             } else if (job.status === 'queued' || job.status === 'running') {
                 // Check again in 5 seconds
                 setTimeout(() => checkJobStatus(jobId), 5000);
             }
+
+            // Update job ID display
+            updateJobIdDisplay(jobId);
         })
         .catch(error => {
             console.error('Error checking job status:', error);
@@ -210,14 +155,20 @@ function fetchQueueStatus() {
         .then(data => {
             const queueStatusContainer = document.getElementById('queueStatusContainer');
             const queuedJobsCount = document.getElementById('queuedJobsCount');
+            const runningJobsCount = document.getElementById('runningJobsCount');
+            const totalJobsProcessed = document.getElementById('totalJobsProcessed');
 
-            if (queueStatusContainer && queuedJobsCount) {
-                queuedJobsCount.textContent = data.totalJobs;
+            if (queueStatusContainer) {
+                if (queuedJobsCount) {
+                    queuedJobsCount.textContent = data.queuedJobs;
+                }
 
-                if (data.totalJobs > 0) {
-                    queueStatusContainer.classList.remove('d-none');
-                } else {
-                    queueStatusContainer.classList.add('d-none');
+                if (runningJobsCount) {
+                    runningJobsCount.textContent = data.runningJobs;
+                }
+
+                if (totalJobsProcessed) {
+                    totalJobsProcessed.textContent = data.completedJobs;
                 }
             }
         })
@@ -272,11 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = JSON.parse(event.data);
         const status = document.getElementById('status');
 
-        if (data.status === 'Complete' && data.records) {
-            displayResults(data.records);
-        }
-
-        status.innerHTML = `<strong>Status:</strong> ${data.status}`;
+        status.innerHTML = `<strong>Status:</strong> ${data.status || 'Idle'}`;
 
         // Store job ID if provided
         if (data.jobId) {

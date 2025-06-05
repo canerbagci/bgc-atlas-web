@@ -175,6 +175,42 @@ async function getQueuedJobs() {
   }
 }
 
+/**
+ * Get all running jobs
+ * @returns {Promise<Array>} - Array of running jobs
+ */
+async function getRunningJobs() {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM search_jobs WHERE status = $1 ORDER BY created_at ASC',
+      ['running']
+    );
+
+    return result.rows;
+  } catch (error) {
+    logger.error(`Error getting running jobs: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Get count of completed jobs
+ * @returns {Promise<number>} - Count of completed jobs
+ */
+async function getCompletedJobsCount() {
+  try {
+    const result = await pool.query(
+      'SELECT COUNT(*) as count FROM search_jobs WHERE status = $1',
+      ['completed']
+    );
+
+    return parseInt(result.rows[0].count, 10);
+  } catch (error) {
+    logger.error(`Error getting completed jobs count: ${error.message}`);
+    throw error;
+  }
+}
+
 module.exports = {
   createJob,
   updateJobStatus,
@@ -183,5 +219,7 @@ module.exports = {
   getJobResults,
   getUserJobs,
   getNextQueuedJob,
-  getQueuedJobs
+  getQueuedJobs,
+  getRunningJobs,
+  getCompletedJobsCount
 };

@@ -80,13 +80,18 @@ router.get('/user/:userId', async (req, res, next) => {
 });
 
 // Get queue status
-router.get('/queue/status', (req, res) => {
+router.get('/queue/status', async (req, res) => {
   try {
     const queuedJobs = schedulerService.getQueuedJobs();
+    const runningJobs = await jobService.getRunningJobs();
+    const completedJobsCount = await jobService.getCompletedJobsCount();
+
     const queueStatus = {
-      totalJobs: queuedJobs.length,
-      isProcessing: queuedJobs.length > 0,
-      queuedJobs
+      queuedJobs: queuedJobs.length,
+      runningJobs: runningJobs.length,
+      completedJobs: completedJobsCount,
+      isProcessing: runningJobs.length > 0,
+      queuedJobsList: queuedJobs
     };
 
     // Set no-cache headers to prevent caching
