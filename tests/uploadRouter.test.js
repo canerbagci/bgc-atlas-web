@@ -137,7 +137,7 @@ describe('SSE client cleanup', () => {
   let handler;
 
   beforeAll(() => {
-    handler = router.stack.find(l => l.route && l.route.path === '/events').route.stack[0].handle;
+    handler = router.stack.find(l => l.route && l.route.path === '/events').route.stack[1].handle;
   });
 
   beforeEach(() => {
@@ -173,4 +173,8 @@ describe('SSE client cleanup', () => {
 
     expect(router._clients.size).toBe(0);
   });
+});
+
+afterAll(() => {
+  router._stopClientCleanupTimer();
 });
