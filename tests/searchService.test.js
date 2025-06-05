@@ -8,6 +8,8 @@ jest.mock('child_process', () => ({
   }))
 }));
 
+jest.mock('../config/database', () => ({ pool: { query: jest.fn() } }));
+
 // Import the required modules
 const { sanitizeDirectoryName, getMembership } = require('../services/searchService');
 const { spawn } = require('child_process');

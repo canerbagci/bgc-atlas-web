@@ -1,5 +1,12 @@
 require('dotenv').config();
 
+const requiredVars = ['DB_USER', 'DB_HOST', 'DB_DATABASE', 'DB_PASSWORD'];
+const missingVars = requiredVars.filter(v => !process.env[v]);
+if (missingVars.length) {
+    const plural = missingVars.length > 1 ? 's' : '';
+    throw new Error(`Missing required database environment variable${plural}: ${missingVars.join(', ')}`);
+}
+
 const { Pool } = require('pg');
 
 // Create a PostgreSQL pool for multiple connections
