@@ -56,6 +56,29 @@ const upload = multer({
 
 // Store connected SSE clients
 const clients = new Map();
+let cleanupTimer;
+
+function startClientCleanupTimer() {
+  if (cleanupTimer) return;
+  const interval = parseInt(process.env.SSE_CLEANUP_INTERVAL, 10) || 30000;
+  cleanupTimer = setInterval(() => {
+    clients.forEach((client, id) => {
+      if (client.writableEnded || client.finished) {
+        clients.delete(id);
+        logger.info(`Removed inactive SSE client ${id} via timer, total clients: ${clients.size}`);
+      }
+    });
+  }, interval);
+}
+
+function stopClientCleanupTimer() {
+  if (cleanupTimer) {
+    clearInterval(cleanupTimer);
+    cleanupTimer = null;
+  }
+}
+
+startClientCleanupTimer();
 
 
 // SSE route
@@ -170,4 +193,6 @@ module.exports = router;
 
 if (process.env.NODE_ENV === 'test') {
   module.exports._clients = clients;
+  module.exports._startClientCleanupTimer = startClientCleanupTimer;
+  module.exports._stopClientCleanupTimer = stopClientCleanupTimer;
 }
