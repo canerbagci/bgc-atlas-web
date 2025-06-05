@@ -125,7 +125,7 @@ block scripts
                                             var regionAnchor = $row.find('td a').attr('href').substring(1); // e.g., "r277c1"
 
                                             // Use the dataset value passed from the parent
-                                            var dataset = '${dataset}';
+                                            var dataset = '${encodeURIComponent(dataset)}';
 
                                             // Step 1: Fetch the BGC ID from the server using dataset and regionAnchor
                                             fetch('/getBgcId?dataset=' + dataset + '&anchor=' + regionAnchor)
@@ -167,7 +167,7 @@ block scripts
         // Handle the iframe load event
         document.getElementById('contentFrame').addEventListener('load', function () {
             adjustIframeHeight(); // Adjust the height once the iframe is loaded
-            modifyIframeContent("#{dataset}");
+            modifyIframeContent("#{encodeURIComponent(dataset)}");
         });
 
         // Handle window resize to dynamically adjust iframe height

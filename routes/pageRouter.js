@@ -69,11 +69,18 @@ router.get('/privacy', (req, res) => {
 });
 
 router.get('/antismash', (req, res) => {
+  const { dataset, anchor } = req.query;
+
+  // Validate dataset - only allow alphanumeric characters, dash and underscore
+  if (dataset && !/^[A-Za-z0-9_-]+$/.test(dataset)) {
+    return res.status(400).send('Invalid dataset parameter');
+  }
+
   res.render('antismash', {
-    title: 'antiSMASH Analysis', 
+    title: 'antiSMASH Analysis',
     metaDescription: 'View detailed antiSMASH analysis results for biosynthetic gene clusters in our database.',
-    dataset: req.query.dataset, 
-    anchor: req.query.anchor, 
+    dataset,
+    anchor,
     activePage: 'antismash'
   });
 });
