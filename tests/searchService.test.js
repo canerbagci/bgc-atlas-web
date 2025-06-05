@@ -1,18 +1,25 @@
 const path = require('path');
 
-jest.mock('child_process', () => ({
-  spawn: jest.fn(() => ({
-    stderr: { on: jest.fn() },
-    stdout: { on: jest.fn() },
-    on: jest.fn((event, cb) => { if (event === 'close') cb(0); })
-  }))
-}));
+jest.mock('sqlite3', () => {
+  const allMock = jest.fn((q, cb) => cb(null, []));
+  const closeMock = jest.fn();
+  const Database = jest.fn((path, mode, cb) => {
+    if (cb) cb(null);
+    return { all: allMock, close: closeMock };
+  });
+  return {
+    verbose: () => ({ Database }),
+    __mocks__: { Database, allMock, closeMock }
+  };
+});
+
+const { __mocks__ } = require('sqlite3');
+const dbConstructor = __mocks__.Database;
 
 jest.mock('../config/database', () => ({ pool: { query: jest.fn() } }));
 
 // Import the required modules
 const { sanitizeDirectoryName, getMembership } = require('../services/searchService');
-const { spawn } = require('child_process');
 
 describe('sanitizeDirectoryName', () => {
   it('allows valid names', () => {
@@ -44,12 +51,12 @@ describe('getMembership', () => {
 
   it('rejects invalid report ids before spawning', async () => {
     await expect(getMembership('../evil')).rejects.toThrow();
-    expect(spawn).not.toHaveBeenCalled();
+    expect(dbConstructor).not.toHaveBeenCalled();
   });
 
-  it('spawns sqlite3 with sanitized path', async () => {
+  it('opens sqlite3 database with sanitized path', async () => {
     await getMembership('validID');
     const expected = path.join(process.env.REPORTS_DIR, 'validID', 'data.db');
-    expect(spawn).toHaveBeenCalledWith('sqlite3', [expected, expect.any(String)]);
+    expect(dbConstructor).toHaveBeenCalledWith(expected, undefined, expect.any(Function));
   });
 });
