@@ -1,5 +1,5 @@
 function createMapGCF() {
-    var map = L.map('map').setView({lon: 0, lat: 0}, 2.5);
+    var map = L.map('map').setView({lat: 0, lng: 0}, 2.5);
 
     const southWest = L.latLng(-90, -180);
     const northEast = L.latLng(90, 180);
@@ -41,10 +41,6 @@ function createMapGCF() {
         }
     }
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.responseType = 'json';
-
     const markers = L.markerClusterGroup();
 
     // Create a new LatLngBounds object
@@ -55,9 +51,11 @@ function createMapGCF() {
     let lngSum = 0;
     let count = 0;
 
-    xhr.onload = function () {
-        if (xhr.status === 200) {
-            const results = xhr.response;
+    $.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'json',
+        success: function(results) {
             for (var i = 0; i < results.length; i++) {
                 if (typeof results[i].longitude === 'string' && typeof results[i].latitude === 'string') {
                     const marker = L.marker({
@@ -75,16 +73,16 @@ function createMapGCF() {
                     count++;
                 }
             }
-        }
 
-        // Adjust the map view to the average latitude and longitude of all markers
-        if (count > 0) {
-            const avgLat = latSum / count;
-            const avgLng = lngSum / count;
-            map.setView([avgLat, avgLng]);
+            // Adjust the map view to the average latitude and longitude of all markers
+            if (count > 0) {
+                const avgLat = latSum / count;
+                const avgLng = lngSum / count;
+                map.setView([avgLat, avgLng]);
+            }
+        },
+        complete: function() {
+            map.addLayer(markers);
         }
-    };
-
-    map.addLayer(markers);
-    xhr.send();
+    });
 }

@@ -1,19 +1,20 @@
 extends layout
+include components/card
 
 block content
     div.row.flex-fill.d-flex.justify-content-start(style=height="inherit;")
         div.col-sm-12.text-center.bg-white.text-dark
-            h2 Downloads
-            ul.list-group
-                li.list-group-item
-                    a(href="/downloads/complete-bgcs.tar.gz" download) complete-bgcs.tar.gz
-                    p A tarball containing the GBK files for only the complete BGC (3.5GB).
-                li.list-group-item
-                    a(href="/downloads/all-bgcs.tar.gz" download) all-bgcs.tar.gz
-                    p A tarball containing the GBK files for all BGCs (13GB).
-                li.list-group-item
-                    a(href="/downloads/bigslice_2.0.0_T0.4_16April.tar.gz" download) bigslice_2.0.0_T0.4_16April.tar.gz
-                    p A tarball containing the BiG-SliCE clustering of complete BGCs (2.0 GB).
+            +card('Downloads')
+                ul.list-group
+                    li.list-group-item
+                        a(href="/downloads/complete-bgcs.tar.gz" download) complete-bgcs.tar.gz
+                        p A tarball containing the GBK files for only the complete BGC (3.5GB).
+                    li.list-group-item
+                        a(href="/downloads/all-bgcs.tar.gz" download) all-bgcs.tar.gz
+                        p A tarball containing the GBK files for all BGCs (13GB).
+                    li.list-group-item
+                        a(href="/downloads/bigslice_2.0.0_T0.4_16April.tar.gz" download) bigslice_2.0.0_T0.4_16April.tar.gz
+                        p A tarball containing the BiG-SliCE clustering of complete BGCs (2.0 GB).
 
 append head
     link(rel="stylesheet", href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.css")
@@ -21,7 +22,7 @@ append head
 
     link(rel="stylesheet", href="https://cdn.datatables.net/searchbuilder/1.4.2/css/searchBuilder.bootstrap5.min.css")
     link(rel="stylesheet", href="https://cdn.datatables.net/datetime/1.4.1/css/dataTables.dateTime.min.css")
-    script(href="https://cdn.datatables.net/datetime/1.4.1/js/dataTables.dateTime.min.js")
+    script(src="https://cdn.datatables.net/datetime/1.4.1/js/dataTables.dateTime.min.js")
     script(src="https://cdn.datatables.net/searchbuilder/1.4.2/js/dataTables.searchBuilder.min.js")
     script(src="https://cdn.datatables.net/searchbuilder/1.4.2/js/searchBuilder.bootstrap5.min.js")
     script(src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js")

@@ -1,0 +1,70 @@
+extends layout
+include components/card
+
+block content
+  .container.mt-4
+    .row
+      .col-12
+        +card('Job Status')
+          .alert.alert-primary.mb-3
+            p Your job ID: <strong id="jobIdDisplay"></strong>
+            p Save this ID to check your results later.
+
+          #statusContainer.mb-4
+            h4 Status: 
+            p#status.lead <strong>Status:</strong> Loading...
+
+            #queueInfo.alert.alert-info.mb-3.d-none
+              h5 Queue Information
+              p Your job is in queue position <strong id="queuePosition">0</strong> of <strong id="totalJobs">0</strong>.
+              p#estimatedTime Estimated wait time: calculating...
+
+            #loadingIndicator.text-center.d-none
+              .spinner-border.text-primary(role="status")
+                span.visually-hidden Loading...
+              p.mt-2 Processing your job...
+
+        +card('Results')
+          .alert.alert-info.mb-3
+            p Note: Only the best hit for each BGC uploaded is shown. Hits with a membership value > 0.4 are highlighted as putative.
+            .form-check.form-switch
+              input.form-check-input#hidePutativeToggle(type="checkbox")
+              label.form-check-label(for="hidePutativeToggle") Hide putative hits (membership value > 0.4)
+
+          table.table.table-bordered.mt-3
+            thead
+              tr
+                th BGC Name
+                th GCF ID
+                th Membership Value
+            tbody#results
+              tr
+                td.colspan-3.text-center No results to display
+
+append head
+  link(rel="stylesheet", href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.css")
+  script(src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.js")
+
+  link(rel="stylesheet", href="https://cdn.datatables.net/searchbuilder/1.4.2/css/searchBuilder.bootstrap5.min.css")
+  link(rel="stylesheet", href="https://cdn.datatables.net/datetime/1.4.1/css/dataTables.dateTime.min.css")
+  script(src="https://cdn.datatables.net/datetime/1.4.1/js/dataTables.dateTime.min.js")
+  script(src="https://cdn.datatables.net/searchbuilder/1.4.2/js/dataTables.searchBuilder.min.js")
+  script(src="https://cdn.datatables.net/searchbuilder/1.4.2/js/searchBuilder.bootstrap5.min.js")
+  script(src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js")
+  link(rel="stylesheet", href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css")
+  link(rel="stylesheet", href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css")
+
+  style.
+    .putative-bgc {
+      background-color: #ffcccb !important;
+      color: #333 !important;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+  script.
+    // Pass jobId from server to client
+    const serverJobId = '#{jobId}';
+  script(src="/javascripts/job_status.js")

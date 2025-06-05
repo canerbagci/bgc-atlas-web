@@ -1,41 +1,52 @@
 extends layout
+include components/card
 
 block content
     .container.mt-4
         .row
             .col-12
-                h2 Upload GenBank Files
-                    span.info-icon(data-bs-toggle="tooltip" title="The search function accepts antiSMASH compatible GenBank files. Please upload one or more GenBank files to search for similar BGCs in the database.")
-                        img(src="/images/info.svg" width="16" height="16" alt="Info")
-                form(id='uploadForm' action='/upload' method='post' enctype='multipart/form-data' onsubmit='registerFiles(event)')
-                    .mb-3
-                        input.form-control(type='file' id='formFile' name='file' multiple)
-                        //label(for='formFile') Input GenBank files...
-                        button#uploadButton.btn.btn-primary.mt-2(type='submit') Upload
-                hr
-                h3 Selected Files
-                table.table.table-bordered.mt-3
-                    thead
-                        tr
-                            th Selected Files
-                    tbody#fileList
-                        tr
-                            td.colspan-4.text-center No files selected
-                hr
-                button#submitButton.btn.btn-primary(type='button' onclick='submitFiles()') Submit
-                p#status <strong>Status:</strong> Idle
-                hr
-                h3 Results
-                table.table.table-bordered.mt-3
-                    thead
-                        tr
-                            th BGC Name
-                            th GCF ID
-                            th Membership Value
-                    tbody#results
-                        tr
-                            td.colspan-3.text-center No results to display
-                hr
+                +card('Queue Status')
+                    p#status(role='status' aria-live='polite') <strong>Status:</strong> Idle
+
+                    .alert.alert-primary.mt-3#queueStatusContainer
+                        h5 Queue Status
+                        p <strong id="runningJobsCount">0</strong> jobs running, <strong id="queuedJobsCount">0</strong> jobs in queue
+                        p Total jobs processed: <strong id="totalJobsProcessed">0</strong>
+
+                +card('Upload GenBank Files')
+                    form(id='uploadForm' action='/upload' method='post' enctype='multipart/form-data')
+                        input(type='hidden' name='_csrf' value=csrfToken)
+                        .input-group.mb-3
+                            span.info-icon.me-2(data-bs-toggle="tooltip" title="The search function accepts antiSMASH compatible GenBank files. Please upload one or more GenBank files to search for similar BGCs in the database.")
+                                img(src="/images/info.svg" width="16" height="16" alt="Info", loading = "lazy")
+                            input.form-control(type='file' id='formFile' name='file' multiple aria-label='GenBank file upload')
+                            button#uploadButton.btn.btn-primary(type='submit') Upload
+                +card('Selected Files')
+                    table.table.table-bordered.mt-3
+                        thead
+                            tr
+                                th Selected Files
+                        tbody#fileList
+                            tr
+                                td.colspan-4.text-center No files selected
+                +card()
+                    .text-center
+                        button#submitButton.btn.btn-primary.btn-lg(type='button') Submit
+
+                    .alert.alert-info.mt-3.d-none#jobIdContainer
+                        p Your job ID: <strong id="jobIdDisplay"></strong>
+                        p Save this ID to check your results later.
+
+                +card('Look Up Previous Results')
+                    form#jobLookupForm
+                        .input-group
+                            input.form-control#jobIdInput(type='text' placeholder='Enter Job ID' aria-label='Job ID')
+                            button.btn.btn-outline-secondary(type='submit') Look Up
+
+                    .mt-3
+                        h5 Your Previous Jobs
+                        ul#previousJobsList.list-group.mt-2
+                            li.list-group-item.text-center No previous jobs found
 
 
 append head
@@ -44,7 +55,7 @@ append head
 
     link(rel="stylesheet", href="https://cdn.datatables.net/searchbuilder/1.4.2/css/searchBuilder.bootstrap5.min.css")
     link(rel="stylesheet", href="https://cdn.datatables.net/datetime/1.4.1/css/dataTables.dateTime.min.css")
-    script(href="https://cdn.datatables.net/datetime/1.4.1/js/dataTables.dateTime.min.js")
+    script(src="https://cdn.datatables.net/datetime/1.4.1/js/dataTables.dateTime.min.js")
     script(src="https://cdn.datatables.net/searchbuilder/1.4.2/js/dataTables.searchBuilder.min.js")
     script(src="https://cdn.datatables.net/searchbuilder/1.4.2/js/searchBuilder.bootstrap5.min.js")
     script(src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js")
@@ -54,159 +65,12 @@ append head
     style.
         #upload-status-message {
             font-size: 1em;
-            color: #007bff;
+            color: #0056b3;
         }
 
-    script.
-        let selectedFiles = [];
-
-        function registerFiles(event) {
-            event.preventDefault();
-            const input = document.getElementById('formFile');
-            const fileList = document.getElementById('fileList');
-
-            const newFiles = Array.from(input.files);
-
-            // Filter out files that are already in the selectedFiles array
-            const uniqueNewFiles = newFiles.filter(file => {
-                const fileName = file.name.toLowerCase();
-                const fileExtension = fileName.split('.').pop();
-
-                // Only allow files with the extension 'gbk' or 'genbank'
-                if (fileExtension !== 'gbk' && fileExtension !== 'genbank') {
-                    alert(`Invalid file type: ${fileName}. Please upload files with '.gbk' or '.genbank' extensions.`);
-                    return false;
-                }
-
-                return !selectedFiles.some(existingFile => existingFile.name === file.name && existingFile.size === file.size && existingFile.lastModified === file.lastModified);
-            });
-
-            selectedFiles = selectedFiles.concat(uniqueNewFiles);
-
-            updateFileListDisplay();
-            toggleSubmitButton(); // Call here to update the submit button state
+        .putative-bgc {
+            background-color: #ffcccb !important;
+            color: white !important;
         }
 
-        function updateFileListDisplay() {
-            const fileList = document.getElementById('fileList');
-            fileList.innerHTML = '';
-
-            selectedFiles.forEach((file, index) => {
-                const row = document.createElement('tr');
-                const cell = document.createElement('td');
-                cell.textContent = file.name;
-                const removeButton = document.createElement('button');
-                removeButton.textContent = 'X';
-                removeButton.className = 'btn btn-danger btn-sm float-end';
-                removeButton.onclick = () => removeFile(index);
-                cell.appendChild(removeButton);
-                row.appendChild(cell);
-                fileList.appendChild(row);
-            });
-
-            if (selectedFiles.length === 0) {
-                const row = document.createElement('tr');
-                const cell = document.createElement('td');
-                cell.className = 'colspan-4 text-center';
-                cell.textContent = 'No files selected';
-                row.appendChild(cell);
-                fileList.appendChild(row);
-            }
-
-            toggleSubmitButton(); // Call here to update the submit button state
-        }
-
-        function removeFile(index) {
-            selectedFiles.splice(index, 1);
-            updateFileListDisplay();
-            toggleSubmitButton(); // Call here to update the submit button state
-        }
-
-        function submitFiles() {
-            if (selectedFiles.length === 0) {
-                alert('No files selected');
-                return;
-            }
-
-            const submitButton = document.getElementById('submitButton');
-            const uploadButton = document.getElementById('uploadButton');
-
-            submitButton.disabled = true;
-            uploadButton.disabled = true;
-
-            const formData = new FormData();
-            selectedFiles.forEach(file => formData.append('file', file));
-
-            fetch('/upload', {
-                method: 'POST',
-                body: formData
-            })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-        }
-
-        function displayResults(data) {
-            const results = document.getElementById('results');
-            results.innerHTML = '';
-
-            if (data.length > 0) {
-                data.forEach(item => {
-                    const row = document.createElement('tr');
-                    const nameCell = document.createElement('td');
-                    const idCell = document.createElement('td');
-                    const valueCell = document.createElement('td');
-
-                    nameCell.textContent = item.bgc_name;
-
-                    // Create a link for the GCF ID
-                    const gcfLink = document.createElement('a');
-                    gcfLink.href = `https://bgc-atlas.cs.uni-tuebingen.de/bgcs?gcf=${item.gcf_id}`;
-                    gcfLink.textContent = item.gcf_id;
-                    gcfLink.target = '_blank';
-                    idCell.appendChild(gcfLink);
-
-                    valueCell.textContent = item.membership_value;
-
-                    row.appendChild(nameCell);
-                    row.appendChild(idCell);
-                    row.appendChild(valueCell);
-                    results.appendChild(row);
-                });
-            } else {
-                const row = document.createElement('tr');
-                const cell = document.createElement('td');
-                cell.className = 'colspan-3 text-center';
-                cell.textContent = 'No results to display';
-                row.appendChild(cell);
-                results.appendChild(row);
-            }
-        }
-
-        function toggleSubmitButton() {
-            const submitButton = document.getElementById('submitButton');
-            if (submitButton) {
-                submitButton.disabled = selectedFiles.length === 0;
-            }
-        }
-
-        // Listen for server-sent events
-        const eventSource = new EventSource('/events');
-        eventSource.onmessage = function (event) {
-            const data = JSON.parse(event.data);
-            const status = document.getElementById('status');
-
-            if (data.status === 'Complete') {
-                displayResults(data.records);
-            }
-
-            status.innerHTML = `<strong>Status:</strong> ${data.status}`;
-        };
-
-        // Initialize the Submit button state
-        document.addEventListener('DOMContentLoaded', toggleSubmitButton);
-
-        //Initialize tooltips
-        document.addEventListener('DOMContentLoaded', function () {
-            $('[data-bs-toggle="tooltip"]').tooltip();
-        });
+    script(src="/javascripts/search.js")

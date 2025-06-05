@@ -1,5 +1,125 @@
-const { client, pool } = require('../config/database');
+const { pool } = require('../config/database');
 const cacheService = require('./cacheService');
+const logger = require('../utils/logger');
+
+/**
+ * Validates a dataset parameter
+ * @param {string} dataset - The dataset to validate
+ * @returns {string} - The validated dataset
+ * @throws {Error} - If the dataset is invalid
+ */
+function validateDataset(dataset) {
+  if (!dataset || typeof dataset !== 'string') {
+    throw new Error('Dataset is required and must be a string');
+  }
+
+  // Validate dataset format (alphanumeric with some special chars)
+  const validDatasetRegex = /^[A-Za-z0-9_.-]+$/;
+  if (!validDatasetRegex.test(dataset)) {
+    throw new Error(`Invalid dataset format: ${dataset}`);
+  }
+
+  if (dataset.length > 100) {
+    throw new Error('Dataset name is too long');
+  }
+
+  return dataset;
+}
+
+/**
+ * Validates an anchor parameter
+ * @param {string} anchor - The anchor to validate
+ * @returns {string} - The validated anchor
+ * @throws {Error} - If the anchor is invalid
+ */
+function validateAnchor(anchor) {
+  if (!anchor || typeof anchor !== 'string') {
+    throw new Error('Anchor is required and must be a string');
+  }
+
+  // Validate anchor format (alphanumeric with some special chars)
+  const validAnchorRegex = /^[A-Za-z0-9_.-]+$/;
+  if (!validAnchorRegex.test(anchor)) {
+    throw new Error(`Invalid anchor format: ${anchor}`);
+  }
+
+  if (anchor.length > 100) {
+    throw new Error('Anchor name is too long');
+  }
+
+  return anchor;
+}
+
+/**
+ * Validates pagination parameters
+ * @param {*} start - The start index
+ * @param {*} length - The page size
+ * @returns {Object} - The validated pagination parameters
+ * @throws {Error} - If the pagination parameters are invalid
+ */
+function validatePagination(start, length) {
+  const startNum = Number.parseInt(start, 10);
+  if (Number.isNaN(startNum) || startNum < 0) {
+    throw new Error('Invalid start parameter: must be a non-negative integer');
+  }
+
+  const lengthNum = Number.parseInt(length, 10);
+  if (Number.isNaN(lengthNum) || lengthNum <= 0 || lengthNum > 1000) {
+    throw new Error('Invalid length parameter: must be a positive integer not exceeding 1000');
+  }
+
+  return { start: startNum, length: lengthNum };
+}
+
+/**
+ * Validates a search value
+ * @param {string} searchValue - The search value to validate
+ * @returns {string|null} - The validated search value or null if empty
+ * @throws {Error} - If the search value is invalid
+ */
+function validateSearchValue(searchValue) {
+  if (!searchValue) {
+    return null;
+  }
+
+  if (typeof searchValue !== 'string') {
+    throw new Error('Search value must be a string');
+  }
+
+  if (searchValue.length > 1000) {
+    throw new Error('Search value is too long');
+  }
+
+  // Remove potentially dangerous characters
+  return searchValue.replace(/[;'"\\]/g, '');
+}
+
+/**
+ * Validates order parameters
+ * @param {*} order - The order parameters
+ * @param {string[]} allowedColumns - The allowed column names
+ * @returns {Array} - The validated order parameters
+ * @throws {Error} - If the order parameters are invalid
+ */
+function validateOrder(order, allowedColumns) {
+  if (!order || !Array.isArray(order) || order.length === 0) {
+    return [];
+  }
+
+  return order.map(item => {
+    const column = Number.parseInt(item.column, 10);
+    if (Number.isNaN(column) || column < 0 || column >= allowedColumns.length) {
+      throw new Error(`Invalid column index: ${item.column}`);
+    }
+
+    const dir = item.dir.toLowerCase();
+    if (dir !== 'asc' && dir !== 'desc') {
+      throw new Error(`Invalid sort direction: ${item.dir}`);
+    }
+
+    return { column, dir };
+  });
+}
 
 /**
  * Get sample information including counts of samples, analyzed samples, running samples, and BGCs
@@ -12,16 +132,16 @@ async function getSampleInfo() {
   // Use the caching service to get or fetch the data
   return cacheService.getOrFetch(cacheKey, async () => {
     try {
-      const result = await client.query('SELECT\n' +
+      const result = await pool.query('SELECT\n' +
         '    (SELECT COUNT(*) FROM mgnify_asms) AS "sample_count",\n' +
         '    (SELECT COUNT(*) FROM antismash_runs WHERE status = \'success\') AS "success",\n' +
         '    (SELECT COUNT(*) FROM antismash_runs WHERE status = \'runningAS\') AS "running",\n' +
         '    (SELECT COUNT(*) FROM protoclusters) AS protoclusters,\n' +
         '    (SELECT COUNT(*) FROM protoclusters WHERE contig_edge = \'False\') AS complbgcscount');
 
-      return JSON.parse(JSON.stringify(result.rows));
+      return result.rows;
     } catch (error) {
-      console.error('Error getting sample info:', error);
+      logger.error('Error getting sample info:', error);
       throw error;
     }
   }, 3600); // Cache for 1 hour
@@ -62,7 +182,7 @@ async function getSampleData() {
 
       return rows;
     } catch (error) {
-      console.error('Error getting sample data:', error);
+      logger.error('Error getting sample data:', error);
       throw error;
     }
   }, 3600); // Cache for 1 hour
@@ -79,9 +199,29 @@ async function getSampleData() {
  * @returns {Promise<Object>} - Object containing paginated data and metadata
  */
 async function getPaginatedSampleData(options) {
-  const { start, length, searchValue, order, draw } = options;
-
   try {
+    const { start, length, searchValue, order, draw } = options;
+
+    // Validate inputs
+    const { start: validatedStart, length: validatedLength } = validatePagination(start || 0, length || 10);
+    const validatedSearchValue = validateSearchValue(searchValue);
+
+    // Validate draw parameter
+    const validatedDraw = Number.parseInt(draw, 10);
+    if (Number.isNaN(validatedDraw) || validatedDraw < 0) {
+      throw new Error('Invalid draw parameter: must be a non-negative integer');
+    }
+
+    // Define allowed columns for ordering
+    const columns = [
+      'status', 'sampleacc', 'assembly', 'longest_biome', 'submittedseqs',
+      'protocluster_count', 'longitude', 'latitude', 'envbiome', 'envfeat',
+      'collectdate', 'biosample'
+    ];
+
+    // Validate order parameters
+    const validatedOrder = validateOrder(order, columns);
+
     // Base query for counting total records
     const baseCountQuery = `
       SELECT COUNT(*) AS total
@@ -134,7 +274,7 @@ async function getPaginatedSampleData(options) {
     let searchCondition = '';
     let searchParams = [];
 
-    if (searchValue) {
+    if (validatedSearchValue) {
       searchCondition = `
         WHERE ma.sampleacc ILIKE $1
         OR ma.assembly ILIKE $1
@@ -142,9 +282,8 @@ async function getPaginatedSampleData(options) {
         OR ma.envbiome ILIKE $1
         OR ma.envfeat ILIKE $1
         OR ma.biosample ILIKE $1
-        OR ma.species ILIKE $1
       `;
-      searchParams.push(`%${searchValue}%`);
+      searchParams.push(`%${validatedSearchValue}%`);
     }
 
     // Get total count (without search)
@@ -153,7 +292,7 @@ async function getPaginatedSampleData(options) {
 
     // Get filtered count (with search)
     let filteredRecords = totalRecords;
-    if (searchValue) {
+    if (validatedSearchValue) {
       const filteredCountQuery = `
         SELECT COUNT(*) AS total
         FROM (
@@ -185,7 +324,7 @@ async function getPaginatedSampleData(options) {
     }
 
     // Add search condition to data query
-    if (searchValue) {
+    if (validatedSearchValue) {
       baseDataQuery += searchCondition;
     }
 
@@ -199,17 +338,9 @@ async function getPaginatedSampleData(options) {
     // Add ORDER BY clause
     let orderClause = 'ORDER BY protocluster_count DESC';
 
-    if (order && order.length > 0) {
-      const columns = [
-        'status', 'sampleacc', 'assembly', 'longest_biome', 'submittedseqs',
-        'protocluster_count', 'longitude', 'latitude', 'envbiome', 'envfeat',
-        'collectdate', 'biosample', 'species', 'hosttaxid'
-      ];
-
-      const orderParts = order.map(o => {
-        const columnIndex = parseInt(o.column);
-        const direction = o.dir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-        return `${columns[columnIndex]} ${direction}`;
+    if (validatedOrder && validatedOrder.length > 0) {
+      const orderParts = validatedOrder.map(o => {
+        return `${columns[o.column]} ${o.dir === 'asc' ? 'ASC' : 'DESC'}`;
       });
 
       if (orderParts.length > 0) {
@@ -221,20 +352,20 @@ async function getPaginatedSampleData(options) {
 
     // Add LIMIT and OFFSET
     baseDataQuery += ` LIMIT $${searchParams.length + 1} OFFSET $${searchParams.length + 2}`;
-    searchParams.push(length);
-    searchParams.push(start);
+    searchParams.push(validatedLength);
+    searchParams.push(validatedStart);
 
     // Execute the final query
     const { rows } = await pool.query(baseDataQuery, searchParams);
 
     return {
-      draw: draw,
+      draw: validatedDraw,
       recordsTotal: totalRecords,
       recordsFiltered: filteredRecords,
       data: rows
     };
   } catch (error) {
-    console.error('Error getting paginated sample data:', error);
+    logger.error('Error getting paginated sample data:', error);
     throw error;
   }
 }
@@ -261,7 +392,7 @@ async function getSampleData2() {
 
       return rows;
     } catch (error) {
-      console.error('Error getting sample data 2:', error);
+      logger.error('Error getting sample data 2:', error);
       throw error;
     }
   }, 3600); // Cache for 1 hour
@@ -274,25 +405,34 @@ async function getSampleData2() {
  * @returns {Promise<Object>} - Object containing the BGC ID
  */
 async function getBgcId(dataset, anchor) {
-  // Create a cache key based on the function parameters
-  const cacheKey = `bgcId_${dataset}_${anchor}`;
+  try {
+    // Validate inputs
+    const validatedDataset = validateDataset(dataset);
+    const validatedAnchor = validateAnchor(anchor);
 
-  // Use the caching service to get or fetch the data
-  return cacheService.getOrFetch(cacheKey, async () => {
-    try {
-      const query = 'SELECT region_id FROM regions WHERE assembly = $1 AND anchor = $2';
-      const result = await client.query(query, [dataset, anchor]);
+    // Create a cache key based on the validated parameters
+    const cacheKey = `bgcId_${validatedDataset}_${validatedAnchor}`;
 
-      if (result.rows.length > 0) {
-        return { bgcId: result.rows[0].region_id };
-      } else {
-        return { bgcId: 'Not Found' };
+    // Use the caching service to get or fetch the data
+    return cacheService.getOrFetch(cacheKey, async () => {
+      try {
+        const query = 'SELECT region_id FROM regions WHERE assembly = $1 AND anchor = $2';
+        const result = await pool.query(query, [validatedDataset, validatedAnchor]);
+
+        if (result.rows.length > 0) {
+          return { bgcId: result.rows[0].region_id };
+        } else {
+          return { bgcId: 'Not Found' };
+        }
+      } catch (error) {
+        logger.error('Error getting BGC ID:', error);
+        throw error;
       }
-    } catch (error) {
-      console.error('Error getting BGC ID:', error);
-      throw error;
-    }
-  }, 3600); // Cache for 1 hour
+    }, 3600); // Cache for 1 hour
+  } catch (error) {
+    logger.error('Error validating inputs for BGC ID:', error);
+    throw error;
+  }
 }
 
 module.exports = {

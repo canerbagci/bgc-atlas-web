@@ -65,6 +65,12 @@ To set up a local instance of BGC Atlas, follow these steps:
    PORT=3000
    APP_URL=http://localhost:3000
    DATABASE_URL=postgres://username:password@localhost:5432/bgcatlas
+   MONTHLY_SOIL_BASE_DIR=/path/to/monthly-soil  # Optional: Path to monthly soil data directory
+   ULTRA_DEEP_SOIL_DIR=/path/to/ultra-deep-soil  # Optional: Path to ultra-deep soil data directory
+   SEARCH_UPLOADS_DIR=/path/to/search/uploads  # Optional: Path to store uploaded files for search
+   SEARCH_SCRIPT_PATH=/path/to/search/script.py  # Required: Path to the search script
+   REPORTS_DIR=/path/to/reports  # Required: Path to store search reports
+   SSL_CERT_PATH=/path/to/ssl/certs  # Optional: Path to SSL certificates
    ```
 
 4. Set up the database:
@@ -84,12 +90,18 @@ To set up a local instance of BGC Atlas, follow these steps:
 BGC Atlas is built with the following main dependencies:
 
 - [Express.js](https://expressjs.com/) - Web framework
+- [Helmet](https://helmetjs.github.io/) - Security headers
+- [Express Rate Limit](https://github.com/express-rate-limit/express-rate-limit) - API rate limiting
 - [Pug](https://pugjs.org/) - Template engine
 - [PostgreSQL](https://www.postgresql.org/) - Database
 - [Leaflet](https://leafletjs.com/) - Interactive maps
 - [Node.js](https://nodejs.org/) - JavaScript runtime
 
 For a complete list of dependencies, see the `package.json` file.
+
+## Frontend Components
+
+The user interface is built with Pug templates. Reusable pieces of markup live in the `views/components` directory as mixins. Core elements such as the navigation bar and footer are defined once and included across all pages. Additional components, like a generic card, can be composed to simplify future UI work.
 
 ## Data
 
@@ -100,6 +112,7 @@ The current version of BGC Atlas includes:
 
 ## Change Log
 
+- **Current**: Added API rate limiting to prevent abuse of endpoints.
 - **04.06.2025**: Added ultra-deep and monthly-soil sampling data from Schönbuch.
 - **15.08.2024**: First release. 35,486 samples from MGnify analysed, and 1,854,079 BGCs and 13,854 GCFs identified.
 

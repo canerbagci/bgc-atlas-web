@@ -1,5 +1,5 @@
 function createMap() {
-    var map = L.map('map').setView({lon: 0, lat: 0}, 2.5);
+    var map = L.map('map').setView({lat: 0, lng: 0}, 2.5);
 
     const southWest = L.latLng(-90, -180);
     const northEast = L.latLng(90, 180);
@@ -20,16 +20,14 @@ function createMap() {
     // show the scale bar on the lower left corner
     L.control.scale({imperial: true, metric: true}).addTo(map);
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', '/map-data', true);
-    xhr.responseType = 'json';
-
     const markers = L.markerClusterGroup();
     const markerList = [];
 
-    xhr.onload = function () {
-        if (xhr.status === 200) {
-            const results = xhr.response;
+    $.ajax({
+        url: '/map-data',
+        type: 'GET',
+        dataType: 'json',
+        success: function(results) {
             for (var i = 0; i < results.length; i++) {
                 if (typeof results[i].longitude === 'number' && typeof results[i].latitude === 'number') {
                     const marker = L.marker({
@@ -46,11 +44,11 @@ function createMap() {
                     markers.addLayer(marker);
                 }
             }
+        },
+        complete: function() {
+            map.addLayer(markers);
         }
-    };
-
-    map.addLayer(markers);
-    xhr.send();
+    });
 
     // Add drawing controls
     var drawnItems = new L.FeatureGroup();
@@ -88,8 +86,6 @@ function createMap() {
             containedIDs = containedMarkers.map(function(item) {
                 return item.id; // Get the IDs of the contained markers
             });
-
-            console.log('Markers within the rectangle:', containedIDs);
         }
 
         drawnItems.addLayer(layer);
@@ -135,23 +131,23 @@ function createMap() {
     L.control.analyzeButton({ position: 'topright' }).addTo(map);
 }
 
-
-
 function getSampleInfo() {
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', '/sample-info', true);
-    xhr.responseType = 'json';
-
-    console.log("getting sample info");
-    xhr.onload = function () {
-        if (xhr.status === 200) {
-            const results = xhr.response;
-            document.getElementById("samples-count").innerHTML = results[0].sample_count;
-            document.getElementById("analyzed-count").innerHTML = results[0].success;
-            document.getElementById("running-count").innerHTML = results[0].running;
-            document.getElementById("bgcs-count").innerHTML = results[0].protoclusters;
-            document.getElementById('compl-bgcs').innerHTML = results[0].complbgcscount;
+    $.ajax({
+        url: '/sample-info',
+        type: 'GET',
+        dataType: 'json',
+        success: function(results) {
+            $("#samples-count").html(results[0].sample_count);
+            $("#analyzed-count").html(results[0].success);
+            $("#running-count").html(results[0].running);
+            $("#bgcs-count").html(results[0].protoclusters);
+            $("#compl-bgcs").html(results[0].complbgcscount);
         }
-    }
-    xhr.send()
+    });
 }
+
+// Initialize the map when jQuery is ready
+$(document).ready(function() {
+    getSampleInfo();
+    createMap();
+});

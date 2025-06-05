@@ -1,4 +1,5 @@
 extends layout.pug
+include components/card
 
 block head
   link(rel="stylesheet", href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css")
@@ -15,22 +16,22 @@ block content
   .container.d-flex.flex-column.h-100
     .row.flex-grow-1
       #sample-info.col-md-4
-        h3 Sample Information
-        p
-          strong Total Samples: 
-          span#samples-count Loading...
-        p
-          strong Analyzed: 
-          span#analyzed-count Loading...
-        p
-          strong Running: 
-          span#running-count Loading...
-        p
-          strong BGCs: 
-          span#bgcs-count Loading...
-        p
-          strong Complete BGCs: 
-          span#compl-bgcs Loading...
+        +card('Sample Information')
+          p
+            strong Total Samples:
+            span#samples-count Loading...
+          p
+            strong Analyzed:
+            span#analyzed-count Loading...
+          p
+            strong Running:
+            span#running-count Loading...
+          p
+            strong BGCs:
+            span#bgcs-count Loading...
+          p
+            strong Complete BGCs:
+            span#compl-bgcs Loading...
       #map.col-md-8
 
 block scripts

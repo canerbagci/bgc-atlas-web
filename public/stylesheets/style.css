@@ -1,21 +1,20 @@
-
 .header-custom {
   background-color: #333333;
 }
 
 .search-button-custom {
-  color: #FF6666;
-  border-color: #FF6666;
+  color: #c41c1c;
+  border-color: #c41c1c;
   background-color: transparent;
 }
-
 .search-button-custom:hover {
-  color: #fff; /* White text on hover */
-  border-color: #FF6666; /* Red border on hover */
-  background-color: #FF6666; /* Red background on hover */
+  color: #fff;
+  border-color: #c41c1c;
+  background-color: #c41c1c;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   width: 100%;
   margin: 0;
@@ -25,16 +24,15 @@ html, body {
 
 main {
   height: 100%;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .flex-fill {
   flex: 1;
 }
 
-/* Fixed header and footer styles */
 nav.navbar {
   position: fixed;
   top: 0;
@@ -51,17 +49,14 @@ footer {
   z-index: 1000;
   padding: 10px 0;
 }
-
 footer a {
   color: #fff;
   text-decoration: underline;
 }
-
 footer a:hover {
   color: #ccc;
 }
 
-/* Navigation active link styles */
 .navbar-dark .navbar-nav .nav-link.active {
   color: #fff;
   font-weight: bold;
@@ -69,38 +64,35 @@ footer a:hover {
   border-radius: 0.25rem;
 }
 
-/* Content area styles */
 .content-container {
   flex: 1;
   overflow-y: auto;
-  margin-top: 56px; /* Height of the navbar */
-  margin-bottom: 40px; /* Height of the footer */
+  margin-top: 56px;
+  margin-bottom: 40px;
   padding: 20px;
   width: 100%;
   box-sizing: border-box;
-  height: calc(100vh - 96px); /* 100vh - (navbar height + footer height) */
+  height: calc(100vh - 96px);
   display: flex;
   flex-direction: column;
 }
 
-.bodyParts{
+.bodyParts {
   border-color: black;
-  fill: #72B8FC;cursor: pointer;
-}
-area.bodyParts
-{
-  fill: black;
-  stroke:gray; /* Replace with none if you like*/
-  stroke-width: 4;
+  fill: #0056b3;
   cursor: pointer;
 }
 
-area.bodyParts:hover
-{
-  stroke:black;
+area.bodyParts {
+  fill: black;
+  stroke: gray;
+  stroke-width: 4;
+  cursor: pointer;
+}
+area.bodyParts:hover {
+  stroke: black;
 }
 
-/* Chart container styles */
 .chart-container {
   position: relative;
   height: 400px;
@@ -108,14 +100,12 @@ area.bodyParts:hover
   margin-bottom: 20px;
 }
 
-/* Responsive canvas styles */
-canvas#category-chart, canvas#product-chart {
+canvas#category-chart,
+canvas#product-chart {
   max-width: 100%;
   height: auto !important;
 }
 
-
-/* Tooltip styles for all charts */
 .tooltip {
   background-color: rgba(51, 51, 51, 0.9) !important;
   color: white !important;
@@ -125,13 +115,11 @@ canvas#category-chart, canvas#product-chart {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* Media queries for responsive charts */
 @media (max-width: 768px) {
   .chart-container {
     height: 300px;
   }
 }
-
 @media (max-width: 576px) {
   .chart-container {
     height: 250px;

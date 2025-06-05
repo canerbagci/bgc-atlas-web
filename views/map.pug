@@ -1,4 +1,5 @@
 extends layout
+include components/card
 
 block content
     div.row
@@ -12,28 +13,29 @@ block content
             p This is a web resource where the diversity of biosynthetic gene clusters (BGCs) found in various environments can be explored through analysis of publicly available metagenomic datasets.
             p To begin exploration, check out <a href='/samples'>Samples</a>, <a href='/bgcs'>BGCs</a>, or <a href='/gcfs'>GCFs</a> pages; or <a href='/search'>Search</a> your query BGCs against the collection of BGCs and GCFs deposited here.
         div.col-sm-3.d-flex.align-items-center
-            table(style="text-align: center;" class="text-center mx-auto")
-                colgroup
-                    col(style="width:100%;")
-                    col(style="width:100%;")
-                tr
-                    td <b>Samples</b>
-                    td#samples-count ...
-                tr
-                    td <b>Analyzed</b>
-                    td#analyzed-count ...
-                tr
-                    td <b>Running</b>
-                    td#running-count ...
-                tr
-                    td <b>BGCs</b>
-                    td#bgcs-count ...
-                tr
-                    td <b>Complete BGCs</b>
-                    td#compl-bgcs ...
-                tr
-                    td <b>GCFs</b>
-                    td#gcfs-count 18566
+            +card('Sample Information')
+                table.text-center.mx-auto(style="text-align: center;")
+                    colgroup
+                        col(style="width:100%;")
+                        col(style="width:100%;")
+                    tr
+                        td <b>Samples</b>
+                        td#samples-count ...
+                    tr
+                        td <b>Analyzed</b>
+                        td#analyzed-count ...
+                    tr
+                        td <b>Running</b>
+                        td#running-count ...
+                    tr
+                        td <b>BGCs</b>
+                        td#bgcs-count ...
+                    tr
+                        td <b>Complete BGCs</b>
+                        td#compl-bgcs ...
+                    tr
+                        td <b>GCFs</b>
+                        td#gcfs-count 18566
     div.row.flex-fill.d-flex.justify-content-start
         div.col-sm-12.text-center
             #map.flex-grow-1(style="height:100%;")
@@ -60,8 +62,3 @@ block styles
 
 
 block scripts
-    script.
-        document.addEventListener("DOMContentLoaded", function () {
-            getSampleInfo();
-            createMap();
-        });

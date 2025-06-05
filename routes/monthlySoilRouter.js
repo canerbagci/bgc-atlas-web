@@ -1,9 +1,10 @@
 const express = require('express');
 const path = require('path');
 const monthlySoilService = require('../services/monthlySoilService');
+const logger = require('../utils/logger');
 
 const router = express.Router();
-const { BASE_DIR, FULL_AS_DIR, PRODUCT_AS_DIR } = monthlySoilService;
+const { BASE_DIR, FULL_AS_DIR, PRODUCT_AS_DIR, NAME_REGEX } = monthlySoilService;
 
 /* ───────────────────────────── routes ─────────────────────────────── */
 
@@ -14,38 +15,62 @@ router.get('/monthly-soil/?', async (_req, res, next) => {
     const productMonths = await monthlySoilService.listMonths(PRODUCT_AS_DIR);
 
     res.render('monthlySoil', { 
+      title: 'Monthly Soil Samples',
+      metaDescription: 'Browse monthly soil sample collections with antiSMASH analysis results for biosynthetic gene clusters.',
+      activePage: 'monthlySoil',
       fullMonths, 
       productMonths 
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    logger.error(err);
+    next(err);
+  }
 });
 
 // 2. Full-AS month index page
 router.get('/monthly-soil/full-AS/:month/?', async (req, res, next) => {
   try {
     const month = req.params.month;
+    if (!NAME_REGEX.test(month)) {
+      return res.status(400).send('Invalid month parameter');
+    }
     const monthDir = path.join(FULL_AS_DIR, month);
     const datasetNames = await monthlySoilService.listDatasets(monthDir);
     const datasets = await monthlySoilService.getDatasetDetails(FULL_AS_DIR, month, datasetNames);
 
     res.render('fullASMonth', {
+      title: `Full antiSMASH Analysis - ${month}`,
+      metaDescription: `Complete antiSMASH analysis results for soil samples collected in ${month}, showing all detected biosynthetic gene clusters.`,
+      activePage: 'monthlySoil',
       month,
       datasets
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    logger.error(err);
+    next(err);
+  }
 });
 
 // 3. Product-AS month index page
 router.get('/monthly-soil/product-AS/:month/?', async (req, res, next) => {
   try {
     const month = req.params.month;
+    if (!NAME_REGEX.test(month)) {
+      return res.status(400).send('Invalid month parameter');
+    }
     const productTypesWithDatasets = await monthlySoilService.getProductTypesWithDatasets(month);
 
     res.render('productASMonth', {
+      title: `Product Analysis - ${month}`,
+      metaDescription: `Product-focused antiSMASH analysis for soil samples collected in ${month}, categorized by secondary metabolite types.`,
+      activePage: 'monthlySoil',
       month,
       productTypesWithDatasets
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    logger.error(err);
+    next(err);
+  }
 });
 
 // Note: Product-AS product type index page route removed

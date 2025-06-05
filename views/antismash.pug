@@ -31,9 +31,7 @@ block styles
 
 block scripts
     script.
-        console.log("antismash - pug script");
         function adjustIframeHeight() {
-            console.log("adjusting iframe height");
             var iframe = document.getElementById('contentFrame');
             if (iframe) {
                 // Calculate available height (viewport height minus navbar and footer)
@@ -75,9 +73,7 @@ block scripts
         }
 
         function modifyIframeContent(dataset) {
-            console.log("modifying iframe content");
             var iframe = document.getElementById('contentFrame');
-            console.log(iframe);
 
             if (iframe && iframe.contentWindow && iframe.contentWindow.document) {
                 var iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
@@ -100,8 +96,6 @@ block scripts
                 script.src = "https://code.jquery.com/jquery-3.6.0.min.js"; // Use the jQuery CDN
                 iframeDocument.head.appendChild(script);
 
-                console.log(iframeDocument.head);
-
                 // Wait for jQuery to load, then inject the custom script
                 script.onload = function () {
                     // Insert your custom jQuery code into the iframe here
@@ -109,18 +103,25 @@ block scripts
                     customScript.type = 'text/javascript';
                     customScript.text = `
                                     $(document).ready(function() {
+                                        // Make sure the region-table is visible
+                                        $('.region-table').css('display', 'table');
+
                                         // Add the new column header "BGC ID" as the second column
                                         $('.region-table thead tr').each(function() {
                                             $(this).find('th').first().after('<th>BGC ID</th>');
                                         });
 
-                                        // Loop through each row in the table's tbody and insert the "BGC ID" column
-                                        $('.region-table tbody tr').each(function(index) {
+                                        // Store all rows to avoid issues with async operations
+                                        var rows = $('.region-table tbody tr').toArray();
+
+                                        // Process each row
+                                        rows.forEach(function(row) {
+                                            var $row = $(row);
                                             // Get the href anchor from the Region column
-                                            var regionAnchor = $(this).find('td a').attr('href').substring(1); // e.g., "r277c1"
+                                            var regionAnchor = $row.find('td a').attr('href').substring(1); // e.g., "r277c1"
 
                                             // Use the dataset value passed from the parent
-                                            var dataset = '${dataset}';
+                                            var dataset = '${encodeURIComponent(dataset)}';
 
                                             // Step 1: Fetch the BGC ID from the server using dataset and regionAnchor
                                             fetch('/getBgcId?dataset=' + dataset + '&anchor=' + regionAnchor)
@@ -129,13 +130,24 @@ block scripts
                                                     var bgcId = data.bgcId || 'Not Found'; // Handle "Not Found" case
 
                                                     // Step 2: Insert the BGC ID into the table
-                                                    $(this).find('td').first().after('<td>' + bgcId + '</td>');
+                                                    $row.find('td').first().after('<td>' + bgcId + '</td>');
+
+                                                    // Ensure the table remains visible
+                                                    $('.region-table').css('display', 'table');
                                                 })
                                                 .catch(error => {
                                                     console.error('Error fetching BGC ID:', error);
-                                                    $(this).find('td').first().after('<td>Error</td>');
+                                                    $row.find('td').first().after('<td>Error</td>');
+
+                                                    // Ensure the table remains visible even on error
+                                                    $('.region-table').css('display', 'table');
                                                 });
                                         });
+
+                                        // Add a final check to ensure the table is visible after all operations
+                                        setTimeout(function() {
+                                            $('.region-table').css('display', 'table');
+                                        }, 1000);
                                     });
                                 `;
                     iframeDocument.head.appendChild(customScript);
@@ -151,7 +163,7 @@ block scripts
         // Handle the iframe load event
         document.getElementById('contentFrame').addEventListener('load', function () {
             adjustIframeHeight(); // Adjust the height once the iframe is loaded
-            modifyIframeContent("#{dataset}");
+            modifyIframeContent("#{encodeURIComponent(dataset)}");
         });
 
         // Handle window resize to dynamically adjust iframe height

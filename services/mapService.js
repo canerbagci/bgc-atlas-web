@@ -1,4 +1,5 @@
-const { client } = require('../config/database');
+const { pool } = require('../config/database');
+const logger = require('../utils/logger');
 
 /**
  * Get map data for all samples with geographic coordinates
@@ -6,7 +7,7 @@ const { client } = require('../config/database');
  */
 async function getMapData() {
   try {
-    const result = await client.query('WITH geo_data AS (\n' +
+    const result = await pool.query('WITH geo_data AS (\n' +
       '    SELECT\n' +
       '        sample,\n' +
       '        MAX(CASE WHEN meta_key = \'geographic location (longitude)\' AND meta_value ~ \'^-?\\d+(\\.\\d+)?$\' THEN CAST(meta_value AS FLOAT) END) AS longitude,\n' +
@@ -35,9 +36,9 @@ async function getMapData() {
       'ORDER BY\n' +
       '    gd.latitude;');
     
-    return JSON.parse(JSON.stringify(result.rows));
+    return result.rows;
   } catch (error) {
-    console.error('Error getting map data:', error);
+    logger.error('Error getting map data:', error);
     throw error;
   }
 }
@@ -65,6 +66,8 @@ async function getMapDataForGcf(gcfId = null, samples = null) {
     `;
 
     let filters = [];
+    let params = [];
+    let paramIndex = 1;
 
     // Handle the gcf query parameter
     if (gcfId) {
@@ -74,14 +77,18 @@ async function getMapDataForGcf(gcfId = null, samples = null) {
               FROM
                   regions
               WHERE
-                  bigslice_gcf_id = ${gcfId}
+                  bigslice_gcf_id = $${paramIndex}
           )`);
+      params.push(parseInt(gcfId, 10));
+      paramIndex++;
     }
 
     // Handle the samples query parameter
     if (samples && samples.length > 0) {
-      let samplesStr = samples.map(sample => `'${sample.trim()}'`).join(', ');
-      filters.push(`ma.assembly IN (${samplesStr})`);
+      let samplesArray = Array.isArray(samples) ? samples : samples.split(',').map(sample => sample.trim());
+      filters.push(`ma.assembly IN (${samplesArray.map((_, idx) => `$${paramIndex + idx}`).join(', ')})`);
+      params.push(...samplesArray);
+      paramIndex += samplesArray.length;
     }
 
     // If there are any filters, apply them to the SQL query
@@ -96,10 +103,10 @@ async function getMapDataForGcf(gcfId = null, samples = null) {
           latitude
     `;
 
-    const result = await client.query(sql);
+    const result = await pool.query(sql, params);
     return result.rows;
   } catch (error) {
-    console.error('Error getting map data for GCF:', error);
+    logger.error('Error getting map data for GCF:', error);
     throw error;
   }
 }
@@ -110,14 +117,14 @@ async function getMapDataForGcf(gcfId = null, samples = null) {
  */
 async function getBodyMapData() {
   try {
-    const result = await client.query('SELECT sample, meta_value\n' +
+    const result = await pool.query('SELECT sample, meta_value\n' +
       'FROM sample_metadata\n' +
       'WHERE meta_key = \'body site\'\n' +
       'GROUP BY sample, meta_value;');
     
-    return JSON.parse(JSON.stringify(result.rows));
+    return result.rows;
   } catch (error) {
-    console.error('Error getting body map data:', error);
+    logger.error('Error getting body map data:', error);
     throw error;
   }
 }
@@ -129,23 +136,25 @@ async function getBodyMapData() {
  */
 async function getFilteredMapData(column) {
   try {
-    const result = await client.query('SELECT \n' +
-      '    sm1.sample AS sample, \n' +
-      '    sm1.meta_value AS longitude, \n' +
-      '    sm2.meta_value AS latitude,\n' +
-      '    sm3.meta_value AS environment\n' +
-      'FROM \n' +
-      '    sample_metadata sm1\n' +
-      '    JOIN sample_metadata sm2 ON sm1.sample = sm2.sample\n' +
-      '    JOIN sample_metadata sm3 ON sm1.sample = sm3.sample\n' +
-      'WHERE \n' +
-      '    sm1.meta_key = \'geographic location (longitude)\' AND sm1.meta_value IS NOT NULL\n' +
-      '    AND sm2.meta_key = \'geographic location (latitude)\' AND sm2.meta_value IS NOT NULL\n' +
-      '    AND sm3.meta_key = \'' + column +'\' AND sm3.meta_value IS NOT NULL;\n');
+    const query = `SELECT
+        sm1.sample AS sample,
+        sm1.meta_value AS longitude,
+        sm2.meta_value AS latitude,
+        sm3.meta_value AS environment
+      FROM
+        sample_metadata sm1
+        JOIN sample_metadata sm2 ON sm1.sample = sm2.sample
+        JOIN sample_metadata sm3 ON sm1.sample = sm3.sample
+      WHERE
+        sm1.meta_key = 'geographic location (longitude)' AND sm1.meta_value IS NOT NULL
+        AND sm2.meta_key = 'geographic location (latitude)' AND sm2.meta_value IS NOT NULL
+        AND sm3.meta_key = $1 AND sm3.meta_value IS NOT NULL;`;
+
+    const result = await pool.query(query, [column]);
     
-    return JSON.parse(JSON.stringify(result.rows));
+    return result.rows;
   } catch (error) {
-    console.error(`Error getting filtered map data for column ${column}:`, error);
+    logger.error(`Error getting filtered map data for column ${column}:`, error);
     throw error;
   }
 }
@@ -157,14 +166,16 @@ async function getFilteredMapData(column) {
  */
 async function getColumnValues(column) {
   try {
-    const result = await client.query('SELECT DISTINCT meta_value\n' +
-      'FROM sample_metadata\n' +
-      'WHERE meta_key = \''+ column + '\'' +
-      'ORDER BY meta_value ASC');
+    const query = `SELECT DISTINCT meta_value
+      FROM sample_metadata
+      WHERE meta_key = $1
+      ORDER BY meta_value ASC`;
+
+    const result = await pool.query(query, [column]);
     
-    return JSON.parse(JSON.stringify(result.rows));
+    return result.rows;
   } catch (error) {
-    console.error(`Error getting column values for ${column}:`, error);
+    logger.error(`Error getting column values for ${column}:`, error);
     throw error;
   }
 }
