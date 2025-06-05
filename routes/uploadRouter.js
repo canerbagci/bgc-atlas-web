@@ -58,14 +58,14 @@ const clients = new Map();
 
 // SSE route
 router.get('/events', (req, res) => {
-  console.log('New SSE client connected');
+  logger.info('New SSE client connected');
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
 
   const clientId = Date.now();
   clients.set(clientId, res);
-  console.log(`Client ${clientId} connected, total clients: ${clients.size}`);
+  logger.info(`Client ${clientId} connected, total clients: ${clients.size}`);
 
   // Send a test event to confirm connection and include queue status
   const schedulerService = require('../services/schedulerService');
@@ -83,15 +83,15 @@ router.get('/events', (req, res) => {
   });
 
   req.on('close', () => {
-    console.log(`Client ${clientId} disconnected`);
+    logger.info(`Client ${clientId} disconnected`);
     clients.delete(clientId);
-    console.log(`Total clients after disconnect: ${clients.size}`);
+    logger.info(`Total clients after disconnect: ${clients.size}`);
   });
 });
 
 // Function to send events to clients
 function sendEvent(message) {
-  console.log(`Sending SSE event to ${clients.size} clients:`, message);
+  logger.debug(`Sending SSE event to ${clients.size} clients:`, message);
   clients.forEach(client => {
     try {
       client.write(`data: ${JSON.stringify(message)}\n\n`);

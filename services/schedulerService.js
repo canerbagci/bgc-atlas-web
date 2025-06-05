@@ -89,14 +89,14 @@ async function runJobInline(jobId, emitter) {
   const scriptPath = process.env.SEARCH_SCRIPT_PATH;
   const uploadDir = job.upload_dir;
   const proc = spawn(scriptPath, [uploadDir], { shell: false });
-  console.log('mock spawn called');
+  logger.debug('mock spawn called');
   let output = '';
   proc.stdout.on('data', d => { output += d.toString(); });
   proc.stderr.on('data', d => { output += d.toString(); });
   await new Promise((resolve, reject) => {
     proc.on('close', code => {
       if (code !== 0) return reject(new Error('Script failed'));
-      console.log('mock spawn close');
+      logger.debug('mock spawn close');
       logger.info(`runJobInline close for ${jobId}`);
       resolve();
     });

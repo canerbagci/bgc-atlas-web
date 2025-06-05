@@ -16,9 +16,17 @@ let biomeChart = null;
 // Store the raw biome data
 let rawBiomeData = [];
 
+// Debug flag to control logging
+const DEBUG = false;
+function debugLog(...args) {
+    if (DEBUG) {
+        console.log(...args);
+    }
+}
+
 // Function to clear the biome chart completely
 function clearBiomeChart() {
-    console.log('Clearing biome chart');
+    debugLog('Clearing biome chart');
 
     // Clear the chart if it exists
     if (biomeChart) {
@@ -95,7 +103,7 @@ function updateJobIdDisplay(jobId) {
 
 // Function to load job results
 function loadJobResults(jobId) {
-    console.log(`Loading results for job ${jobId}`);
+    debugLog(`Loading results for job ${jobId}`);
 
     // Check if the hide putative toggle is checked
     const hidePutativeToggle = document.getElementById('hidePutativeToggle');
@@ -114,14 +122,14 @@ function loadJobResults(jobId) {
 
     fetch(url)
         .then(response => {
-            console.log(`Response status: ${response.status}`);
+            debugLog(`Response status: ${response.status}`);
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
             return response.json();
         })
         .then(data => {
-            console.log(`Received ${data.length} results:`, data);
+            debugLog(`Received ${data.length} results:`, data);
 
             // Store the original data (already filtered if needed)
             originalResults = [...data];
@@ -153,19 +161,19 @@ function loadJobResults(jobId) {
 
 // Function to check job status
 function checkJobStatus(jobId) {
-    console.log(`Checking status for job ${jobId}`);
+    debugLog(`Checking status for job ${jobId}`);
     // Add cache-busting parameter to prevent caching
     const timestamp = new Date().getTime();
     fetch(`/jobs/${jobId}?_=${timestamp}`)
         .then(response => {
-            console.log(`Response status: ${response.status}`);
+            debugLog(`Response status: ${response.status}`);
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
             return response.json();
         })
         .then(job => {
-            console.log(`Job status: ${job.status}`, job);
+            debugLog(`Job status: ${job.status}`, job);
             const status = document.getElementById('status');
             status.innerHTML = `<strong>Status:</strong> ${job.status}`;
 
@@ -208,14 +216,14 @@ function checkJobStatus(jobId) {
 
             // Load results when job is completed
             if (job.status === 'completed') {
-                console.log(`Job ${jobId} is completed, loading results`);
+                debugLog(`Job ${jobId} is completed, loading results`);
                 loadJobResults(jobId);
             } else if (job.status === 'queued' || job.status === 'running') {
-                console.log(`Job ${jobId} is still running, checking again in 5 seconds`);
+                debugLog(`Job ${jobId} is still running, checking again in 5 seconds`);
                 // Check again in 5 seconds
                 setTimeout(() => checkJobStatus(jobId), 5000);
             } else {
-                console.log(`Job ${jobId} has status ${job.status}, not loading results`);
+                debugLog(`Job ${jobId} has status ${job.status}, not loading results`);
             }
         })
         .catch(error => {
@@ -236,7 +244,7 @@ function handleHidePutativeToggle() {
     const hidePutativeToggle = document.getElementById('hidePutativeToggle');
     if (hidePutativeToggle) {
         hidePutativeToggle.addEventListener('change', function() {
-            console.log("change")
+            debugLog("change")
             // Get the current job ID
             const jobIdDisplay = document.getElementById('jobIdDisplay');
             const jobId = jobIdDisplay ? jobIdDisplay.textContent : null;
@@ -294,7 +302,7 @@ function initializeMap() {
         map.invalidateSize();
     }, 100);
 
-    console.log('Map initialized');
+    debugLog('Map initialized');
 
     // Add an observer to detect when the map container becomes visible
     // This is important for maps in tabs or collapsed sections
@@ -303,7 +311,7 @@ function initializeMap() {
             if (mutation.type === 'attributes' && 
                 (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
                 map.invalidateSize();
-                console.log('Map size invalidated due to visibility change');
+                debugLog('Map size invalidated due to visibility change');
             }
         });
     });
@@ -317,13 +325,13 @@ function collectGcfIds(results) {
     // Extract unique GCF IDs (no client-side filtering)
     const gcfIds = [...new Set(results.map(item => item.gcf_id))];
 
-    console.log(`Collected ${gcfIds.length} unique GCF IDs`);
+    debugLog(`Collected ${gcfIds.length} unique GCF IDs`);
     return gcfIds;
 }
 
 // Function to fetch geographical data for GCF IDs
 async function fetchGeographicalData(gcfIds, jobId = null, filterPutative = false) {
-    console.log(`Fetching geographical data for ${gcfIds.length} GCF IDs`);
+    debugLog(`Fetching geographical data for ${gcfIds.length} GCF IDs`);
 
     // Create an array to store all marker data
     let allMarkerData = [];
@@ -345,7 +353,7 @@ async function fetchGeographicalData(gcfIds, jobId = null, filterPutative = fals
             }
 
             const data = await response.json();
-            console.log(`Received ${data.length} geographical points for job ${jobId}`);
+            debugLog(`Received ${data.length} geographical points for job ${jobId}`);
 
             // Use the data directly
             allMarkerData = data;
@@ -368,7 +376,7 @@ async function fetchGeographicalData(gcfIds, jobId = null, filterPutative = fals
                 }
 
                 const data = await response.json();
-                console.log(`Received ${data.length} geographical points for GCF ${gcfId}`);
+                debugLog(`Received ${data.length} geographical points for GCF ${gcfId}`);
 
                 // Add the data to the array
                 allMarkerData = allMarkerData.concat(data);
@@ -378,13 +386,13 @@ async function fetchGeographicalData(gcfIds, jobId = null, filterPutative = fals
         }
     }
 
-    console.log(`Total geographical points: ${allMarkerData.length}`);
+    debugLog(`Total geographical points: ${allMarkerData.length}`);
     return allMarkerData;
 }
 
 // Function to display geographical data on the map
 function displayGeographicalData(data) {
-    console.log(`Displaying ${data.length} geographical points on the map`);
+    debugLog(`Displaying ${data.length} geographical points on the map`);
 
     // Clear existing markers
     markers.clearLayers();
@@ -430,12 +438,12 @@ function displayGeographicalData(data) {
         map.setView([avgLat, avgLng]);
     }
 
-    console.log(`Added ${count} markers to the map`);
+    debugLog(`Added ${count} markers to the map`);
 }
 
 // Function to update the map with results
 async function updateMapWithResults(results) {
-    console.log('Updating map with results');
+    debugLog('Updating map with results');
 
     // Initialize the map if not already initialized
     initializeMap();
@@ -467,7 +475,7 @@ async function updateMapWithResults(results) {
 
 // Function to fetch biome data for GCF IDs
 async function fetchBiomeData(gcfIds, jobId = null, filterPutative = false) {
-    console.log(`Fetching biome data for ${gcfIds.length} GCF IDs`);
+    debugLog(`Fetching biome data for ${gcfIds.length} GCF IDs`);
 
     try {
         // Build the URL with query parameters
@@ -494,7 +502,7 @@ async function fetchBiomeData(gcfIds, jobId = null, filterPutative = false) {
         }
 
         const data = await response.json();
-        console.log(`Received biome data: ${data.length} entries`);
+        debugLog(`Received biome data: ${data.length} entries`);
 
         // Store the raw biome data
         rawBiomeData = data;
@@ -558,7 +566,7 @@ function processBiomeDataByLevel(
 
 // Function to create and update the biome chart
 async function updateBiomeChart(gcfIds, level, jobId = null, filterPutative = false) {
-    console.log('Updating biome chart');
+    debugLog('Updating biome chart');
 
     // Get the selected level from the dropdown if not provided
     if (!level) {
@@ -570,7 +578,7 @@ async function updateBiomeChart(gcfIds, level, jobId = null, filterPutative = fa
     await fetchBiomeData(gcfIds, jobId, filterPutative);
 
     if (rawBiomeData.length === 0) {
-        console.log('No biome data available');
+        debugLog('No biome data available');
         // Clear the chart if it exists
         if (biomeChart) {
             biomeChart.destroy();
@@ -579,7 +587,7 @@ async function updateBiomeChart(gcfIds, level, jobId = null, filterPutative = fa
         return;
     }
 
-    console.log(rawBiomeData);
+    debugLog(rawBiomeData);
 
     // Process the biome data by the selected level
     const processedData = processBiomeDataByLevel(rawBiomeData, level);
@@ -588,8 +596,8 @@ async function updateBiomeChart(gcfIds, level, jobId = null, filterPutative = fa
     const labels = processedData.map(item => item.biome);
     const counts = processedData.map(item => item.count);
 
-    console.log(labels);
-    console.log(counts);
+    debugLog(labels);
+    debugLog(counts);
 
     // Get the canvas element
     const ctx = document.getElementById('biomeChart');
@@ -647,12 +655,12 @@ async function updateBiomeChart(gcfIds, level, jobId = null, filterPutative = fa
         }
     });
 
-    console.log(`Biome chart created for level ${level}`);
+    debugLog(`Biome chart created for level ${level}`);
 }
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing job status page');
+    debugLog('DOM loaded, initializing job status page');
 
     // Set up the hide putative toggle
     handleHidePutativeToggle();
@@ -666,7 +674,7 @@ document.addEventListener('DOMContentLoaded', function() {
         biomeLevelSelect.addEventListener('change', function() {
             // Get the selected level
             const level = this.value;
-            console.log(`Biome level changed to ${level}`);
+            debugLog(`Biome level changed to ${level}`);
 
             // Get the current job ID and putative threshold setting
             const jobIdDisplay = document.getElementById('jobIdDisplay');
@@ -687,13 +695,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Check if serverJobId is defined (passed from the server)
     if (typeof serverJobId !== 'undefined' && serverJobId) {
-        console.log(`Using server-provided job ID: ${serverJobId}`);
+        debugLog(`Using server-provided job ID: ${serverJobId}`);
         jobId = serverJobId;
     } else {
         // Fallback to URL parameter
         const urlParams = new URLSearchParams(window.location.search);
         jobId = urlParams.get('jobId');
-        console.log(`Using URL parameter job ID: ${jobId}`);
+        debugLog(`Using URL parameter job ID: ${jobId}`);
     }
 
     if (!jobId) {
@@ -704,7 +712,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    console.log(`Initializing job status page for job ID: ${jobId}`);
+    debugLog(`Initializing job status page for job ID: ${jobId}`);
 
     // Update job ID display
     updateJobIdDisplay(jobId);
@@ -713,11 +721,11 @@ document.addEventListener('DOMContentLoaded', function() {
     checkJobStatus(jobId);
 
     // Listen for server-sent events
-    console.log('Setting up SSE event listener');
+    debugLog('Setting up SSE event listener');
     const eventSource = new EventSource('/events');
 
     eventSource.onopen = function() {
-        console.log('SSE connection opened');
+        debugLog('SSE connection opened');
     };
 
     eventSource.onerror = function(error) {
@@ -725,12 +733,12 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     eventSource.onmessage = function (event) {
-        console.log('Received SSE event:', event.data);
+        debugLog('Received SSE event:', event.data);
         const data = JSON.parse(event.data);
 
         // Only process events for this job
         if (data.jobId && data.jobId === jobId) {
-            console.log(`Processing SSE event for job ${jobId}:`, data);
+            debugLog(`Processing SSE event for job ${jobId}:`, data);
             const status = document.getElementById('status');
             status.innerHTML = `<strong>Status:</strong> ${data.status}`;
 
@@ -773,7 +781,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // If job is completed and has results, display them
             if (data.status === 'completed' && data.records) {
-                console.log(`Job ${jobId} is complete with ${data.records.length} results, displaying them`);
+                debugLog(`Job ${jobId} is complete with ${data.records.length} results, displaying them`);
 
                 // Check if the hide putative toggle is checked
                 const hidePutativeToggle = document.getElementById('hidePutativeToggle');
@@ -786,7 +794,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateMapWithResults(data.records, filterPutative);
             }
         } else {
-            console.log('Ignoring SSE event for different job or without job ID');
+            debugLog('Ignoring SSE event for different job or without job ID');
         }
     };
 });
