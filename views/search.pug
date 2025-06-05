@@ -14,11 +14,11 @@ block content
                         p Total jobs processed: <strong id="totalJobsProcessed">0</strong>
 
                 +card('Upload GenBank Files')
-                    span.info-icon(data-bs-toggle="tooltip" title="The search function accepts antiSMASH compatible GenBank files. Please upload one or more GenBank files to search for similar BGCs in the database.")
-                        img(src="/images/info.svg" width="16" height="16" alt="Info", loading = "lazy")
                     form(id='uploadForm' action='/upload' method='post' enctype='multipart/form-data')
                         input(type='hidden' name='_csrf' value=csrfToken)
                         .input-group.mb-3
+                            span.info-icon.me-2(data-bs-toggle="tooltip" title="The search function accepts antiSMASH compatible GenBank files. Please upload one or more GenBank files to search for similar BGCs in the database.")
+                                img(src="/images/info.svg" width="16" height="16" alt="Info", loading = "lazy")
                             input.form-control(type='file' id='formFile' name='file' multiple aria-label='GenBank file upload')
                             button#uploadButton.btn.btn-primary(type='submit') Upload
                 +card('Selected Files')
@@ -42,6 +42,11 @@ block content
                         .input-group
                             input.form-control#jobIdInput(type='text' placeholder='Enter Job ID' aria-label='Job ID')
                             button.btn.btn-outline-secondary(type='submit') Look Up
+
+                    .mt-3
+                        h5 Your Previous Jobs
+                        ul#previousJobsList.list-group.mt-2
+                            li.list-group-item.text-center No previous jobs found
 
 
 append head

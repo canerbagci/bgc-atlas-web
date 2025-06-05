@@ -1,10 +1,27 @@
+// Store the original results data
+let originalResults = [];
+
+// Define the threshold for putative BGCs
+const PUTATIVE_THRESHOLD = 0.4;
+
 // Function to display results in the table
-function displayResults(data) {
+function displayResults(data, filterPutative = false) {
+    // Store the original data
+    if (!filterPutative) {
+        originalResults = [...data];
+    }
+
     const results = document.getElementById('results');
     results.innerHTML = '';
 
-    if (data.length > 0) {
-        data.forEach(item => {
+    // Filter data if needed
+    let filteredData = data;
+    if (filterPutative) {
+        filteredData = data.filter(item => parseFloat(item.membership_value) <= PUTATIVE_THRESHOLD);
+    }
+
+    if (filteredData.length > 0) {
+        filteredData.forEach(item => {
             const row = document.createElement('tr');
             const nameCell = document.createElement('td');
             const idCell = document.createElement('td');
@@ -21,8 +38,8 @@ function displayResults(data) {
 
             valueCell.textContent = item.membership_value;
 
-            // Add putative-bgc class if membership value is greater than 0.405
-            if (parseFloat(item.membership_value) > 0.405) {
+            // Add putative-bgc class if membership value is greater than the threshold
+            if (parseFloat(item.membership_value) > PUTATIVE_THRESHOLD) {
                 row.classList.add('putative-bgc');
             }
 
@@ -34,8 +51,9 @@ function displayResults(data) {
     } else {
         const row = document.createElement('tr');
         const cell = document.createElement('td');
-        cell.className = 'colspan-3 text-center';
-        cell.textContent = 'No results to display';
+        cell.colSpan = 3;
+        cell.className = 'text-center';
+        cell.textContent = 'No hits found';
         row.appendChild(cell);
         results.appendChild(row);
     }
@@ -64,7 +82,13 @@ function loadJobResults(jobId) {
         })
         .then(data => {
             console.log(`Received ${data.length} results:`, data);
-            displayResults(data);
+
+            // Check if the hide putative toggle is checked
+            const hidePutativeToggle = document.getElementById('hidePutativeToggle');
+            const filterPutative = hidePutativeToggle ? hidePutativeToggle.checked : false;
+
+            // Display results with or without filtering
+            displayResults(data, filterPutative);
 
             // Hide loading indicator
             const loadingIndicator = document.getElementById('loadingIndicator');
@@ -165,9 +189,23 @@ function checkJobStatus(jobId) {
         });
 }
 
+// Function to handle the hide putative toggle
+function handleHidePutativeToggle() {
+    const hidePutativeToggle = document.getElementById('hidePutativeToggle');
+    if (hidePutativeToggle) {
+        hidePutativeToggle.addEventListener('change', function() {
+            // Re-display results with or without filtering
+            displayResults(originalResults, this.checked);
+        });
+    }
+}
+
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing job status page');
+
+    // Set up the hide putative toggle
+    handleHidePutativeToggle();
 
     // Get job ID from server or URL
     let jobId;
@@ -261,7 +299,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // If job is complete and has results, display them
             if (data.status === 'Complete' && data.records) {
                 console.log(`Job ${jobId} is complete with ${data.records.length} results, displaying them`);
-                displayResults(data.records);
+
+                // Check if the hide putative toggle is checked
+                const hidePutativeToggle = document.getElementById('hidePutativeToggle');
+                const filterPutative = hidePutativeToggle ? hidePutativeToggle.checked : false;
+
+                // Display results with or without filtering
+                displayResults(data.records, filterPutative);
             }
         } else {
             console.log('Ignoring SSE event for different job or without job ID');

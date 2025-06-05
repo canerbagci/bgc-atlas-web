@@ -47,7 +47,7 @@ $(document).ready(function () {
             },
             {data: 'biosample', name: 'Sample', title: 'Sample', type: 'string'},
         ],
-        order: [[0, 'desc'], [4, 'desc']],
+        order: [[0, 'desc'], [5, 'desc']],
         createdRow: function (row, data, dataIndex) {
             if (data.status === 'success') {
                 var statusCell = $(row).find('td').eq(0);

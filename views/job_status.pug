@@ -25,6 +25,12 @@ block content
               p.mt-2 Processing your job...
 
         +card('Results')
+          .alert.alert-info.mb-3
+            p Note: Only the best hit for each BGC uploaded is shown. Hits with a membership value > 0.4 are highlighted as putative.
+            .form-check.form-switch
+              input.form-check-input#hidePutativeToggle(type="checkbox")
+              label.form-check-label(for="hidePutativeToggle") Hide putative hits (membership value > 0.4)
+
           table.table.table-bordered.mt-3
             thead
               tr
@@ -51,6 +57,11 @@ append head
   style.
     .putative-bgc {
       background-color: #ffcccb !important;
+      color: #333 !important;
+    }
+
+    .hidden {
+      display: none;
     }
 
   script.
