@@ -35,7 +35,7 @@ async function getMapData() {
       'ORDER BY\n' +
       '    gd.latitude;');
     
-    return JSON.parse(JSON.stringify(result.rows));
+    return result.rows;
   } catch (error) {
     console.error('Error getting map data:', error);
     throw error;
@@ -121,7 +121,7 @@ async function getBodyMapData() {
       'WHERE meta_key = \'body site\'\n' +
       'GROUP BY sample, meta_value;');
     
-    return JSON.parse(JSON.stringify(result.rows));
+    return result.rows;
   } catch (error) {
     console.error('Error getting body map data:', error);
     throw error;
@@ -151,7 +151,7 @@ async function getFilteredMapData(column) {
 
     const result = await client.query(query, [column]);
     
-    return JSON.parse(JSON.stringify(result.rows));
+    return result.rows;
   } catch (error) {
     console.error(`Error getting filtered map data for column ${column}:`, error);
     throw error;
@@ -172,7 +172,7 @@ async function getColumnValues(column) {
 
     const result = await client.query(query, [column]);
     
-    return JSON.parse(JSON.stringify(result.rows));
+    return result.rows;
   } catch (error) {
     console.error(`Error getting column values for ${column}:`, error);
     throw error;

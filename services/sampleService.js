@@ -19,7 +19,7 @@ async function getSampleInfo() {
         '    (SELECT COUNT(*) FROM protoclusters) AS protoclusters,\n' +
         '    (SELECT COUNT(*) FROM protoclusters WHERE contig_edge = \'False\') AS complbgcscount');
 
-      return JSON.parse(JSON.stringify(result.rows));
+      return result.rows;
     } catch (error) {
       console.error('Error getting sample info:', error);
       throw error;

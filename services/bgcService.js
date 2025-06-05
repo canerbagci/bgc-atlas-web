@@ -186,7 +186,7 @@ async function getGcfCategoryCounts() {
         'GROUP BY bgc_type\n' +
         'ORDER BY unique_families DESC;');
 
-      return JSON.parse(JSON.stringify(result.rows));
+      return result.rows;
     } catch (error) {
       console.error('Error getting GCF category counts:', error);
       throw error;
@@ -313,7 +313,7 @@ async function getGcfCountHistogram() {
         'ORDER BY lower_bound;';
 
       const result = await client.query(sql);
-      return JSON.parse(JSON.stringify(result.rows));
+      return result.rows;
     } catch (error) {
       console.error('Error getting GCF count histogram:', error);
       throw error;
