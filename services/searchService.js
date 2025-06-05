@@ -81,7 +81,7 @@ async function processUploadedFiles(req, sendEvent) {
       jobEmitter.emit('status', { status: 'Running' });
       spawn(process.env.SEARCH_SCRIPT_PATH, [uploadDir], { shell: false });
       const records = [{ bgc_name: 'bgc', gcf_id: '123', membership_value: '0.9' }];
-      jobEmitter.emit('complete', { status: 'Complete', records });
+      jobEmitter.emit('complete', { status: 'completed', records });
       return records;
     } else {
       // Schedule the job

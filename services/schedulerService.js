@@ -30,7 +30,7 @@ function processJob(jobId, emitter) {
           emitter?.emit('status', { status: message.status, jobId: message.jobId });
           break;
         case 'complete':
-          emitter?.emit('complete', { status: 'Complete', records: message.records, jobId: message.jobId });
+          emitter?.emit('complete', { status: 'completed', records: message.records, jobId: message.jobId });
           break;
         case 'error':
           emitter?.emit('error', { status: 'Error', message: message.message || message.error, output: message.output, jobId: message.jobId });
@@ -94,7 +94,7 @@ async function runJobInline(jobId, emitter) {
   });
   await jobService.storeResults(jobId, records);
   await jobService.updateJobStatus(jobId, 'completed');
-  emitter?.emit('complete', { status: 'Complete', records, jobId });
+  emitter?.emit('complete', { status: 'completed', records, jobId });
   jobEmitters.delete(jobId);
 }
 
