@@ -58,7 +58,18 @@ async function processUploadedFiles(req, sendEvent) {
     const scriptPath = process.env.SEARCH_SCRIPT_PATH;
     const scriptArgs = [uploadDir];
 
-    const scriptProcess = spawn('bash', [scriptPath, ...scriptArgs]);
+    // Validate script path existence and safety
+    const resolvedScript = path.resolve(scriptPath);
+    if (!fs.existsSync(resolvedScript)) {
+      return reject(new Error('Search script not found'));
+    }
+
+    const safeDir = path.resolve(process.env.SEARCH_UPLOADS_DIR || '', '..');
+    if (!resolvedScript.startsWith(safeDir + path.sep)) {
+      return reject(new Error('Invalid search script path'));
+    }
+
+    const scriptProcess = spawn(resolvedScript, scriptArgs, { shell: false });
 
     let scriptOutput = '';
 
