@@ -2,6 +2,125 @@ const { pool } = require('../config/database');
 const cacheService = require('./cacheService');
 
 /**
+ * Validates a dataset parameter
+ * @param {string} dataset - The dataset to validate
+ * @returns {string} - The validated dataset
+ * @throws {Error} - If the dataset is invalid
+ */
+function validateDataset(dataset) {
+  if (!dataset || typeof dataset !== 'string') {
+    throw new Error('Dataset is required and must be a string');
+  }
+
+  // Validate dataset format (alphanumeric with some special chars)
+  const validDatasetRegex = /^[A-Za-z0-9_.-]+$/;
+  if (!validDatasetRegex.test(dataset)) {
+    throw new Error(`Invalid dataset format: ${dataset}`);
+  }
+
+  if (dataset.length > 100) {
+    throw new Error('Dataset name is too long');
+  }
+
+  return dataset;
+}
+
+/**
+ * Validates an anchor parameter
+ * @param {string} anchor - The anchor to validate
+ * @returns {string} - The validated anchor
+ * @throws {Error} - If the anchor is invalid
+ */
+function validateAnchor(anchor) {
+  if (!anchor || typeof anchor !== 'string') {
+    throw new Error('Anchor is required and must be a string');
+  }
+
+  // Validate anchor format (alphanumeric with some special chars)
+  const validAnchorRegex = /^[A-Za-z0-9_.-]+$/;
+  if (!validAnchorRegex.test(anchor)) {
+    throw new Error(`Invalid anchor format: ${anchor}`);
+  }
+
+  if (anchor.length > 100) {
+    throw new Error('Anchor name is too long');
+  }
+
+  return anchor;
+}
+
+/**
+ * Validates pagination parameters
+ * @param {*} start - The start index
+ * @param {*} length - The page size
+ * @returns {Object} - The validated pagination parameters
+ * @throws {Error} - If the pagination parameters are invalid
+ */
+function validatePagination(start, length) {
+  const startNum = Number.parseInt(start, 10);
+  if (Number.isNaN(startNum) || startNum < 0) {
+    throw new Error('Invalid start parameter: must be a non-negative integer');
+  }
+
+  const lengthNum = Number.parseInt(length, 10);
+  if (Number.isNaN(lengthNum) || lengthNum <= 0 || lengthNum > 1000) {
+    throw new Error('Invalid length parameter: must be a positive integer not exceeding 1000');
+  }
+
+  return { start: startNum, length: lengthNum };
+}
+
+/**
+ * Validates a search value
+ * @param {string} searchValue - The search value to validate
+ * @returns {string|null} - The validated search value or null if empty
+ * @throws {Error} - If the search value is invalid
+ */
+function validateSearchValue(searchValue) {
+  if (!searchValue) {
+    return null;
+  }
+
+  if (typeof searchValue !== 'string') {
+    throw new Error('Search value must be a string');
+  }
+
+  if (searchValue.length > 1000) {
+    throw new Error('Search value is too long');
+  }
+
+  // Remove potentially dangerous characters
+  return searchValue.replace(/[;'"\\]/g, '');
+}
+
+/**
+ * Validates order parameters
+ * @param {*} order - The order parameters
+ * @param {string[]} allowedColumns - The allowed column names
+ * @returns {Array} - The validated order parameters
+ * @throws {Error} - If the order parameters are invalid
+ */
+function validateOrder(order, allowedColumns) {
+  if (!order || !Array.isArray(order) || order.length === 0) {
+    return [];
+  }
+
+  return order.map(item => {
+    const column = Number.parseInt(item.column, 10);
+    if (Number.isNaN(column) || column < 0 || column >= allowedColumns.length) {
+      throw new Error(`Invalid column index: ${item.column}`);
+    }
+
+    const dir = item.dir.toLowerCase();
+    if (dir !== 'asc' && dir !== 'desc') {
+      throw new Error(`Invalid sort direction: ${item.dir}`);
+    }
+
+    return { column, dir };
+  });
+}
+
+/**
  * Get sample information including counts of samples, analyzed samples, running samples, and BGCs
  * @returns {Promise<Array>} - Array of sample information
  */
