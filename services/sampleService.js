@@ -1,4 +1,4 @@
-const { client, pool } = require('../config/database');
+const { pool } = require('../config/database');
 const cacheService = require('./cacheService');
 
 /**
@@ -12,7 +12,7 @@ async function getSampleInfo() {
   // Use the caching service to get or fetch the data
   return cacheService.getOrFetch(cacheKey, async () => {
     try {
-      const result = await client.query('SELECT\n' +
+      const result = await pool.query('SELECT\n' +
         '    (SELECT COUNT(*) FROM mgnify_asms) AS "sample_count",\n' +
         '    (SELECT COUNT(*) FROM antismash_runs WHERE status = \'success\') AS "success",\n' +
         '    (SELECT COUNT(*) FROM antismash_runs WHERE status = \'runningAS\') AS "running",\n' +
@@ -281,7 +281,7 @@ async function getBgcId(dataset, anchor) {
   return cacheService.getOrFetch(cacheKey, async () => {
     try {
       const query = 'SELECT region_id FROM regions WHERE assembly = $1 AND anchor = $2';
-      const result = await client.query(query, [dataset, anchor]);
+      const result = await pool.query(query, [dataset, anchor]);
 
       if (result.rows.length > 0) {
         return { bgcId: result.rows[0].region_id };
