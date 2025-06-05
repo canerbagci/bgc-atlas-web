@@ -45,8 +45,8 @@ router.get('/:jobId/results', async (req, res, next) => {
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    // Check for both lowercase 'completed' and capitalized 'Complete'
-    if (job.status !== 'completed' && job.status !== 'Complete') {
+    // Ensure job is completed before returning results
+    if (job.status !== 'completed') {
       return res.status(400).json({ 
         error: 'Job not completed', 
         status: job.status 

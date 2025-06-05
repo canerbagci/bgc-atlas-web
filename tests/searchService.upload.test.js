@@ -76,7 +76,7 @@ describe('processUploadedFiles', () => {
     expect(createJobSpy).toHaveBeenCalledWith('1.2.3.4', '/tmp/up', 1, ['f.txt']);
     expect(spawn).toHaveBeenCalledWith('/tmp/search/script.sh', ['/tmp/up'], { shell: false });
     expect(sendEvent).toHaveBeenCalledWith({ status: 'Running' });
-    expect(sendEvent).toHaveBeenLastCalledWith({ status: 'Complete', records: result });
+    expect(sendEvent).toHaveBeenLastCalledWith({ status: 'completed', records: result });
     expect(result).toEqual([{ bgc_name: 'bgc', gcf_id: '123', membership_value: '0.9' }]);
   });
 });

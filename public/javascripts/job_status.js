@@ -179,8 +179,8 @@ function checkJobStatus(jobId) {
                 }
             }
 
-            // Check for both lowercase 'completed' and capitalized 'Complete'
-            if (job.status === 'completed' || job.status === 'Complete') {
+            // Load results when job is completed
+            if (job.status === 'completed') {
                 console.log(`Job ${jobId} is completed, loading results`);
                 loadJobResults(jobId);
             } else if (job.status === 'queued' || job.status === 'running') {
@@ -706,8 +706,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            // If job is complete and has results, display them
-            if (data.status === 'Complete' && data.records) {
+            // If job is completed and has results, display them
+            if (data.status === 'completed' && data.records) {
                 console.log(`Job ${jobId} is complete with ${data.records.length} results, displaying them`);
 
                 // Check if the hide putative toggle is checked
