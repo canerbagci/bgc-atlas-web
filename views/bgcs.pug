@@ -34,6 +34,10 @@ block content
                                     td(style="text-align: left;") :
                                     td(style="text-align: left;")
                                         span.badge.badge-primary#meanbgcsamples Loading...
+                                if GCF
+                                    tr
+                                        td(style="text-align: left;" colspan="3")
+                                            a.btn.btn-info(href=`/gcf-gene-view?gcf=${GCF}` title="View gene organization") View Genes
                     .col-md-6
                         h2 Biome Distribution
                         div#sunburst-chart Loading...
