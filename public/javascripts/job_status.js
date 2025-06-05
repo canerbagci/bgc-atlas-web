@@ -233,10 +233,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (queuePosition) queuePosition.textContent = data.queuePosition;
                     if (totalJobs) totalJobs.textContent = data.totalJobs || 0;
 
-                    // Calculate estimated wait time (rough estimate: 5 minutes per job ahead in queue)
+                    // Calculate estimated wait time (rough estimate: 2 minutes per job ahead in queue)
                     if (estimatedTime && data.queuePosition > 1) {
                         const jobsAhead = data.queuePosition - 1;
-                        const estimatedMinutes = jobsAhead * 5;
+                        const estimatedMinutes = jobsAhead * 2;
                         estimatedTime.textContent = `Estimated wait time: approximately ${estimatedMinutes} minutes`;
                     } else if (estimatedTime) {
                         estimatedTime.textContent = 'Your job is next in the queue!';
