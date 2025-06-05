@@ -85,8 +85,10 @@ async function processUploadedFiles(req, sendEvent) {
     const fileNames = files.map(file => file.name);
 
     // Determine IP address for logging
+    const forwarded = req.headers && req.headers['x-forwarded-for'];
+    const headerIp = forwarded ? forwarded.split(',')[0].trim() : null;
     const ipAddress =
-      (req.headers && req.headers['x-forwarded-for']) ||
+      headerIp ||
       req.ip ||
       (req.connection && req.connection.remoteAddress) ||
       '';

@@ -80,7 +80,9 @@ app.set('view engine', 'pug');
 
 // Create a custom token for geolocation
 morgan.token('geolocation', function (req, res) {
-  const ip = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || '';
+  const forwarded = req.headers && req.headers['x-forwarded-for'];
+  const headerIp = forwarded ? forwarded.split(',')[0].trim() : null;
+  const ip = headerIp || req.ip || (req.connection && req.connection.remoteAddress) || '';
   // Remove IPv6 prefix if present
   const cleanIp = ip.replace(/^::ffff:/, '');
   const geo = geoip.lookup(cleanIp);
