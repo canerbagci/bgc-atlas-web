@@ -1,0 +1,7 @@
+mixin card(title)
+  .card.mb-3
+    if title
+      .card-header #{title}
+    .card-body
+      block
+

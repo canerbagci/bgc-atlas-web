@@ -1,0 +1,23 @@
+mixin navbar(activePage)
+  nav.navbar.navbar-expand-sm.navbar-dark.bg-dark(style="width:100%;" aria-label="Main Navigation")
+    .container-fluid
+      a.navbar-brand(href='/') BGC Atlas
+      button.navbar-toggler(type='button' data-bs-toggle='collapse' data-bs-target='#mynavbar' aria-controls='mynavbar' aria-label='Toggle navigation' aria-expanded='false')
+        span.navbar-toggler-icon
+      #mynavbar.collapse.navbar-collapse
+        ul.navbar-nav.me-auto
+          li.nav-item
+            a.nav-link(href='/' class=activePage === 'home' ? 'active' : '') Home
+          li.nav-item
+            a.nav-link(href='/samples' class=activePage === 'samples' ? 'active' : '') Samples
+          li.nav-item
+            a.nav-link(href='/bgcs' class=activePage === 'bgcs' ? 'active' : '') BGCs
+          li.nav-item
+            a.nav-link(href='/gcfs' class=activePage === 'gcfs' ? 'active' : '') GCFs
+          li.nav-item
+            a.nav-link(href='/search' class=activePage === 'search' ? 'active' : '') Search
+          li.nav-item
+            a.nav-link(href='/downloads' class=activePage === 'downloads' ? 'active' : '') Downloads
+          li.nav-item
+            a.nav-link(href='/about' class=activePage === 'about' ? 'active' : '') About
+
