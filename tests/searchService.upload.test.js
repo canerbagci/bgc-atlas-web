@@ -1,12 +1,17 @@
 const EventEmitter = require('events');
 const fs = require('fs-extra');
+const path = require('path');
 const { spawn } = require('child_process');
 const jobService = require('../services/jobService');
 
-jest.mock('fs-extra', () => ({
-  ensureDirSync: jest.fn(),
-  existsSync: jest.fn()
-}));
+jest.mock('fs-extra', () => {
+  const original = jest.requireActual('fs-extra');
+  return {
+    ...original,
+    ensureDirSync: jest.fn(),
+    existsSync: jest.fn()
+  };
+});
 
 jest.mock('child_process', () => ({
   spawn: jest.fn()
@@ -16,7 +21,7 @@ jest.mock('child_process', () => ({
 process.env.SEARCH_SCRIPT_PATH = '/tmp/search/script.sh';
 
 // Import the required modules
-const { createTimestampedDirectory, processUploadedFiles } = require('../services/searchService');
+const { createTimestampedDirectory, processUploadedFiles, validateUploadedFiles } = require('../services/searchService');
 
 describe('createTimestampedDirectory', () => {
   beforeEach(() => {
@@ -31,6 +36,24 @@ describe('createTimestampedDirectory', () => {
     const dir = createTimestampedDirectory('/base');
     expect(fs.ensureDirSync).toHaveBeenCalledWith('/base/1234567890000');
     expect(dir).toBe('/base/1234567890000');
+  });
+});
+
+describe('validateUploadedFiles', () => {
+  it('passes for valid GenBank content', async () => {
+    const tmpDir = fs.mkdtempSync('/tmp/gbk-');
+    const filePath = path.join(tmpDir, 'test.gbk');
+    fs.writeFileSync(filePath, 'LOCUS       TEST');
+    await expect(validateUploadedFiles([{ path: filePath }])).resolves.not.toThrow();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('throws for invalid content', async () => {
+    const tmpDir = fs.mkdtempSync('/tmp/gbk-');
+    const filePath = path.join(tmpDir, 'bad.gbk');
+    fs.writeFileSync(filePath, 'INVALID');
+    await expect(validateUploadedFiles([{ path: filePath }])).rejects.toThrow('Invalid GenBank file format');
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 });
 
@@ -58,8 +81,11 @@ describe('processUploadedFiles', () => {
     proc.stderr = new EventEmitter();
     spawn.mockReturnValue(proc);
 
+    const tmpDir = fs.mkdtempSync('/tmp/gbk-');
+    const filePath = path.join(tmpDir, 'f.txt');
+    fs.writeFileSync(filePath, 'LOCUS TEST');
     const req = {
-      files: [{ originalname: 'f.txt', filename: 'f.txt', path: '/ceph/ibmi/tgm/bgc-atlas/search/uploads/f.txt' }],
+      files: [{ originalname: 'f.txt', filename: 'f.txt', path: filePath }],
       uploadDir: '/tmp/up',
       ip: '1.2.3.4',
       headers: {}
@@ -72,6 +98,8 @@ describe('processUploadedFiles', () => {
     proc.emit('close', 0);
 
     const result = await promise;
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
 
     expect(createJobSpy).toHaveBeenCalledWith('1.2.3.4', '/tmp/up', 1, ['f.txt']);
     expect(spawn).toHaveBeenCalledWith('/tmp/search/script.sh', ['/tmp/up'], { shell: false });

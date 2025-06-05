@@ -39,6 +39,32 @@ function createTimestampedDirectory(basePath) {
 }
 
 /**
+ * Validate uploaded GenBank files by inspecting their contents
+ * @param {Array} files - Array of multer file objects
+ * @throws {Error} - If a file fails validation
+ */
+async function validateUploadedFiles(files) {
+  for (const file of files) {
+    const fd = await fs.promises.open(file.path, 'r');
+    const buffer = Buffer.alloc(64);
+    const { bytesRead } = await fd.read(buffer, 0, 64, 0);
+    await fd.close();
+
+    const slice = buffer.subarray(0, bytesRead);
+
+    // reject if any null bytes are found (simple binary detection)
+    if (slice.includes(0)) {
+      throw new Error('Invalid binary file');
+    }
+
+    const snippet = slice.toString('utf8');
+    if (!snippet.includes('LOCUS')) {
+      throw new Error('Invalid GenBank file format');
+    }
+  }
+}
+
+/**
  * Process uploaded files and create a job
  * @param {Object} req - The request object containing uploaded files
  * @param {Function} sendEvent - Function to send SSE events to clients
@@ -52,6 +78,8 @@ async function processUploadedFiles(req, sendEvent) {
       id: file.filename,
       path: path.relative(process.env.SEARCH_UPLOADS_DIR, file.path) // Relative path to the file
     }));
+
+    await validateUploadedFiles(req.files);
 
     const uploadDir = req.uploadDir;
     const fileNames = files.map(file => file.name);
@@ -154,6 +182,7 @@ function getMembership(reportId) {
 
 module.exports = {
   createTimestampedDirectory,
+  validateUploadedFiles,
   processUploadedFiles,
   getMembership,
   sanitizeDirectoryName
