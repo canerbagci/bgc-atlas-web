@@ -68,9 +68,10 @@ To set up a local instance of BGC Atlas, follow these steps:
    MONTHLY_SOIL_BASE_DIR=/path/to/monthly-soil  # Optional: Path to monthly soil data directory
    ULTRA_DEEP_SOIL_DIR=/path/to/ultra-deep-soil  # Optional: Path to ultra-deep soil data directory
    SEARCH_UPLOADS_DIR=/path/to/search/uploads  # Optional: Path to store uploaded files for search
-   SEARCH_SCRIPT_PATH=/path/to/search/script.py  # Required: Path to the search script
-   REPORTS_DIR=/path/to/reports  # Required: Path to store search reports
-   SSL_CERT_PATH=/path/to/ssl/certs  # Optional: Path to SSL certificates
+    SEARCH_SCRIPT_PATH=/path/to/search/script.py  # Required: Path to the search script
+    REPORTS_DIR=/path/to/reports  # Required: Path to store search reports
+    ENABLE_SSL=true  # Set to false to disable HTTPS
+    SSL_CERT_PATH=/path/to/ssl/certs  # Optional: Path to SSL certificates
    ```
 
 4. Set up the database:
