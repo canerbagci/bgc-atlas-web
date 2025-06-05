@@ -47,7 +47,8 @@ The Download section provides access to the raw data (GenBank files for BGCs, th
 ## Installation
 
 To set up a local instance of BGC Atlas, follow these steps. The project
-requires **Node.js 18** or later:
+requires **Node.js 18** or later (the recommended version is defined in
+the `.nvmrc` file):
 
 1. Clone the repository:
    ```
@@ -62,20 +63,32 @@ requires **Node.js 18** or later:
    ```
 
 3. Configure environment variables:
-   Create a `.env` file in the root directory with the following variables:
+   Create a `.env` file in the root directory with the following variables
+   (see `.env.example` for a complete template):
    ```
-   PORT=3000
+   # Database connection
+   DB_USER=your_db_user
+   DB_HOST=localhost
+   DB_DATABASE=bgc_atlas
+   DB_PASSWORD=change_me
+   DB_PORT=5432
+
+   # Redis configuration
+   REDIS_HOST=127.0.0.1
+   REDIS_PORT=6379
+
+   # Application settings
    APP_URL=http://localhost:3000
-   DATABASE_URL=postgres://username:password@localhost:5432/bgcatlas
-   REDIS_HOST=127.0.0.1  # Redis host for Bull queue
-   REDIS_PORT=6379       # Redis port for Bull queue
-   MONTHLY_SOIL_BASE_DIR=/path/to/monthly-soil  # Optional: Path to monthly soil data directory
-   ULTRA_DEEP_SOIL_DIR=/path/to/ultra-deep-soil  # Optional: Path to ultra-deep soil data directory
-   SEARCH_UPLOADS_DIR=/path/to/search/uploads  # Optional: Path to store uploaded files for search
-    SEARCH_SCRIPT_PATH=/path/to/search/script.py  # Required: Path to the search script
-    REPORTS_DIR=/path/to/reports  # Required: Path to store search reports
-    ENABLE_SSL=true  # Set to false to disable HTTPS
-    SSL_CERT_PATH=/path/to/ssl/certs  # Optional: Path to SSL certificates
+   PORT=3000
+   ENABLE_SSL=true      # Set to false to disable HTTPS
+   SSL_CERT_PATH=/path/to/ssl/certs  # Optional
+
+   # Paths used by the search feature
+   MONTHLY_SOIL_BASE_DIR=/path/to/monthly-soil     # optional
+   ULTRA_DEEP_SOIL_DIR=/path/to/ultra-deep-soil    # optional
+   SEARCH_UPLOADS_DIR=/path/to/search/uploads      # optional
+   SEARCH_SCRIPT_PATH=/path/to/search/script.py    # required
+   REPORTS_DIR=/path/to/reports                    # required
    ```
 
 4. Set up the database:
