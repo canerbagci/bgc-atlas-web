@@ -3,6 +3,7 @@ const router = express.Router();
 const sampleService = require('../services/sampleService');
 const { defaultRateLimiter } = require('../services/rateLimitMiddleware');
 const logger = require('../utils/logger');
+const { sanitizeMessage } = require('../utils/sanitize');
 
 /* ───────────────────────────── Sample Routes ─────────────────────────────── */
 
@@ -24,7 +25,7 @@ router.get('/getBgcId', async (req, res, next) => {
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {
-      return res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: sanitizeMessage(error.message) });
     }
 
     next(error);
@@ -76,7 +77,7 @@ router.get('/sample-data', async (req, res, next) => {
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {
-      return res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: sanitizeMessage(error.message) });
     }
 
     next(error);
