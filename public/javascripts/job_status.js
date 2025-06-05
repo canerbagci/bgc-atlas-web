@@ -10,6 +10,12 @@ let map = null;
 // Store the markers layer
 let markers = null;
 
+// Store the biome chart instance
+let biomeChart = null;
+
+// Store the raw biome data
+let rawBiomeData = [];
+
 // Function to display results in the table
 function displayResults(data, filterPutative = false) {
     // Store the original data
@@ -208,6 +214,16 @@ function handleHidePutativeToggle() {
 
             // Update the map with the filtered results
             updateMapWithResults(originalResults, this.checked);
+
+            // Update the biome chart with the filtered results
+            const gcfIds = collectGcfIds(originalResults, this.checked);
+
+            // Get the current selected level from the dropdown
+            const biomeLevelSelect = document.getElementById('biomeLevelSelect');
+            const level = biomeLevelSelect ? biomeLevelSelect.value : '1';
+
+            // Update the biome chart with the current level
+            updateBiomeChart(gcfIds, level);
         });
     }
 }
@@ -395,6 +411,181 @@ async function updateMapWithResults(results, filterPutative = false) {
 
     // Display the geographical data on the map
     displayGeographicalData(geographicalData);
+
+    // Update the biome chart with the same GCF IDs
+    updateBiomeChart(gcfIds);
+}
+
+// Function to fetch biome data for GCF IDs
+async function fetchBiomeData(gcfIds) {
+    console.log(`Fetching biome data for ${gcfIds.length} GCF IDs`);
+
+    try {
+        // Convert GCF IDs to a comma-separated string
+        const gcfIdsParam = gcfIds.join(',');
+
+        // Fetch biome data from the API
+        const response = await fetch(`/biome-data-gcfs?gcfs=${encodeURIComponent(gcfIdsParam)}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(`Received biome data: ${data.length} entries`);
+
+        // Store the raw biome data
+        rawBiomeData = data;
+
+        return data;
+    } catch (error) {
+        console.error('Error fetching biome data:', error);
+        return [];
+    }
+}
+
+// Function to process biome data by hierarchy level
+function processBiomeDataByLevel(data, level) {
+    console.log(`Processing biome data for level ${level}`);
+
+    // Default to level 1 if invalid level is provided
+    const hierarchyLevel = parseInt(level, 10) || 1;
+
+    // Create a map to store grouped data
+    const groupedData = new Map();
+
+    // Process each biome entry
+    data.forEach(item => {
+        // Split the biome name by colon to get hierarchy parts
+        const biomeParts = item.biome.split(':');
+
+        // Get the part at the specified level (if it exists)
+        let levelName = '';
+        if (hierarchyLevel <= biomeParts.length) {
+            levelName = biomeParts[hierarchyLevel - 1];
+        } else {
+            // If the requested level is deeper than what's available,
+            // use the deepest available level
+            levelName = biomeParts[biomeParts.length - 1];
+        }
+
+        // Trim any whitespace
+        levelName = levelName.trim();
+
+        // If empty, use "Unknown"
+        if (!levelName) {
+            levelName = "Unknown";
+        }
+
+        // Add or update the count in the grouped data
+        if (groupedData.has(levelName)) {
+            groupedData.set(levelName, groupedData.get(levelName) + item.count);
+        } else {
+            groupedData.set(levelName, item.count);
+        }
+    });
+
+    // Convert the map to an array of objects
+    const result = Array.from(groupedData.entries()).map(([biome, count]) => ({
+        biome,
+        count
+    }));
+
+    // Sort by count in descending order
+    result.sort((a, b) => b.count - a.count);
+
+    console.log(`Processed ${result.length} unique biomes at level ${level}`);
+    return result;
+}
+
+// Function to create and update the biome chart
+async function updateBiomeChart(gcfIds, level) {
+    console.log('Updating biome chart');
+
+    // Get the selected level from the dropdown if not provided
+    if (!level) {
+        const biomeLevelSelect = document.getElementById('biomeLevelSelect');
+        level = biomeLevelSelect ? biomeLevelSelect.value : '1';
+    }
+
+    // Fetch biome data if not already available
+    if (!rawBiomeData.length) {
+        await fetchBiomeData(gcfIds);
+    }
+
+    if (rawBiomeData.length === 0) {
+        console.log('No biome data available');
+        // Clear the chart if it exists
+        if (biomeChart) {
+            biomeChart.destroy();
+            biomeChart = null;
+        }
+        return;
+    }
+
+    // Process the biome data by the selected level
+    const processedData = processBiomeDataByLevel(rawBiomeData, level);
+
+    // Prepare data for the chart
+    const labels = processedData.map(item => item.biome);
+    const counts = processedData.map(item => item.count);
+
+    // Get the canvas element
+    const ctx = document.getElementById('biomeChart');
+    if (!ctx) {
+        console.error('Biome chart canvas not found');
+        return;
+    }
+
+    // Destroy existing chart if it exists
+    if (biomeChart) {
+        biomeChart.destroy();
+    }
+
+    // Create a new chart
+    biomeChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Number of Samples',
+                data: counts,
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Samples'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: `Biome (Level ${level})`
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                title: {
+                    display: true,
+                    text: `Biome Distribution of Hits (Level ${level})`
+                }
+            }
+        }
+    });
+
+    console.log(`Biome chart created for level ${level}`);
 }
 
 // Initialize when DOM is loaded
@@ -406,6 +597,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize the map
     initializeMap();
+
+    // Set up biome level dropdown change event
+    const biomeLevelSelect = document.getElementById('biomeLevelSelect');
+    if (biomeLevelSelect) {
+        biomeLevelSelect.addEventListener('change', function() {
+            // Get the selected level
+            const level = this.value;
+            console.log(`Biome level changed to ${level}`);
+
+            // Get the current GCF IDs from the results
+            const hidePutativeToggle = document.getElementById('hidePutativeToggle');
+            const filterPutative = hidePutativeToggle ? hidePutativeToggle.checked : false;
+            const gcfIds = collectGcfIds(originalResults, filterPutative);
+
+            // Update the chart with the new level
+            updateBiomeChart(gcfIds, level);
+        });
+    }
 
     // Get job ID from server or URL
     let jobId;

@@ -35,7 +35,7 @@ async function getMapData() {
       '    NOT (gd.longitude = 0 AND gd.latitude = 0)\n' +
       'ORDER BY\n' +
       '    gd.latitude;');
-    
+
     return result.rows;
   } catch (error) {
     logger.error('Error getting map data:', error);
@@ -121,7 +121,7 @@ async function getBodyMapData() {
       'FROM sample_metadata\n' +
       'WHERE meta_key = \'body site\'\n' +
       'GROUP BY sample, meta_value;');
-    
+
     return result.rows;
   } catch (error) {
     logger.error('Error getting body map data:', error);
@@ -151,7 +151,7 @@ async function getFilteredMapData(column) {
         AND sm3.meta_key = $1 AND sm3.meta_value IS NOT NULL;`;
 
     const result = await pool.query(query, [column]);
-    
+
     return result.rows;
   } catch (error) {
     logger.error(`Error getting filtered map data for column ${column}:`, error);
@@ -172,10 +172,124 @@ async function getColumnValues(column) {
       ORDER BY meta_value ASC`;
 
     const result = await pool.query(query, [column]);
-    
+
     return result.rows;
   } catch (error) {
     logger.error(`Error getting column values for ${column}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Get biome data for a specific GCF or set of GCFs
+ * @param {number[]|null} gcfIds - Array of GCF IDs to filter by (optional)
+ * @param {string[]|null} samples - Array of sample IDs to filter by (optional)
+ * @param {string|null} jobId - Job ID to filter by (optional)
+ * @param {number|null} putativeThreshold - Threshold for putative hits (optional)
+ * @returns {Promise<Array>} - Array of biomes with counts
+ */
+async function getBiomeDataForGcfs(gcfIds = null, samples = null, jobId = null, putativeThreshold = null) {
+  try {
+    // If job ID is provided, get GCF IDs from search_results table
+    if (jobId) {
+      let jobResultsQuery = `
+        SELECT DISTINCT gcf_id
+        FROM search_results
+        WHERE job_id = $1
+      `;
+
+      const params = [jobId];
+
+      // If putative threshold is provided, filter out hits with membership value greater than the threshold
+      if (putativeThreshold !== null) {
+        jobResultsQuery += ` AND membership_value <= $2`;
+        params.push(putativeThreshold);
+      }
+
+      const jobResults = await pool.query(jobResultsQuery, params);
+
+      // Extract GCF IDs from results
+      const jobGcfIds = jobResults.rows.map(row => {
+        // If the ID is in the format "GCF_123", extract the numeric part
+        if (row.gcf_id.startsWith('GCF_')) {
+          return parseInt(row.gcf_id.substring(4), 10);
+        }
+        return parseInt(row.gcf_id, 10);
+      }).filter(id => !isNaN(id));
+
+      // If we have GCF IDs from the job, use them instead of the provided GCF IDs
+      if (jobGcfIds.length > 0) {
+        gcfIds = jobGcfIds;
+      }
+    }
+
+    // If no GCF IDs and no samples, return empty array
+    if ((!gcfIds || gcfIds.length === 0) && (!samples || samples.length === 0)) {
+      return [];
+    }
+
+    // New SQL query that uses the regions table and longest_biome column
+    let sql = `
+      SELECT
+        r.longest_biome AS biome,
+        COUNT(DISTINCT r.region_id) AS count
+      FROM
+        regions r
+      WHERE
+        r.longest_biome IS NOT NULL
+    `;
+
+    let filters = [];
+    let params = [];
+    let paramIndex = 1;
+
+    // Handle the gcfIds parameter
+    if (gcfIds && gcfIds.length > 0) {
+      // Create placeholders for each GCF ID
+      const gcfPlaceholders = gcfIds.map((_, idx) => `$${paramIndex + idx}`).join(', ');
+
+      filters.push(`r.bigslice_gcf_id IN (${gcfPlaceholders})`);
+
+      // Add each GCF ID as a parameter
+      params.push(...gcfIds.map(id => parseInt(id, 10)));
+      paramIndex += gcfIds.length;
+    }
+
+    // Handle the samples parameter
+    if (samples && samples.length > 0) {
+      let samplesArray = Array.isArray(samples) ? samples : samples.split(',').map(sample => sample.trim());
+      filters.push(`r.assembly IN (${samplesArray.map((_, idx) => `$${paramIndex + idx}`).join(', ')})`);
+      params.push(...samplesArray);
+      paramIndex += samplesArray.length;
+    }
+
+    // If there are any filters, apply them to the SQL query
+    if (filters.length > 0) {
+      sql += ` AND ${filters.join(' AND ')}`;
+    }
+
+    // Group by biome and order by count
+    sql += `
+      GROUP BY
+        r.longest_biome
+      ORDER BY
+        count DESC
+    `;
+
+    // Log the SQL query and parameters to the console
+    logger.info('Executing SQL query for biome data:', { sql, params });
+
+    const result = await pool.query(sql, params);
+
+    // Process the results to remove "root:" prefix from biome names
+    const processedRows = result.rows.map(row => ({
+      ...row,
+      biome: row.biome ? row.biome.replace(/^root:/, '') : 'Unknown'
+    }));
+
+    return processedRows;
+  } catch (error) {
+    logger.error('Error getting biome data for GCFs:', error);
     throw error;
   }
 }
@@ -185,5 +299,6 @@ module.exports = {
   getMapDataForGcf,
   getBodyMapData,
   getFilteredMapData,
-  getColumnValues
+  getColumnValues,
+  getBiomeDataForGcfs
 };

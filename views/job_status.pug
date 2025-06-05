@@ -11,7 +11,6 @@ block content
             p Save this ID to check your results later.
 
           #statusContainer.mb-4
-            h4 Status: 
             p#status.lead <strong>Status:</strong> Loading...
 
             #queueInfo.alert.alert-info.mb-3.d-none
@@ -49,6 +48,22 @@ block content
           #mapContainer.mt-3(style="height: 500px;")
             #map(style="height: 100%; width: 100%;")
 
+        +card('Biome Distribution of Hits')
+          .alert.alert-info.mb-3
+            p This chart shows the distribution of biome types for all hits identified for your query BGCs.
+            p If putative hits are hidden, they will not be included in the chart.
+
+          .form-group.mb-3
+            label.form-label(for="biomeLevelSelect") Biome Hierarchy Level:
+            select.form-select#biomeLevelSelect
+              option(value="1" selected) Level 1 (Top Level)
+              option(value="2") Level 2
+              option(value="3") Level 3
+              option(value="4") Level 4 (Most Specific)
+
+          #biomeChartContainer.mt-3(style="height: 400px;")
+            canvas#biomeChart(style="width: 100%; height: 100%;")
+
 append head
   link(rel="stylesheet", href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.css")
   script(src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.js")
@@ -70,6 +85,9 @@ append head
   link(rel="stylesheet", href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css")
   link(rel="stylesheet", href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css")
   script(src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js")
+
+  // Chart.js for biome distribution chart
+  script(src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js")
 
   style.
     .putative-bgc {
