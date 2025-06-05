@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 const searchService = require('../services/searchService');
 const logger = require('../utils/logger');
 const { sanitizeMessage } = require('../utils/sanitize');
+const { defaultRateLimiter } = require('../services/rateLimitMiddleware');
 const csrf = require('csurf');
 
 /* ───────────────────────────── Upload Routes ─────────────────────────────── */
@@ -67,7 +68,7 @@ setInterval(() => {
 }, 30000);
 
 // SSE route
-router.get('/events', (req, res) => {
+router.get('/events', defaultRateLimiter, (req, res) => {
   console.log('New SSE client connected');
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
