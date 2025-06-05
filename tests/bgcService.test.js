@@ -30,6 +30,9 @@ describe('bgcService.getBgcInfo', () => {
 });
 
 describe('bgcService.getGcfTable', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
   it('aggregates taxonomy information', async () => {
     const rows = [{ gcf_id: 1, core_taxa: 'GenusA (2)', all_taxa: 'GenusA (2), GenusB (1)' }];
     pool.query
