@@ -4,6 +4,12 @@ let originalResults = [];
 // Define the threshold for putative BGCs
 const PUTATIVE_THRESHOLD = 0.4;
 
+// Store the map instance
+let map = null;
+
+// Store the markers layer
+let markers = null;
+
 // Function to display results in the table
 function displayResults(data, filterPutative = false) {
     // Store the original data
@@ -89,6 +95,9 @@ function loadJobResults(jobId) {
 
             // Display results with or without filtering
             displayResults(data, filterPutative);
+
+            // Update the map with the results
+            updateMapWithResults(data, filterPutative);
 
             // Hide loading indicator
             const loadingIndicator = document.getElementById('loadingIndicator');
@@ -196,8 +205,196 @@ function handleHidePutativeToggle() {
         hidePutativeToggle.addEventListener('change', function() {
             // Re-display results with or without filtering
             displayResults(originalResults, this.checked);
+
+            // Update the map with the filtered results
+            updateMapWithResults(originalResults, this.checked);
         });
     }
+}
+
+// Function to initialize the map
+function initializeMap() {
+    // Check if map is already initialized
+    if (map) return;
+
+    // Check if map container exists
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) return;
+
+    // Initialize the map
+    map = L.map('map').setView({lat: 0, lng: 0}, 2.5);
+
+    // Set map bounds
+    const southWest = L.latLng(-90, -180);
+    const northEast = L.latLng(90, 180);
+    const bounds = L.latLngBounds(southWest, northEast);
+
+    map.setMaxBounds(bounds);
+    map.on('drag', function () {
+        map.panInsideBounds(bounds, {animate: false});
+    });
+
+    // Add the OpenStreetMap tiles
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
+        minZoom: 2,
+        maxZoom: 9,
+        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+    }).addTo(map);
+
+    // Show the scale bar on the lower left corner
+    L.control.scale({imperial: true, metric: true}).addTo(map);
+
+    // Initialize the markers cluster group
+    markers = L.markerClusterGroup();
+
+    // Add the markers layer to the map
+    map.addLayer(markers);
+
+    // Invalidate size after a short delay to ensure proper rendering
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 100);
+
+    console.log('Map initialized');
+
+    // Add an observer to detect when the map container becomes visible
+    // This is important for maps in tabs or collapsed sections
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && 
+                (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+                map.invalidateSize();
+                console.log('Map size invalidated due to visibility change');
+            }
+        });
+    });
+
+    // Start observing the map container for attribute changes
+    observer.observe(mapContainer, { attributes: true });
+}
+
+// Function to collect GCF IDs from the results
+function collectGcfIds(results, filterPutative = false) {
+    // Filter results if needed
+    let filteredResults = results;
+    if (filterPutative) {
+        filteredResults = results.filter(item => parseFloat(item.membership_value) <= PUTATIVE_THRESHOLD);
+    }
+
+    // Extract unique GCF IDs
+    const gcfIds = [...new Set(filteredResults.map(item => item.gcf_id))];
+
+    console.log(`Collected ${gcfIds.length} unique GCF IDs`);
+    return gcfIds;
+}
+
+// Function to fetch geographical data for GCF IDs
+async function fetchGeographicalData(gcfIds) {
+    console.log(`Fetching geographical data for ${gcfIds.length} GCF IDs`);
+
+    // Create an array to store all marker data
+    let allMarkerData = [];
+
+    // Fetch data for each GCF ID
+    for (const gcfId of gcfIds) {
+        try {
+            // Extract the numeric part of the GCF ID if it's in the format "GCF_123"
+            let gcfIdParam = gcfId;
+            if (typeof gcfId === 'string' && gcfId.startsWith('GCF_')) {
+                gcfIdParam = gcfId.substring(4); // Remove "GCF_" prefix
+            }
+
+            const response = await fetch(`/map-data-gcf?gcf=${gcfIdParam}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log(`Received ${data.length} geographical points for GCF ${gcfId}`);
+
+            // Add the data to the array
+            allMarkerData = allMarkerData.concat(data);
+        } catch (error) {
+            console.error(`Error fetching geographical data for GCF ${gcfId}:`, error);
+        }
+    }
+
+    console.log(`Total geographical points: ${allMarkerData.length}`);
+    return allMarkerData;
+}
+
+// Function to display geographical data on the map
+function displayGeographicalData(data) {
+    console.log(`Displaying ${data.length} geographical points on the map`);
+
+    // Clear existing markers
+    markers.clearLayers();
+
+    // Variables to store the sum of all latitudes and longitudes
+    let latSum = 0;
+    let lngSum = 0;
+    let count = 0;
+
+    // Create a new LatLngBounds object
+    const markerBounds = L.latLngBounds();
+
+    // Add markers for each data point
+    for (const point of data) {
+        if (typeof point.longitude === 'string' && typeof point.latitude === 'string') {
+            const lat = parseFloat(point.latitude);
+            const lng = parseFloat(point.longitude);
+
+            // Skip invalid coordinates
+            if (isNaN(lat) || isNaN(lng)) continue;
+
+            const marker = L.marker({
+                lon: lng,
+                lat: lat
+            }).bindPopup(`<a href="https://www.ebi.ac.uk/metagenomics/samples/${point.sample}" target="_blank">${point.sample}</a>`);
+
+            markers.addLayer(marker);
+
+            // Extend the bounds with the marker's coordinates
+            markerBounds.extend(marker.getLatLng());
+
+            // Add the marker's latitude and longitude to the sums
+            latSum += lat;
+            lngSum += lng;
+            count++;
+        }
+    }
+
+    // Adjust the map view to the average latitude and longitude of all markers
+    if (count > 0) {
+        const avgLat = latSum / count;
+        const avgLng = lngSum / count;
+        map.setView([avgLat, avgLng]);
+    }
+
+    console.log(`Added ${count} markers to the map`);
+}
+
+// Function to update the map with results
+async function updateMapWithResults(results, filterPutative = false) {
+    console.log('Updating map with results');
+
+    // Initialize the map if not already initialized
+    initializeMap();
+
+    // Collect GCF IDs from the results
+    const gcfIds = collectGcfIds(results, filterPutative);
+
+    // If no GCF IDs, clear the map and return
+    if (gcfIds.length === 0) {
+        markers.clearLayers();
+        return;
+    }
+
+    // Fetch geographical data for the GCF IDs
+    const geographicalData = await fetchGeographicalData(gcfIds);
+
+    // Display the geographical data on the map
+    displayGeographicalData(geographicalData);
 }
 
 // Initialize when DOM is loaded
@@ -206,6 +403,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Set up the hide putative toggle
     handleHidePutativeToggle();
+
+    // Initialize the map
+    initializeMap();
 
     // Get job ID from server or URL
     let jobId;
@@ -306,6 +506,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Display results with or without filtering
                 displayResults(data.records, filterPutative);
+
+                // Update the map with the results
+                updateMapWithResults(data.records, filterPutative);
             }
         } else {
             console.log('Ignoring SSE event for different job or without job ID');

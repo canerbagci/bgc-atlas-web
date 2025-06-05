@@ -41,6 +41,14 @@ block content
               tr
                 td.colspan-3.text-center No results to display
 
+        +card('Geographical Distribution of Hits')
+          .alert.alert-info.mb-3
+            p This map shows the geographical distribution of all hits identified for your query BGCs.
+            p If putative hits are hidden, they will not be included in the map.
+
+          #mapContainer.mt-3(style="height: 500px;")
+            #map(style="height: 100%; width: 100%;")
+
 append head
   link(rel="stylesheet", href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.css")
   script(src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.js")
@@ -53,6 +61,15 @@ append head
   script(src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js")
   link(rel="stylesheet", href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css")
   link(rel="stylesheet", href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css")
+
+  // Leaflet CSS and JS
+  link(rel="stylesheet", href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css")
+  script(src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js")
+
+  // Leaflet MarkerCluster CSS and JS
+  link(rel="stylesheet", href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css")
+  link(rel="stylesheet", href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css")
+  script(src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js")
 
   style.
     .putative-bgc {
