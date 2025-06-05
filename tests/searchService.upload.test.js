@@ -3,7 +3,8 @@ const fs = require('fs-extra');
 const { spawn } = require('child_process');
 
 jest.mock('fs-extra', () => ({
-  ensureDirSync: jest.fn()
+  ensureDirSync: jest.fn(),
+  existsSync: jest.fn()
 }));
 
 jest.mock('child_process', () => ({
@@ -11,7 +12,7 @@ jest.mock('child_process', () => ({
 }));
 
 // Set script path for tests
-process.env.SEARCH_SCRIPT_PATH = '/bin/echo';
+process.env.SEARCH_SCRIPT_PATH = '/tmp/search/script.sh';
 
 // Import the required modules
 const { createTimestampedDirectory, processUploadedFiles } = require('../services/searchService');
@@ -40,11 +41,13 @@ describe('processUploadedFiles', () => {
     // Set temporary environment variables before each test
     process.env.SEARCH_UPLOADS_DIR = '/tmp/uploads';
     process.env.REPORTS_DIR = '/tmp/reports';
+    fs.existsSync.mockReturnValue(true);
   });
 
   afterEach(() => {
     // Restore original environment variables after each test
     process.env = { ...originalEnv };
+    jest.clearAllMocks();
   });
 
   it('spawns search script and parses output', async () => {
@@ -66,7 +69,7 @@ describe('processUploadedFiles', () => {
 
     const result = await promise;
 
-    expect(spawn).toHaveBeenCalled();
+    expect(spawn).toHaveBeenCalledWith('/tmp/search/script.sh', ['/tmp/up'], { shell: false });
     expect(sendEvent).toHaveBeenCalledWith({ status: 'Running' });
     expect(sendEvent).toHaveBeenLastCalledWith({ status: 'Complete', records: result });
     expect(result).toEqual([{ bgc_name: 'bgc', gcf_id: '123', membership_value: '0.9' }]);
