@@ -59,12 +59,12 @@ block content
                     .col-md-12
                         div.mb-3
                             div.form-check.form-check-inline
-                                input.form-check-input.checkbox-custom(type="checkbox" id="showCoreMembers" name="showCoreMembers")
+                                input.form-check-input.checkbox-custom(type="checkbox" id="showCoreMembers" name="showCoreMembers" aria-label="Show only core members")
                                 label.form-check-label(for="showCoreMembers") Show only core members
                                 span.info-icon(data-bs-toggle="tooltip" title="Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.")
                                     img(src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy")
                             div.form-check.form-check-inline.ms-3
-                                input.form-check-input.checkbox-custom(type="checkbox" id="showNonPutativeMembers" name="showNonPutativeMembers")
+                                input.form-check-input.checkbox-custom(type="checkbox" id="showNonPutativeMembers" name="showNonPutativeMembers" aria-label="Show only non-putative members")
                                 label.form-check-label(for="showNonPutativeMembers") Show only non-putative members
                                 span.info-icon(data-bs-toggle="tooltip" title="Non-putative BGCs are those that have a membership value less than 0.4 to their assigned GCF.")
                                     img(src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy")

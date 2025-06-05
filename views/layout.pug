@@ -31,10 +31,10 @@ html(lang="en")
         link(rel="preconnect", href="https://cdnjs.cloudflare.com")
     body
         main.w-100.d-flex.flex-column
-            nav.navbar.navbar-expand-sm.navbar-dark.bg-dark(style="width:100%;")
+            nav.navbar.navbar-expand-sm.navbar-dark.bg-dark(style="width:100%;" aria-label="Main Navigation")
                 .container-fluid
                     a.navbar-brand(href='/') BGC Atlas
-                    button.navbar-toggler(type='button' data-bs-toggle='collapse' data-bs-target='#mynavbar')
+                    button.navbar-toggler(type='button' data-bs-toggle='collapse' data-bs-target='#mynavbar' aria-controls='mynavbar' aria-label='Toggle navigation' aria-expanded='false')
                         span.navbar-toggler-icon
                     #mynavbar.collapse.navbar-collapse
                         ul.navbar-nav.me-auto

@@ -10,7 +10,7 @@ block content
                 form(id='uploadForm' action='/upload' method='post' enctype='multipart/form-data' onsubmit='registerFiles(event)')
                     input(type='hidden' name='_csrf' value=csrfToken)
                     .mb-3
-                        input.form-control(type='file' id='formFile' name='file' multiple)
+                        input.form-control(type='file' id='formFile' name='file' multiple aria-label='GenBank file upload')
                         //label(for='formFile') Input GenBank files...
                         button#uploadButton.btn.btn-primary.mt-2(type='submit') Upload
                 hr
@@ -23,8 +23,8 @@ block content
                         tr
                             td.colspan-4.text-center No files selected
                 hr
-                button#submitButton.btn.btn-primary(type='button' onclick='submitFiles()') Submit
-                p#status <strong>Status:</strong> Idle
+                button#submitButton.btn.btn-primary(type='button' onclick='submitFiles()' aria-describedby='status') Submit
+                p#status(role='status' aria-live='polite') <strong>Status:</strong> Idle
                 hr
                 h3 Results
                 table.table.table-bordered.mt-3
