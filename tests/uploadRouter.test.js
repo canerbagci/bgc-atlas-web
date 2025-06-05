@@ -137,7 +137,8 @@ describe('SSE client cleanup', () => {
   let handler;
 
   beforeAll(() => {
-    handler = router.stack.find(l => l.route && l.route.path === '/events').route.stack[1].handle;
+    const eventsRoute = router.stack.find(l => l.route && l.route.path === '/events');
+    handler = eventsRoute.route.stack[1].handle; // skip rate limiter middleware
   });
 
   beforeEach(() => {
