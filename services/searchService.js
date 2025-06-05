@@ -56,9 +56,15 @@ async function processUploadedFiles(req, sendEvent) {
     const uploadDir = req.uploadDir;
     const fileNames = files.map(file => file.name);
 
-    // Create a job
-    const userId = req.user ? req.user.id : null;
-    const jobId = await jobService.createJob(userId, uploadDir, files.length, fileNames);
+    // Determine IP address for logging
+    const ipAddress =
+      (req.headers && req.headers['x-forwarded-for']) ||
+      req.ip ||
+      (req.connection && req.connection.remoteAddress) ||
+      '';
+
+    // Create a job using the IP address as the user identifier
+    const jobId = await jobService.createJob(ipAddress, uploadDir, files.length, fileNames);
 
     // Create an event emitter for this job
     const jobEmitter = new EventEmitter();
