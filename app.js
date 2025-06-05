@@ -4,6 +4,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const logger = require('./utils/logger');
+const { sanitizeMessage } = require('./utils/sanitize');
 const geoip = require('geoip-lite');
 const compression = require('compression');
 const etagMiddleware = require('./services/etagMiddleware');
@@ -207,9 +208,14 @@ app.use(function(req, res, next) {
 
 // error handler
 app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+  // set locals, only providing detailed error in development
+  if (req.app.get('env') === 'development') {
+    res.locals.message = sanitizeMessage(err.message);
+    res.locals.error = err;
+  } else {
+    res.locals.message = 'An unexpected error occurred';
+    res.locals.error = {};
+  }
 
   logger.error('Unhandled error', err);
 

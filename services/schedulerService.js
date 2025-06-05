@@ -3,6 +3,7 @@ const path = require('path');
 const { Worker } = require('worker_threads');
 const logger = require('../utils/logger');
 const jobService = require('./jobService');
+const { sanitizeMessage } = require('../utils/sanitize');
 
 // Map of jobId -> event emitter
 const jobEmitters = new Map();
@@ -33,7 +34,11 @@ function processJob(jobId, emitter) {
           emitter?.emit('complete', { status: 'Complete', records: message.records, jobId: message.jobId });
           break;
         case 'error':
-          emitter?.emit('error', { status: 'Error', message: message.message || message.error, output: message.output, jobId: message.jobId });
+          emitter?.emit('error', {
+            status: 'Error',
+            message: sanitizeMessage(message.message || message.error),
+            jobId: message.jobId
+          });
           break;
         case 'done':
           logger.info(`Job ${jobId} done`);
@@ -47,7 +52,11 @@ function processJob(jobId, emitter) {
 
     worker.on('error', err => {
       logger.error(`Worker error for job ${jobId}: ${err.message}`);
-      emitter?.emit('error', { status: 'Error', message: err.message, jobId });
+      emitter?.emit('error', {
+        status: 'Error',
+        message: sanitizeMessage(err.message),
+        jobId
+      });
       jobEmitters.delete(jobId);
       reject(err);
     });
@@ -56,7 +65,11 @@ function processJob(jobId, emitter) {
       if (code !== 0) {
         const err = new Error(`Worker stopped with exit code ${code}`);
         logger.error(err.message);
-        emitter?.emit('error', { status: 'Error', message: err.message, jobId });
+        emitter?.emit('error', {
+          status: 'Error',
+          message: sanitizeMessage(err.message),
+          jobId
+        });
         jobEmitters.delete(jobId);
         reject(err);
       }

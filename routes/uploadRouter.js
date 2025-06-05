@@ -5,6 +5,7 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const searchService = require('../services/searchService');
 const logger = require('../utils/logger');
+const { sanitizeMessage } = require('../utils/sanitize');
 const csrf = require('csurf');
 
 /* ───────────────────────────── Upload Routes ─────────────────────────────── */
@@ -109,9 +110,10 @@ router.post('/upload', (req, res, next) => {
   // First process the file upload with multer
   upload(req, res, async (err) => {
     if (err) {
-      sendEvent({ status: 'Error', message: err.message });
+      const sanitized = sanitizeMessage(err.message);
+      sendEvent({ status: 'Error', message: sanitized });
       const status = err.message.includes('.gbk') || err.message.includes('.genbank') ? 400 : 500;
-      return res.status(status).json({ error: err.message });
+      return res.status(status).json({ error: sanitized });
     }
 
     // Then validate the CSRF token
