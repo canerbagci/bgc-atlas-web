@@ -1,6 +1,7 @@
 const EventEmitter = require('events');
 const fs = require('fs-extra');
 const { spawn } = require('child_process');
+const jobService = require('../services/jobService');
 
 jest.mock('fs-extra', () => ({
   ensureDirSync: jest.fn(),
@@ -59,8 +60,11 @@ describe('processUploadedFiles', () => {
 
     const req = {
       files: [{ originalname: 'f.txt', filename: 'f.txt', path: '/ceph/ibmi/tgm/bgc-atlas/search/uploads/f.txt' }],
-      uploadDir: '/tmp/up'
+      uploadDir: '/tmp/up',
+      ip: '1.2.3.4',
+      headers: {}
     };
+    const createJobSpy = jest.spyOn(jobService, 'createJob');
     const sendEvent = jest.fn();
     const promise = processUploadedFiles(req, sendEvent);
 
@@ -69,6 +73,7 @@ describe('processUploadedFiles', () => {
 
     const result = await promise;
 
+    expect(createJobSpy).toHaveBeenCalledWith('1.2.3.4', '/tmp/up', 1, ['f.txt']);
     expect(spawn).toHaveBeenCalledWith('/tmp/search/script.sh', ['/tmp/up'], { shell: false });
     expect(sendEvent).toHaveBeenCalledWith({ status: 'Running' });
     expect(sendEvent).toHaveBeenLastCalledWith({ status: 'Complete', records: result });
