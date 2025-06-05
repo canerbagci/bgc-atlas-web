@@ -7,10 +7,18 @@ const sampleService = require('../services/sampleService');
 router.get('/getBgcId', async (req, res, next) => {
   try {
     const { dataset, anchor } = req.query;
+
+    // Let the service layer handle validation
     const result = await sampleService.getBgcId(dataset, anchor);
     res.json(result);
   } catch (error) {
     console.error(error);
+
+    // Handle validation errors with appropriate status code
+    if (error.message && error.message.includes('Invalid')) {
+      return res.status(400).json({ error: error.message });
+    }
+
     next(error);
   }
 });
@@ -27,12 +35,16 @@ router.get('/sample-info', async (req, res, next) => {
 
 router.get('/sample-data', async (req, res, next) => {
   try {
+    // Safely access nested properties
+    const searchValue = req.query.search && req.query.search.value ? req.query.search.value : null;
+
     // Extract pagination parameters from the request
+    // Let the service layer handle validation
     const options = {
-      draw: parseInt(req.query.draw) || 1,
-      start: parseInt(req.query.start) || 0,
-      length: parseInt(req.query.length) || 50,
-      searchValue: req.query.search ? req.query.search.value : '',
+      draw: req.query.draw || '1',
+      start: req.query.start || '0',
+      length: req.query.length || '50',
+      searchValue: searchValue,
       order: []
     };
 
@@ -53,6 +65,12 @@ router.get('/sample-data', async (req, res, next) => {
     res.json(result);
   } catch (error) {
     console.error(error);
+
+    // Handle validation errors with appropriate status code
+    if (error.message && error.message.includes('Invalid')) {
+      return res.status(400).json({ error: error.message });
+    }
+
     next(error);
   }
 });

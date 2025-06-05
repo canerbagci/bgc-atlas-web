@@ -6,32 +6,40 @@ const bgcService = require('../services/bgcService');
 
 router.get('/bgc-info', async (req, res, next) => {
   try {
-    const gcfId = req.query.gcf ? parseInt(req.query.gcf, 10) : null;
-    if (req.query.gcf && isNaN(gcfId)) {
-      return res.status(400).json({ error: 'Invalid gcf parameter' });
-    }
+    // Let the service layer handle validation
+    const gcfId = req.query.gcf || null;
+    const samples = req.query.samples || null;
 
-    const samples = req.query.samples ? req.query.samples.split(',') : null;
     const bgcInfo = await bgcService.getBgcInfo(gcfId, samples);
     res.json(bgcInfo);
   } catch (error) {
     console.error(error);
+
+    // Handle validation errors with appropriate status code
+    if (error.message && error.message.includes('Invalid')) {
+      return res.status(400).json({ error: error.message });
+    }
+
     next(error);
   }
 });
 
 router.get('/pc-category-count', async (req, res, next) => {
   try {
-    const gcfId = req.query.gcf ? parseInt(req.query.gcf, 10) : null;
-    if (req.query.gcf && isNaN(gcfId)) {
-      return res.status(400).json({ error: 'Invalid gcf parameter' });
-    }
+    // Let the service layer handle validation
+    const gcfId = req.query.gcf || null;
+    const samples = req.query.samples || null;
 
-    const samples = req.query.samples ? req.query.samples.split(',') : null;
     const categoryCount = await bgcService.getProductCategoryCounts(gcfId, samples);
     res.json(categoryCount);
   } catch (error) {
     console.error(error);
+
+    // Handle validation errors with appropriate status code
+    if (error.message && error.message.includes('Invalid')) {
+      return res.status(400).json({ error: error.message });
+    }
+
     next(error);
   }
 });
@@ -48,55 +56,73 @@ router.get('/gcf-category-count', async (req, res, next) => {
 
 router.get('/pc-product-count', async (req, res, next) => {
   try {
-    const gcfId = req.query.gcf ? parseInt(req.query.gcf, 10) : null;
-    if (req.query.gcf && isNaN(gcfId)) {
-      return res.status(400).json({ error: 'Invalid gcf parameter' });
-    }
+    // Let the service layer handle validation
+    const gcfId = req.query.gcf || null;
+    const samples = req.query.samples || null;
 
-    const samples = req.query.samples ? req.query.samples.split(',') : null;
     const productCount = await bgcService.getProductCounts(gcfId, samples);
     res.json(productCount);
   } catch (error) {
     console.error(error);
+
+    // Handle validation errors with appropriate status code
+    if (error.message && error.message.includes('Invalid')) {
+      return res.status(400).json({ error: error.message });
+    }
+
     next(error);
   }
 });
 
 router.get('/pc-taxonomic-count', async (req, res, next) => {
   try {
-    const gcfId = req.query.gcf ? parseInt(req.query.gcf, 10) : null;
-    if (req.query.gcf && isNaN(gcfId)) {
-      return res.status(400).json({ error: 'Invalid gcf parameter' });
-    }
+    // Let the service layer handle validation
+    const gcfId = req.query.gcf || null;
+    const samples = req.query.samples || null;
 
-    const samples = req.query.samples ? req.query.samples.split(',') : null;
     const taxonomicCount = await bgcService.getTaxonomicCounts(gcfId, samples);
     res.json(taxonomicCount);
   } catch (error) {
     console.error(error);
+
+    // Handle validation errors with appropriate status code
+    if (error.message && error.message.includes('Invalid')) {
+      return res.status(400).json({ error: error.message });
+    }
+
     next(error);
   }
 });
 
 router.get('/bgc-table', async (req, res, next) => {
   try {
+    // Safely access nested properties
+    const searchValue = req.query.search && req.query.search.value ? req.query.search.value : null;
+
+    // Let the service layer handle validation of all parameters
     const options = {
-      gcf: req.query.gcf,
-      samples: req.query.samples,
+      gcf: req.query.gcf || null,
+      samples: req.query.samples || null,
       showCoreMembers: req.query.showCoreMembers === 'true',
       showNonPutativeMembers: req.query.showNonPutativeMembers === 'true',
-      draw: req.query.draw,
-      start: parseInt(req.query.start),
-      length: parseInt(req.query.length),
-      searchValue: req.query.search.value,
+      draw: req.query.draw || '1',
+      start: req.query.start || '0',
+      length: req.query.length || '10',
+      searchValue: searchValue,
       order: req.query.order || [],
-      searchBuilder: req.query.searchBuilder
+      searchBuilder: req.query.searchBuilder || null
     };
 
     const result = await bgcService.getBgcTable(options);
     res.json(result);
   } catch (error) {
     console.error(error);
+
+    // Handle validation errors with appropriate status code
+    if (error.message && error.message.includes('Invalid')) {
+      return res.status(400).json({ error: error.message });
+    }
+
     next(error);
   }
 });

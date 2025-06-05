@@ -198,9 +198,29 @@ async function getSampleData() {
  * @returns {Promise<Object>} - Object containing paginated data and metadata
  */
 async function getPaginatedSampleData(options) {
-  const { start, length, searchValue, order, draw } = options;
-
   try {
+    const { start, length, searchValue, order, draw } = options;
+
+    // Validate inputs
+    const { start: validatedStart, length: validatedLength } = validatePagination(start || 0, length || 10);
+    const validatedSearchValue = validateSearchValue(searchValue);
+
+    // Validate draw parameter
+    const validatedDraw = Number.parseInt(draw, 10);
+    if (Number.isNaN(validatedDraw) || validatedDraw < 0) {
+      throw new Error('Invalid draw parameter: must be a non-negative integer');
+    }
+
+    // Define allowed columns for ordering
+    const columns = [
+      'status', 'sampleacc', 'assembly', 'longest_biome', 'submittedseqs',
+      'protocluster_count', 'longitude', 'latitude', 'envbiome', 'envfeat',
+      'collectdate', 'biosample', 'species', 'hosttaxid'
+    ];
+
+    // Validate order parameters
+    const validatedOrder = validateOrder(order, columns);
+
     // Base query for counting total records
     const baseCountQuery = `
       SELECT COUNT(*) AS total
@@ -253,7 +273,7 @@ async function getPaginatedSampleData(options) {
     let searchCondition = '';
     let searchParams = [];
 
-    if (searchValue) {
+    if (validatedSearchValue) {
       searchCondition = `
         WHERE ma.sampleacc ILIKE $1
         OR ma.assembly ILIKE $1
@@ -263,7 +283,7 @@ async function getPaginatedSampleData(options) {
         OR ma.biosample ILIKE $1
         OR ma.species ILIKE $1
       `;
-      searchParams.push(`%${searchValue}%`);
+      searchParams.push(`%${validatedSearchValue}%`);
     }
 
     // Get total count (without search)
@@ -272,7 +292,7 @@ async function getPaginatedSampleData(options) {
 
     // Get filtered count (with search)
     let filteredRecords = totalRecords;
-    if (searchValue) {
+    if (validatedSearchValue) {
       const filteredCountQuery = `
         SELECT COUNT(*) AS total
         FROM (
@@ -304,7 +324,7 @@ async function getPaginatedSampleData(options) {
     }
 
     // Add search condition to data query
-    if (searchValue) {
+    if (validatedSearchValue) {
       baseDataQuery += searchCondition;
     }
 
@@ -318,17 +338,9 @@ async function getPaginatedSampleData(options) {
     // Add ORDER BY clause
     let orderClause = 'ORDER BY protocluster_count DESC';
 
-    if (order && order.length > 0) {
-      const columns = [
-        'status', 'sampleacc', 'assembly', 'longest_biome', 'submittedseqs',
-        'protocluster_count', 'longitude', 'latitude', 'envbiome', 'envfeat',
-        'collectdate', 'biosample', 'species', 'hosttaxid'
-      ];
-
-      const orderParts = order.map(o => {
-        const columnIndex = parseInt(o.column);
-        const direction = o.dir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-        return `${columns[columnIndex]} ${direction}`;
+    if (validatedOrder && validatedOrder.length > 0) {
+      const orderParts = validatedOrder.map(o => {
+        return `${columns[o.column]} ${o.dir === 'asc' ? 'ASC' : 'DESC'}`;
       });
 
       if (orderParts.length > 0) {
@@ -340,14 +352,14 @@ async function getPaginatedSampleData(options) {
 
     // Add LIMIT and OFFSET
     baseDataQuery += ` LIMIT $${searchParams.length + 1} OFFSET $${searchParams.length + 2}`;
-    searchParams.push(length);
-    searchParams.push(start);
+    searchParams.push(validatedLength);
+    searchParams.push(validatedStart);
 
     // Execute the final query
     const { rows } = await pool.query(baseDataQuery, searchParams);
 
     return {
-      draw: draw,
+      draw: validatedDraw,
       recordsTotal: totalRecords,
       recordsFiltered: filteredRecords,
       data: rows
@@ -393,25 +405,34 @@ async function getSampleData2() {
  * @returns {Promise<Object>} - Object containing the BGC ID
  */
 async function getBgcId(dataset, anchor) {
-  // Create a cache key based on the function parameters
-  const cacheKey = `bgcId_${dataset}_${anchor}`;
+  try {
+    // Validate inputs
+    const validatedDataset = validateDataset(dataset);
+    const validatedAnchor = validateAnchor(anchor);
 
-  // Use the caching service to get or fetch the data
-  return cacheService.getOrFetch(cacheKey, async () => {
-    try {
-      const query = 'SELECT region_id FROM regions WHERE assembly = $1 AND anchor = $2';
-      const result = await pool.query(query, [dataset, anchor]);
+    // Create a cache key based on the validated parameters
+    const cacheKey = `bgcId_${validatedDataset}_${validatedAnchor}`;
 
-      if (result.rows.length > 0) {
-        return { bgcId: result.rows[0].region_id };
-      } else {
-        return { bgcId: 'Not Found' };
+    // Use the caching service to get or fetch the data
+    return cacheService.getOrFetch(cacheKey, async () => {
+      try {
+        const query = 'SELECT region_id FROM regions WHERE assembly = $1 AND anchor = $2';
+        const result = await pool.query(query, [validatedDataset, validatedAnchor]);
+
+        if (result.rows.length > 0) {
+          return { bgcId: result.rows[0].region_id };
+        } else {
+          return { bgcId: 'Not Found' };
+        }
+      } catch (error) {
+        console.error('Error getting BGC ID:', error);
+        throw error;
       }
-    } catch (error) {
-      console.error('Error getting BGC ID:', error);
-      throw error;
-    }
-  }, 3600); // Cache for 1 hour
+    }, 3600); // Cache for 1 hour
+  } catch (error) {
+    console.error('Error validating inputs for BGC ID:', error);
+    throw error;
+  }
 }
 
 module.exports = {
