@@ -57,6 +57,7 @@ To set up a local instance of BGC Atlas, follow these steps:
 2. Install dependencies:
    ```
    npm install
+   npm run build-css  # or npm run watch-css for development
    ```
 
 3. Configure environment variables:
