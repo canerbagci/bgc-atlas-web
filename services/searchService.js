@@ -45,12 +45,19 @@ function createTimestampedDirectory(basePath) {
  */
 async function validateUploadedFiles(files) {
   for (const file of files) {
-    const fd = await fs.promises.open(file.path, 'r');
-    const buffer = Buffer.alloc(64);
-    const { bytesRead } = await fd.read(buffer, 0, 64, 0);
-    await fd.close();
+    const slice = await new Promise((resolve, reject) => {
+      const chunks = [];
+      const stream = fs.createReadStream(file.path, { start: 0, end: 63 });
 
-    const slice = buffer.subarray(0, bytesRead);
+      stream.on('data', chunk => {
+        chunks.push(chunk);
+      });
+
+      stream.on('error', err => reject(err));
+      stream.on('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
+    });
 
     // reject if any null bytes are found (simple binary detection)
     if (slice.includes(0)) {
