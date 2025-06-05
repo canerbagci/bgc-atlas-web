@@ -67,6 +67,8 @@ requires **Node.js 18** or later:
    PORT=3000
    APP_URL=http://localhost:3000
    DATABASE_URL=postgres://username:password@localhost:5432/bgcatlas
+   REDIS_HOST=127.0.0.1  # Redis host for Bull queue
+   REDIS_PORT=6379       # Redis port for Bull queue
    MONTHLY_SOIL_BASE_DIR=/path/to/monthly-soil  # Optional: Path to monthly soil data directory
    ULTRA_DEEP_SOIL_DIR=/path/to/ultra-deep-soil  # Optional: Path to ultra-deep soil data directory
    SEARCH_UPLOADS_DIR=/path/to/search/uploads  # Optional: Path to store uploaded files for search
