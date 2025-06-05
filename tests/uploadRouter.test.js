@@ -6,6 +6,13 @@ jest.mock('uuid', () => ({
   v4: jest.fn().mockReturnValue('mock-uuid')
 }));
 
+jest.mock('../services/schedulerService', () => ({
+  getQueuedJobs: jest.fn().mockResolvedValue([])
+}));
+
+const EventEmitter = require('events');
+const router = require('../routes/uploadRouter');
+
 describe('Upload Router Filename Function', () => {
   // This is a simplified test that directly tests the filename logic we implemented
 
@@ -123,5 +130,47 @@ describe('Upload Router Filename Function', () => {
 
     // The filename should be sanitized and renamed
     expect(cb).toHaveBeenCalledWith(null, 'mock-uuid_sample_file_with_spaces__region730.gbk');
+  });
+});
+
+describe('SSE client cleanup', () => {
+  let handler;
+
+  beforeAll(() => {
+    handler = router.stack.find(l => l.route && l.route.path === '/events').route.stack[0].handle;
+  });
+
+  beforeEach(() => {
+    router._clients.clear();
+  });
+
+  test('removes client on response close', () => {
+    const req = new EventEmitter();
+    const res = new EventEmitter();
+    res.setHeader = jest.fn();
+    res.write = jest.fn();
+
+    handler(req, res);
+
+    expect(router._clients.size).toBe(1);
+
+    res.emit('close');
+
+    expect(router._clients.size).toBe(0);
+  });
+
+  test('removes client on request error', () => {
+    const req = new EventEmitter();
+    const res = new EventEmitter();
+    res.setHeader = jest.fn();
+    res.write = jest.fn();
+
+    handler(req, res);
+
+    expect(router._clients.size).toBe(1);
+
+    req.emit('error', new Error('boom'));
+
+    expect(router._clients.size).toBe(0);
   });
 });
