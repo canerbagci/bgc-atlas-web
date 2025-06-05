@@ -3,7 +3,7 @@ const path = require('path');
 const monthlySoilService = require('../services/monthlySoilService');
 
 const router = express.Router();
-const { BASE_DIR, FULL_AS_DIR, PRODUCT_AS_DIR } = monthlySoilService;
+const { BASE_DIR, FULL_AS_DIR, PRODUCT_AS_DIR, NAME_REGEX } = monthlySoilService;
 
 /* ───────────────────────────── routes ─────────────────────────────── */
 
@@ -27,6 +27,9 @@ router.get('/monthly-soil/?', async (_req, res, next) => {
 router.get('/monthly-soil/full-AS/:month/?', async (req, res, next) => {
   try {
     const month = req.params.month;
+    if (!NAME_REGEX.test(month)) {
+      return res.status(400).send('Invalid month parameter');
+    }
     const monthDir = path.join(FULL_AS_DIR, month);
     const datasetNames = await monthlySoilService.listDatasets(monthDir);
     const datasets = await monthlySoilService.getDatasetDetails(FULL_AS_DIR, month, datasetNames);
@@ -45,6 +48,9 @@ router.get('/monthly-soil/full-AS/:month/?', async (req, res, next) => {
 router.get('/monthly-soil/product-AS/:month/?', async (req, res, next) => {
   try {
     const month = req.params.month;
+    if (!NAME_REGEX.test(month)) {
+      return res.status(400).send('Invalid month parameter');
+    }
     const productTypesWithDatasets = await monthlySoilService.getProductTypesWithDatasets(month);
 
     res.render('productASMonth', {

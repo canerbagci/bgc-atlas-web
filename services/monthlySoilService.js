@@ -2,6 +2,9 @@ const fs = require('fs').promises;
 const path = require('path');
 const cacheService = require('./cacheService');
 
+const NAME_REGEX = /^[A-Za-z0-9_-]+$/;
+const isValidName = name => NAME_REGEX.test(name);
+
 // Read BASE_DIR from environment variable with fallback to default value
 const BASE_DIR = process.env.MONTHLY_SOIL_BASE_DIR || '/ceph/ibmi/tgm/bgc-atlas/monthly-soil';
 const FULL_AS_DIR = path.join(BASE_DIR, 'full-AS');
@@ -20,7 +23,10 @@ async function listMonths(directory) {
   return cacheService.getOrFetch(cacheKey, async () => {
     try {
       const entries = await fs.readdir(directory, { withFileTypes: true });
-      return entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+      return entries
+        .filter(e => e.isDirectory() && isValidName(e.name))
+        .map(e => e.name)
+        .sort();
     } catch (err) {
       console.error(`Error reading directory ${directory}:`, err);
       return [];
@@ -41,7 +47,10 @@ async function listDatasets(monthDir) {
   return cacheService.getOrFetch(cacheKey, async () => {
     try {
       const entries = await fs.readdir(monthDir, { withFileTypes: true });
-      return entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+      return entries
+        .filter(e => e.isDirectory() && isValidName(e.name))
+        .map(e => e.name)
+        .sort();
     } catch (err) {
       console.error(`Error reading directory ${monthDir}:`, err);
       return [];
@@ -62,7 +71,10 @@ async function listProductTypes(monthDir) {
   return cacheService.getOrFetch(cacheKey, async () => {
     try {
       const entries = await fs.readdir(monthDir, { withFileTypes: true });
-      return entries.filter(e => e.isDirectory()).map(e => e.name).sort();
+      return entries
+        .filter(e => e.isDirectory() && isValidName(e.name))
+        .map(e => e.name)
+        .sort();
     } catch (err) {
       console.error(`Error reading directory ${monthDir}:`, err);
       return [];
@@ -105,7 +117,7 @@ async function countBGCs(datasetPath) {
 async function getDatasetDetails(baseDir, month, datasets) {
   const detailedDatasets = [];
 
-  for (const dataset of datasets) {
+  for (const dataset of datasets.filter(isValidName)) {
     const datasetPath = path.join(baseDir, month, dataset);
     const bgcCount = await countBGCs(datasetPath);
 
@@ -134,13 +146,13 @@ async function getProductTypesWithDatasets(month) {
     const productTypes = await listProductTypes(monthDir);
     const productTypesWithDatasets = [];
 
-    for (const productType of productTypes) {
+    for (const productType of productTypes.filter(isValidName)) {
       const productTypeDir = path.join(PRODUCT_AS_DIR, month, productType);
       const datasetNames = await listDatasets(productTypeDir);
 
       // Get detailed dataset information
       const datasets = [];
-      for (const datasetName of datasetNames) {
+      for (const datasetName of datasetNames.filter(isValidName)) {
         const datasetPath = path.join(productTypeDir, datasetName);
         const bgcCount = await countBGCs(datasetPath);
 
@@ -171,5 +183,6 @@ module.exports = {
   listProductTypes,
   countBGCs,
   getDatasetDetails,
-  getProductTypesWithDatasets
+  getProductTypesWithDatasets,
+  NAME_REGEX
 };
