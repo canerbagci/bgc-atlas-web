@@ -45,7 +45,7 @@ describe('validateUploadedFiles', () => {
     const tmpDir = fs.mkdtempSync('/tmp/gbk-');
     const filePath = path.join(tmpDir, 'test.gbk');
     fs.writeFileSync(filePath, 'LOCUS       TEST');
-    await expect(validateUploadedFiles([{ path: filePath }])).resolves.not.toThrow();
+    await expect(validateUploadedFiles([{ path: filePath }])).resolves.toBeUndefined();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
