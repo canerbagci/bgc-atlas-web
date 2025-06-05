@@ -46,7 +46,8 @@ The Download section provides access to the raw data (GenBank files for BGCs, th
 
 ## Installation
 
-To set up a local instance of BGC Atlas, follow these steps:
+To set up a local instance of BGC Atlas, follow these steps. The project
+requires **Node.js 18** or later:
 
 1. Clone the repository:
    ```
