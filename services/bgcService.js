@@ -1,4 +1,4 @@
-const { client, pool } = require('../config/database');
+const { pool } = require('../config/database');
 const cacheService = require('./cacheService');
 
 /**
@@ -161,7 +161,7 @@ async function getProductCategoryCounts(gcfId = null, samples = null) {
       `;
     }
 
-    const result = await client.query(sql, params);
+    const result = await pool.query(sql, params);
     return result.rows;
   } catch (error) {
     console.error('Error getting product category counts:', error);
@@ -180,7 +180,7 @@ async function getGcfCategoryCounts() {
   // Use the caching service to get or fetch the data
   return cacheService.getOrFetch(cacheKey, async () => {
     try {
-      const result = await client.query('SELECT bgc_type, COUNT(DISTINCT family_number) as unique_families\n' +
+      const result = await pool.query('SELECT bgc_type, COUNT(DISTINCT family_number) as unique_families\n' +
         'FROM atlas.public.bigscape_clustering\n' +
         'WHERE clustering_threshold = 0.3\n' +
         'GROUP BY bgc_type\n' +
@@ -265,7 +265,7 @@ async function getProductCounts(gcfId = null, samples = null) {
       `;
     }
 
-    const result = await client.query(sql, params);
+    const result = await pool.query(sql, params);
     return result.rows;
   } catch (error) {
     console.error('Error getting product counts:', error);
@@ -312,7 +312,7 @@ async function getGcfCountHistogram() {
         'GROUP BY bucket_range, buckets.lower_bound\n' +
         'ORDER BY lower_bound;';
 
-      const result = await client.query(sql);
+      const result = await pool.query(sql);
       return result.rows;
     } catch (error) {
       console.error('Error getting GCF count histogram:', error);
@@ -362,7 +362,7 @@ async function getGcfTableSunburst(gcfId = null, samples = null) {
 
     sql += ` GROUP BY longest_biome`;
 
-    const result = await client.query(sql, params);
+    const result = await pool.query(sql, params);
     return result.rows;
   } catch (error) {
     console.error('Error getting GCF table sunburst:', error);

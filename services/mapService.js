@@ -1,4 +1,4 @@
-const { client } = require('../config/database');
+const { pool } = require('../config/database');
 
 /**
  * Get map data for all samples with geographic coordinates
@@ -6,7 +6,7 @@ const { client } = require('../config/database');
  */
 async function getMapData() {
   try {
-    const result = await client.query('WITH geo_data AS (\n' +
+    const result = await pool.query('WITH geo_data AS (\n' +
       '    SELECT\n' +
       '        sample,\n' +
       '        MAX(CASE WHEN meta_key = \'geographic location (longitude)\' AND meta_value ~ \'^-?\\d+(\\.\\d+)?$\' THEN CAST(meta_value AS FLOAT) END) AS longitude,\n' +
@@ -102,7 +102,7 @@ async function getMapDataForGcf(gcfId = null, samples = null) {
           latitude
     `;
 
-    const result = await client.query(sql, params);
+    const result = await pool.query(sql, params);
     return result.rows;
   } catch (error) {
     console.error('Error getting map data for GCF:', error);
@@ -116,7 +116,7 @@ async function getMapDataForGcf(gcfId = null, samples = null) {
  */
 async function getBodyMapData() {
   try {
-    const result = await client.query('SELECT sample, meta_value\n' +
+    const result = await pool.query('SELECT sample, meta_value\n' +
       'FROM sample_metadata\n' +
       'WHERE meta_key = \'body site\'\n' +
       'GROUP BY sample, meta_value;');
@@ -149,7 +149,7 @@ async function getFilteredMapData(column) {
         AND sm2.meta_key = 'geographic location (latitude)' AND sm2.meta_value IS NOT NULL
         AND sm3.meta_key = $1 AND sm3.meta_value IS NOT NULL;`;
 
-    const result = await client.query(query, [column]);
+    const result = await pool.query(query, [column]);
     
     return result.rows;
   } catch (error) {
@@ -170,7 +170,7 @@ async function getColumnValues(column) {
       WHERE meta_key = $1
       ORDER BY meta_value ASC`;
 
-    const result = await client.query(query, [column]);
+    const result = await pool.query(query, [column]);
     
     return result.rows;
   } catch (error) {

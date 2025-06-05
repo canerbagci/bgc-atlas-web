@@ -1,8 +1,7 @@
 const cacheService = require('../services/cacheService');
-const { client, pool } = require('../config/database');
+const { pool } = require('../config/database');
 
 jest.mock('../config/database', () => ({
-  client: { query: jest.fn() },
   pool: { query: jest.fn() }
 }));
 
