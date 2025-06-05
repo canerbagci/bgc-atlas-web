@@ -4,6 +4,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const geoip = require('geoip-lite');
+const compression = require('compression');
 const etagMiddleware = require('./services/etagMiddleware');
 require('dotenv').config();
 
@@ -24,6 +25,7 @@ const ultraDeepSoilRouter = require('./routes/ultraDeepSoilRouter');
 const monthlySoilRouter = require('./routes/monthlySoilRouter');
 
 const app = express();
+app.use(compression()); // Add compression middleware for faster JSON responses
 app.use(etagMiddleware);
 
 // Mount all routers
