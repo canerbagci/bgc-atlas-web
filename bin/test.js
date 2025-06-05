@@ -2,9 +2,18 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const debug = require('debug')('bgc-atlas:test');
+const { validateSSLCertPath, validateRequiredPaths } = require('../utils/pathValidator');
 const app = require('../app');
 
 const certDir = process.env.SSL_CERT_PATH || '/etc/letsencrypt/live/bgc-atlas.cs.uni-tuebingen.de';
+try {
+  validateSSLCertPath(certDir);
+  validateRequiredPaths();
+} catch (err) {
+  console.error(err.message);
+  process.exit(1);
+}
+
 const privateKey = fs.readFileSync(path.join(certDir, 'privkey.pem'), 'utf8');
 const certificate = fs.readFileSync(path.join(certDir, 'fullchain.pem'), 'utf8');
 
