@@ -29,10 +29,12 @@ router.get('/samples', (req, res) => {
 });
 
 router.get('/bgcs', (req, res) => {
+  const GCF = req.query.gcf || null;
   res.render('bgcs', { 
     title: 'BGCs',
     metaDescription: 'Explore our collection of biosynthetic gene clusters (BGCs) that encode for the production of secondary metabolites.',
-    activePage: 'bgcs' 
+    activePage: 'bgcs',
+    GCF: GCF
   });
 });
 

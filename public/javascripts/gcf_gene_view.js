@@ -194,7 +194,13 @@ $(document).ready(function() {
         loadingIndicator.addClass('d-none');
 
         let errorText = 'Error loading GCF data.';
-        if (xhr.responseJSON && xhr.responseJSON.error) {
+
+        // Check for specific error status codes
+        if (xhr.status === 404) {
+          // 404 means the GCF ID was not found or has no BGCs
+          errorText = 'GCF not found or has no associated BGCs. Please check the GCF ID and try again.';
+        } else if (xhr.responseJSON && xhr.responseJSON.error) {
+          // Use the error message from the server if available
           errorText = xhr.responseJSON.error;
         }
 
@@ -210,8 +216,11 @@ $(document).ready(function() {
 
   if (gcfIdParam && !isNaN(gcfIdParam) && gcfIdParam > 0) {
     loadGCF(gcfIdParam);
+  } else if (!gcfIdParam) {
+    errorMessage.text('No GCF ID provided. Please include a GCF ID in the URL (e.g., ?gcf=123).');
+    errorMessage.removeClass('d-none');
   } else {
-    errorMessage.text('Please provide a valid GCF ID in the URL (e.g., ?gcf=123).');
+    errorMessage.text('Invalid GCF ID. Please provide a valid positive number (e.g., ?gcf=123).');
     errorMessage.removeClass('d-none');
   }
 });

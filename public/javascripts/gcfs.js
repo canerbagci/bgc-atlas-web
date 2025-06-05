@@ -511,8 +511,7 @@ $(document).ready(function () {
                 var famNumCell = $(row).find('td').eq(0);
                 const gcfId = famNumCell.html();
                 famNumCell.html(
-                  '<a href="/bgcs?gcf=' + gcfId + '" target="_blank">' + gcfId + '</a> ' +
-                  '<a href="/gcf-gene-view?gcf=' + gcfId + '" class="btn btn-sm btn-info" title="View gene organization">Genes</a>'
+                  '<a href="/bgcs?gcf=' + gcfId + '" target="_blank">' + gcfId + '</a>'
                 );
             }
         },
