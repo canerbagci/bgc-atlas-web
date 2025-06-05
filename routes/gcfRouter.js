@@ -1,8 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const bgcService = require('../services/bgcService');
+const { defaultRateLimiter } = require('../services/rateLimitMiddleware');
 
 /* ───────────────────────────── GCF Routes ─────────────────────────────── */
+
+// Apply rate limiting to all routes in this router
+router.use('/gcf-count-hist', defaultRateLimiter);
+router.use('/gcf-table-sunburst', defaultRateLimiter);
+router.use('/gcf-table', defaultRateLimiter);
 
 router.get('/gcf-count-hist', async (req, res, next) => {
   try {

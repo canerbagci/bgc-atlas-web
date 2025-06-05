@@ -1,8 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const cacheService = require('../services/cacheService');
+const { devRouteRateLimiter } = require('../services/rateLimitMiddleware');
 
 /* ───────────────────────────── Cache Routes ─────────────────────────────── */
+
+// Apply rate limiting to development-only routes
+router.use('/cache-stats', devRouteRateLimiter);
+router.use('/cache-invalidate', devRouteRateLimiter);
 
 // Cache statistics route - only available in development mode
 router.get('/cache-stats', (req, res) => {

@@ -1,8 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const mapService = require('../services/mapService');
+const { defaultRateLimiter } = require('../services/rateLimitMiddleware');
 
 /* ───────────────────────────── Map Routes ─────────────────────────────── */
+
+// Apply rate limiting to all routes in this router
+router.use('/map-data-gcf', defaultRateLimiter);
+router.use('/map-data', defaultRateLimiter);
+router.use('/body-map-data', defaultRateLimiter);
+router.use('/filter', defaultRateLimiter);
+router.use('/column-values', defaultRateLimiter);
 
 router.get('/map-data-gcf', async (req, res, next) => {
   try {

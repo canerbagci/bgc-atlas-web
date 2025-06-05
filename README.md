@@ -91,6 +91,7 @@ BGC Atlas is built with the following main dependencies:
 
 - [Express.js](https://expressjs.com/) - Web framework
 - [Helmet](https://helmetjs.github.io/) - Security headers
+- [Express Rate Limit](https://github.com/express-rate-limit/express-rate-limit) - API rate limiting
 - [Pug](https://pugjs.org/) - Template engine
 - [PostgreSQL](https://www.postgresql.org/) - Database
 - [Leaflet](https://leafletjs.com/) - Interactive maps
@@ -107,6 +108,7 @@ The current version of BGC Atlas includes:
 
 ## Change Log
 
+- **Current**: Added API rate limiting to prevent abuse of endpoints.
 - **04.06.2025**: Added ultra-deep and monthly-soil sampling data from Schönbuch.
 - **15.08.2024**: First release. 35,486 samples from MGnify analysed, and 1,854,079 BGCs and 13,854 GCFs identified.
 

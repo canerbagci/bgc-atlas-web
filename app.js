@@ -8,6 +8,7 @@ const compression = require('compression');
 const etagMiddleware = require('./services/etagMiddleware');
 const csrf = require('csurf');
 const helmet = require('helmet');
+// Rate limiting is implemented in individual router files using the middleware from services/rateLimitMiddleware.js
 require('dotenv').config();
 
 
@@ -120,6 +121,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(function(req, res, next) {
   // Skip CSRF for GET, HEAD, OPTIONS requests
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return next();
+  }
+
+  // Skip CSRF for cache invalidation endpoint
+  if (req.path === '/cache-invalidate') {
     return next();
   }
 

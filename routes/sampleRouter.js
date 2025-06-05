@@ -1,8 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const sampleService = require('../services/sampleService');
+const { defaultRateLimiter } = require('../services/rateLimitMiddleware');
 
 /* ───────────────────────────── Sample Routes ─────────────────────────────── */
+
+// Apply rate limiting to all routes in this router
+router.use('/getBgcId', defaultRateLimiter);
+router.use('/sample-info', defaultRateLimiter);
+router.use('/sample-data', defaultRateLimiter);
+router.use('/sample-data-2', defaultRateLimiter);
 
 router.get('/getBgcId', async (req, res, next) => {
   try {

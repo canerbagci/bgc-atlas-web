@@ -1,8 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const bgcService = require('../services/bgcService');
+const { defaultRateLimiter } = require('../services/rateLimitMiddleware');
 
 /* ───────────────────────────── BGC Routes ─────────────────────────────── */
+
+// Apply rate limiting to all routes in this router
+router.use('/bgc-info', defaultRateLimiter);
+router.use('/pc-category-count', defaultRateLimiter);
+router.use('/gcf-category-count', defaultRateLimiter);
+router.use('/pc-product-count', defaultRateLimiter);
+router.use('/pc-taxonomic-count', defaultRateLimiter);
+router.use('/bgc-table', defaultRateLimiter);
 
 router.get('/bgc-info', async (req, res, next) => {
   try {
