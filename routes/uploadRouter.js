@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const searchService = require('../services/searchService');
+const logger = require('../utils/logger');
 
 /* ───────────────────────────── Upload Routes ─────────────────────────────── */
 
@@ -79,7 +80,7 @@ router.post('/upload', (req, res, next) => {
       const records = await searchService.processUploadedFiles(req, sendEvent);
       res.json(records);
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       next(error);
     }
   });

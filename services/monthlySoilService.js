@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const cacheService = require('./cacheService');
+const logger = require('../utils/logger');
 
 const NAME_REGEX = /^[A-Za-z0-9_-]+$/;
 const isValidName = name => NAME_REGEX.test(name);
@@ -28,7 +29,7 @@ async function listMonths(directory) {
         .map(e => e.name)
         .sort();
     } catch (err) {
-      console.error(`Error reading directory ${directory}:`, err);
+      logger.error(`Error reading directory ${directory}:`, err);
       return [];
     }
   }, 3600); // Cache for 1 hour
@@ -52,7 +53,7 @@ async function listDatasets(monthDir) {
         .map(e => e.name)
         .sort();
     } catch (err) {
-      console.error(`Error reading directory ${monthDir}:`, err);
+      logger.error(`Error reading directory ${monthDir}:`, err);
       return [];
     }
   }, 3600); // Cache for 1 hour
@@ -76,7 +77,7 @@ async function listProductTypes(monthDir) {
         .map(e => e.name)
         .sort();
     } catch (err) {
-      console.error(`Error reading directory ${monthDir}:`, err);
+      logger.error(`Error reading directory ${monthDir}:`, err);
       return [];
     }
   }, 3600); // Cache for 1 hour
@@ -101,7 +102,7 @@ async function countBGCs(datasetPath) {
       ).length;
       return bgcCount;
     } catch (err) {
-      console.error(`Error counting BGCs in ${datasetPath}:`, err);
+      logger.error(`Error counting BGCs in ${datasetPath}:`, err);
       return 0;
     }
   }, 3600); // Cache for 1 hour

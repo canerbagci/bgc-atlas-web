@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const sampleService = require('../services/sampleService');
 const { defaultRateLimiter } = require('../services/rateLimitMiddleware');
+const logger = require('../utils/logger');
 
 /* ───────────────────────────── Sample Routes ─────────────────────────────── */
 
@@ -19,7 +20,7 @@ router.get('/getBgcId', async (req, res, next) => {
     const result = await sampleService.getBgcId(dataset, anchor);
     res.json(result);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {
@@ -35,7 +36,7 @@ router.get('/sample-info', async (req, res, next) => {
     const sampleInfo = await sampleService.getSampleInfo();
     res.json(sampleInfo);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     next(error);
   }
 });
@@ -71,7 +72,7 @@ router.get('/sample-data', async (req, res, next) => {
     const result = await sampleService.getPaginatedSampleData(options);
     res.json(result);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
 
     // Handle validation errors with appropriate status code
     if (error.message && error.message.includes('Invalid')) {
@@ -87,7 +88,7 @@ router.get('/sample-data-2', async (req, res, next) => {
     const rows = await sampleService.getSampleData2();
     res.json({ data: rows });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     next(error);
   }
 });
