@@ -8,9 +8,12 @@ const { sanitizeMessage } = require('../utils/sanitize');
 // Map of jobId -> event emitter
 const jobEmitters = new Map();
 
-// Create Bull queue using local Redis
+// Create Bull queue using Redis connection details from env vars
 const queue = process.env.NODE_ENV === 'test' ? null : new Bull('searchQueue', {
-  redis: { host: '127.0.0.1', port: 6379 }
+  redis: {
+    host: process.env.REDIS_HOST || '127.0.0.1',
+    port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379
+  }
 });
 
 let processorInitialized = false;
