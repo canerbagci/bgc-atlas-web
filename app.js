@@ -35,6 +35,7 @@ const jobRouter = require('./routes/jobRouter');
 
 const app = express();
 app.locals.APP_URL = process.env.APP_URL || '';
+app.locals.MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true' || false;
 app.use(compression()); // Add compression middleware for faster JSON responses
 app.use(etagMiddleware);
 app.use(cookieParser());

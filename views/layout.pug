@@ -1,5 +1,6 @@
 include components/navbar
 include components/footer
+include components/card
 
 doctype html
 html(lang="en")
@@ -38,6 +39,11 @@ html(lang="en")
         main.w-100.d-flex.flex-column
             +navbar(activePage)
             div.content-container
+                if MAINTENANCE_MODE
+                    div.container.mb-2.pt-0(style="padding-top: 0; padding-bottom: 0;")
+                        +card('Maintenance Notice', 'bg-warning mb-0', 'maintenanceCard')
+                            p.mb-0
+                                | 10.06.2025 - BGC Atlas is currently undergoing maintenance. Some features may be temporarily unavailable. We apologize for any inconvenience and appreciate your patience.
                 block content
             +footer()
 
