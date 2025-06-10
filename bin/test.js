@@ -7,7 +7,6 @@ const app = require('../app');
 const logger = require('../utils/logger');
 
 const enableSSL = process.env.ENABLE_SSL !== 'false';
-const certDir = process.env.SSL_CERT_PATH || '/etc/letsencrypt/live/bgc-atlas.cs.uni-tuebingen.de';
 try {
   validateRequiredPaths();
 } catch (err) {
@@ -18,6 +17,7 @@ try {
 let credentials;
 if (enableSSL) {
   try {
+    const certDir = process.env.SSL_CERT_PATH || '/etc/letsencrypt/live/bgc-atlas.cs.uni-tuebingen.de';
     validateSSLCertPath(certDir);
     const privateKey = fs.readFileSync(path.join(certDir, 'privkey.pem'), 'utf8');
     const certificate = fs.readFileSync(path.join(certDir, 'fullchain.pem'), 'utf8');
