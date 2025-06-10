@@ -708,8 +708,10 @@ async function getBgcTable(options) {
     if (validatedOrder && validatedOrder.length > 0) {
       const orderByConditions = validatedOrder.map((orderItem) => {
         let columnName = columns[orderItem.column];
+        // Handle taxon_name specially as it comes from taxdump_map table
+        let qualifiedColumn = columnName === 'taxon_name' ? 'taxdump_map.name' : `regions.${columnName}`;
         let dir = orderItem.dir === 'asc' ? 'ASC' : 'DESC';
-        return columnName + ' ' + dir;
+        return qualifiedColumn + ' ' + dir;
       });
       orderByClause = 'ORDER BY ' + orderByConditions.join(', ');
     }
@@ -730,6 +732,9 @@ async function getBgcTable(options) {
     for (const criteria of validatedCriteria) {
       const { origData, condition, value, value1 } = criteria;
 
+      // Handle taxon_name specially as it comes from taxdump_map table
+      const qualifiedColumn = origData === 'taxon_name' ? 'taxdump_map.name' : `regions.${origData}`;
+
       switch (condition) {
         case '=':
         case '!=':
@@ -737,51 +742,51 @@ async function getBgcTable(options) {
         case '>':
         case '<=':
         case '>=':
-          whereClauses.push(`${origData} ${condition} $${paramIndex}`);
+          whereClauses.push(`${qualifiedColumn} ${condition} $${paramIndex}`);
           params.push(value);
           paramIndex++;
           break;
         case 'between':
         case 'not between':
-          whereClauses.push(`${origData} ${condition.toUpperCase()} $${paramIndex} AND $${paramIndex + 1}`);
+          whereClauses.push(`${qualifiedColumn} ${condition.toUpperCase()} $${paramIndex} AND $${paramIndex + 1}`);
           params.push(value, value1);
           paramIndex += 2;
           break;
         case 'contains':
-          whereClauses.push(`${origData} LIKE $${paramIndex}`);
+          whereClauses.push(`${qualifiedColumn} LIKE $${paramIndex}`);
           params.push(`%${value}%`);
           paramIndex++;
           break;
         case '!contains':
-          whereClauses.push(`${origData} NOT LIKE $${paramIndex}`);
+          whereClauses.push(`${qualifiedColumn} NOT LIKE $${paramIndex}`);
           params.push(`%${value}%`);
           paramIndex++;
           break;
         case 'starts':
-          whereClauses.push(`${origData} LIKE $${paramIndex}`);
+          whereClauses.push(`${qualifiedColumn} LIKE $${paramIndex}`);
           params.push(`${value}%`);
           paramIndex++;
           break;
         case '!starts':
-          whereClauses.push(`${origData} NOT LIKE $${paramIndex}`);
+          whereClauses.push(`${qualifiedColumn} NOT LIKE $${paramIndex}`);
           params.push(`${value}%`);
           paramIndex++;
           break;
         case 'ends':
-          whereClauses.push(`${origData} LIKE $${paramIndex}`);
+          whereClauses.push(`${qualifiedColumn} LIKE $${paramIndex}`);
           params.push(`%${value}`);
           paramIndex++;
           break;
         case '!ends':
-          whereClauses.push(`${origData} NOT LIKE $${paramIndex}`);
+          whereClauses.push(`${qualifiedColumn} NOT LIKE $${paramIndex}`);
           params.push(`%${value}`);
           paramIndex++;
           break;
         case 'null':
-          whereClauses.push(`${origData} IS NULL`);
+          whereClauses.push(`${qualifiedColumn} IS NULL`);
           break;
         case '!null':
-          whereClauses.push(`${origData} IS NOT NULL`);
+          whereClauses.push(`${qualifiedColumn} IS NOT NULL`);
           break;
       }
     }
@@ -796,19 +801,19 @@ async function getBgcTable(options) {
     // Add samples filter
     if (validatedSamples && validatedSamples.length > 0) {
       let placeholders = validatedSamples.map((_, idx) => `$${paramIndex + idx}`).join(', ');
-      whereClauses.push(`assembly IN (${placeholders})`);
+      whereClauses.push(`regions.assembly IN (${placeholders})`);
       params.push(...validatedSamples);
       paramIndex += validatedSamples.length;
     }
 
     // Add core members filter
     if (validatedShowCoreMembers) {
-      whereClauses.push('gcf_from_search = false');
+      whereClauses.push('regions.gcf_from_search = false');
     }
 
     // Add non-putative members filter
     if (validatedShowNonPutativeMembers) {
-      whereClauses.push('membership_value < 0.405');
+      whereClauses.push('regions.membership_value < 0.405');
     }
 
     // Build where clause
@@ -871,14 +876,14 @@ async function getTaxonomicCounts(gcfId = null, samples = null) {
 
     /* 1. optional GCF filter --------------------------------------- */
     if (validatedGcfId !== null) {
-      where.push(`bigslice_gcf_id = $${params.length + 1}`);
+      where.push(`region_genus.bigslice_gcf_id = $${params.length + 1}`);
       params.push(validatedGcfId);
     }
 
     /* 2. optional assembly filter ---------------------------------- */
     if (validatedSamples && validatedSamples.length) {
       const ph = validatedSamples.map((_, i) => `$${params.length + i + 1}`).join(', ');
-      where.push(`assembly IN (${ph})`);
+      where.push(`region_genus.assembly IN (${ph})`);
       params.push(...validatedSamples);
     }
 
