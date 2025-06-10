@@ -391,6 +391,7 @@ $(document).ready(function () {
         "paging": true, // Ensure paging is explicitly enabled
         "scrollCollapse": true,
         "autoWidth": false,
+        "responsive": true, // Enable responsive features
         "searchDelay": 500, // Delay search execution by 500ms after user stops typing
         "language": {
             searchBuilder: {

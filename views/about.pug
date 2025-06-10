@@ -5,12 +5,10 @@ block content
     div.row.flex-fill.d-flex.justify-content-center
         .container(style="max-width: 900px; padding: 20px;")
             img(src="/images/overview.png", alt="BGC Atlas Overview", class="img-fluid mx-auto d-block", style="max-width: 70%; height: auto; margin-top: 20px; margin-bottom: 30px;", loading="lazy")
-            hr
             div.row.mb-5
                 div.col-md-12
                     +card("About", "", "aboutCollapse")
                         | BGC Atlas is a web resource dedicated to exploring the diversity of biosynthetic gene clusters (BGCs) in metagenomes. Leveraging the power of metagenomics, BGC Atlas identifies and analyzes BGCs from diverse environmental samples, providing insights into the chemical diversity encoded in bacterial genomes. Our goal is to enhance the understanding of secondary metabolites produced by microorganisms and their ecological and evolutionary roles.
-            hr
             div.row.mb-5
                 div.col-md-12
                     +card("Key Features", "", "keyFeaturesCollapse")
@@ -42,7 +40,6 @@ block content
                                 ul(style="list-style-type: none;")
                                     li The intuitive web interface allows users to explore BGCs, GCFs, and samples with ease.
                                     li Users can filter and search for BGCs based on specific criteria, visualize their distribution across various biomes, and query the database for similar clusters.
-            hr
             div.row.mb-5
                 div.col-md-12
                     +card("Interface", "", "interfaceCollapse")
@@ -100,7 +97,6 @@ block content
                         | The GenBank files used to construct the database, as well as the BiG-SLiCE clustering results, can be used for further analysis, for example in automated querying of BGCs similar to the ones contained in the BGC-Atlas.
                         | The full dump of the database can be used to set up a local instance of the BGC Atlas database, in order to programmatically access all the data contained, including the BGCs, and GCFs themselves, as well as all the associated metadata with samples.
                         br
-            hr
             div.row.mb-5
                 div.col-md-12
                     +card("Change Log", "", "changeLogCollapse")
@@ -120,7 +116,6 @@ block content
                                 |  First release.
                                 br
                                 |  35486 samples from MGnify analysed, and 1854079 BGCs and 13854 GCFs identified.
-            hr
             div.row.mb-5
                 div.col-md-12
                     +card("Contact", "", "contactCollapse")

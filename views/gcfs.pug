@@ -1,22 +1,28 @@
 extends layout
+include components/card
 
 block content
     div.row.flex-fill.d-flex.justify-content-start(style=height="inherit;")
         div.col-md-12.text-center.bg-white.text-dark.top-level
             .row.top-level
-                .row
-                    table#gcfTable(style="width:100%;", class="stripe")
+                +card("GCF Table", "", "gcfTableCollapse")
+                    .table-responsive
+                        table#gcfTable(style="width:100%;", class="stripe responsive")
                 //.row
                 //    div#legend-container
             .row.top-level
-                .row
-                    p#gcf-count Loading...
-                    p#mean-gcf
+                +card("Summary Statistics", "", "summaryStatsCollapse")
+                    .row
+                        .col-md-12.text-center
+                            p#gcf-count.h4 Loading...
+                            p#mean-gcf.h4 Loading...
                 .row
                     .col-md-6
-                        canvas#gcf-count-hist-chart
+                        +card("BGC Count Histogram", "", "gcfCountHistCollapse")
+                            canvas#gcf-count-hist-chart
                     .col-md-6
-                        canvas#gcf-category-chart
+                        +card("GCF Categories", "", "gcfCategoryCollapse")
+                            canvas#gcf-category-chart
 
 
 
@@ -24,7 +30,9 @@ block append head
     script(src='https://cdn.jsdelivr.net/npm/chart.js', sourcemaps="false")
 
     link(rel="stylesheet", href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.css")
+    link(rel="stylesheet", href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css")
     script(src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.js")
+    script(src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js")
 
     link(rel="stylesheet", href="https://cdn.datatables.net/searchbuilder/1.4.2/css/searchBuilder.bootstrap5.min.css")
     link(rel="stylesheet", href="https://cdn.datatables.net/datetime/1.4.1/css/dataTables.dateTime.min.css")
@@ -52,6 +60,39 @@ block append head
             height: 400px;
         }
 
+        /* Responsive table styles */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        /* Fix for table overflow */
+        #gcfTable_wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table.dataTable {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        /* Card styles */
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+        }
+
         #legend-container {
             margin-top: 20px;
             display: flex;
@@ -72,6 +113,17 @@ block append head
 
         .info-icon:hover {
             color: #0056b3;
+        }
+
+        /* Responsive adjustments for small screens */
+        @media (max-width: 768px) {
+            .top-level {
+                padding: 20px;
+            }
+
+            .card-body {
+                padding: 0.75rem;
+            }
         }
 
 
