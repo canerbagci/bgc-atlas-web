@@ -11,10 +11,18 @@ block content
                             .table-responsive
                                 table#gcfTable(style="width:100%;", class="stripe")
                     +card("Summary Statistics", "", "summaryStatsCollapse")
-                        .row
-                            .col-md-12.text-center
-                                p#gcf-count.h4 Loading...
-                                p#mean-gcf.h4 Loading...
+                        div(style="display: flex; justify-content: center;")
+                            table.table(style="font-size: 1.2em; font-weight: bold;")
+                                tr
+                                    td(style="text-align: left;") Total GCFs
+                                    td(style="text-align: left;") :
+                                    td(style="text-align: left;")
+                                        span.badge.badge-primary#gcf-count(style="color: #fff; background-color: #007bff;") Loading...
+                                tr
+                                    td(style="text-align: left;") Mean #GCF per sample
+                                    td(style="text-align: left;") :
+                                    td(style="text-align: left;")
+                                        span.badge.badge-primary#mean-gcf(style="color: #fff; background-color: #007bff;") Loading...
                     +card("BGC Count Histogram", "", "gcfCountHistCollapse")
                         .row
                             .col-md-12
