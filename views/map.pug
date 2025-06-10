@@ -8,23 +8,23 @@ block content
                 img(
                     src='images/BGC-Atlas-logo.png'
                     class='img-fluid'
-                    style='max-height: 100%; max-width: 100%; object-fit: contain;'
+                    style='max-height: 250px; max-width: 250px; object-fit: contain;'
                 )
         div.col-sm-6.d-flex.flex-column.gap-2
             +card('Maintenance Notice', 'bg-warning-subtle', 'maintenanceCard')
                 p
                     | 10.06.2025 - BGC Atlas is currently undergoing maintenance. Some features may be temporarily unavailable. We apologize for any inconvenience and appreciate your patience.
-            +card('Welcome to BGC Atlas')
+            +card('Welcome to BGC Atlas', '', 'welcomeCard')
                 p
                     | BGC Atlas is a web resource for exploring the diversity of biosynthetic gene clusters (BGCs) across a wide range of environments. It integrates thousands of publicly available metagenomic datasets to help researchers investigate the ecological and functional distribution of BGCs.
                 p
-                    | Use the #[a(href='/samples') Samples], #[a(href='/bgcs') BGCs], or #[a(href='/gcfs') GCFs] pages to start browsing, or try the #[a(href='/search') Search] tool to query your own BGCs against our collection.
+                    | Use the #[a(href='/samples') Samples], #[a(href='/bgcs') BGCs], or #[a(href='/gcfs') GCFs] pages to start Browse, or try the #[a(href='/search') Search] tool to query your own BGCs against our collection.
 
             +card('Recent Updates', 'bg-info-subtle', 'updatesCard')
                 ul
                     li June 2025 – Improved search functionality.
                     li June 2025 – Added taxonomy information for GCFs and BGCs.
-        div.col-sm-3.d-flex.align-items-center
+        div.col-sm-3.d-flex.align-items-center.justify-content-center
             +card('Dataset Overview')
                 table.text-center.mx-auto(style="text-align: center;")
                     colgroup

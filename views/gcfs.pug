@@ -5,24 +5,24 @@ block content
     div.row.flex-fill.d-flex.justify-content-start(style=height="inherit;")
         div.col-md-12.text-center.bg-white.text-dark.top-level
             .row.top-level
-                +card("GCF Table", "", "gcfTableCollapse")
-                    .table-responsive
-                        table#gcfTable(style="width:100%;", class="stripe responsive")
-                //.row
-                //    div#legend-container
-            .row.top-level
-                +card("Summary Statistics", "", "summaryStatsCollapse")
-                    .row
-                        .col-md-12.text-center
-                            p#gcf-count.h4 Loading...
-                            p#mean-gcf.h4 Loading...
-                .row
-                    .col-md-6
-                        +card("BGC Count Histogram", "", "gcfCountHistCollapse")
-                            canvas#gcf-count-hist-chart
-                    .col-md-6
-                        +card("GCF Categories", "", "gcfCategoryCollapse")
-                            canvas#gcf-category-chart
+                .col-md-12
+                    +card("GCF Data Table", "", "gcfTableCollapse")
+                        .row
+                            .table-responsive
+                                table#gcfTable(style="width:100%;", class="stripe")
+                    +card("Summary Statistics", "", "summaryStatsCollapse")
+                        .row
+                            .col-md-12.text-center
+                                p#gcf-count.h4 Loading...
+                                p#mean-gcf.h4 Loading...
+                    +card("BGC Count Histogram", "", "gcfCountHistCollapse")
+                        .row
+                            .col-md-12
+                                canvas#gcf-count-hist-chart
+                    +card("GCF Categories", "", "gcfCategoryCollapse")
+                        .row
+                            .col-md-12
+                                canvas#gcf-category-chart
 
 
 
@@ -30,9 +30,7 @@ block append head
     script(src='https://cdn.jsdelivr.net/npm/chart.js', sourcemaps="false")
 
     link(rel="stylesheet", href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.css")
-    link(rel="stylesheet", href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css")
     script(src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.js")
-    script(src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js")
 
     link(rel="stylesheet", href="https://cdn.datatables.net/searchbuilder/1.4.2/css/searchBuilder.bootstrap5.min.css")
     link(rel="stylesheet", href="https://cdn.datatables.net/datetime/1.4.1/css/dataTables.dateTime.min.css")
@@ -47,7 +45,7 @@ block append head
 
     style.
         .top-level {
-            padding: 50px;
+            padding: 20px;
         }
 
         /* Center the text in the table headers */
@@ -58,39 +56,6 @@ block append head
         /* Set height for the chart canvases to make them larger */
         #gcf-count-hist-chart, #gcf-category-chart {
             height: 400px;
-        }
-
-        /* Responsive table styles */
-        .table-responsive {
-            width: 100%;
-            overflow-x: auto;
-        }
-
-        /* Fix for table overflow */
-        #gcfTable_wrapper {
-            width: 100%;
-            overflow-x: auto;
-        }
-
-        table.dataTable {
-            width: 100% !important;
-            max-width: 100% !important;
-        }
-
-        /* Card styles */
-        .card {
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .card:hover {
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .card-header {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.125);
         }
 
         #legend-container {
@@ -115,15 +80,34 @@ block append head
             color: #0056b3;
         }
 
-        /* Responsive adjustments for small screens */
-        @media (max-width: 768px) {
-            .top-level {
-                padding: 20px;
-            }
+        /* Ensure the table is responsive on small screens */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
 
-            .card-body {
-                padding: 0.75rem;
-            }
+        /* Ensure the DataTable doesn't overflow its container */
+        .dataTables_wrapper {
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* Fix for header alignment issues */
+        .dataTables_scrollHead {
+            overflow: visible !important;
+        }
+
+        /* Ensure header and body stay aligned */
+        .dataTables_scrollBody {
+            overflow-x: auto !important;
+            overflow-y: auto !important;
+        }
+
+        /* Force table header to match body width */
+        table.dataTable {
+            width: 100% !important;
+            margin: 0 !important;
         }
 
 

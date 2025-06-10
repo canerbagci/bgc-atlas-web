@@ -45,7 +45,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "code.jquery.com", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "cdn.datatables.net", "unpkg.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "code.jquery.com", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "cdn.datatables.net", "unpkg.com", "d3js.org"],
       styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "cdn.datatables.net", "stackpath.bootstrapcdn.com", "unpkg.com"],
       styleSrcElem: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdnjs.cloudflare.com", "cdn.datatables.net", "stackpath.bootstrapcdn.com", "unpkg.com"],
       imgSrc: ["'self'", "data:", "*.basemaps.cartocdn.com", "unpkg.com", "cdnjs.cloudflare.com"],
