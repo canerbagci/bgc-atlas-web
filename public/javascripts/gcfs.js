@@ -4,8 +4,8 @@ function getInfo() {
         type: 'GET',
         dataType: 'json',
         success: function(results) {
-            $("#gcf-count").html("Total GCFs: " + results[0].gcf_count);
-            $("#mean-gcf").html("Mean #BGC per GCF: " + results[0].meanbgc);
+            $("#gcf-count").html(results[0].gcf_count);
+            $("#mean-gcf").html(results[0].meanbgc);
         }
     });
 }
@@ -630,10 +630,32 @@ $(document).ready(function () {
                 if (!rowData[dataField]) return;
 
                 // Parse the data
-                const itemData = rowData[dataField].split(',').map(item => {
+                const rawItemData = rowData[dataField].split(',').map(item => {
                     const [label, count] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
                     return {label: label, count: parseInt(count) || 0};
                 });
+
+                // Combine duplicate taxon names for taxa-all charts
+                let itemData = rawItemData;
+                if (chartType === 'taxa-all') {
+                    // Create a map to combine items with the same label
+                    const labelMap = new Map();
+                    rawItemData.forEach(item => {
+                        if (labelMap.has(item.label)) {
+                            // If label exists, add to its count
+                            labelMap.set(item.label, labelMap.get(item.label) + item.count);
+                        } else {
+                            // If label doesn't exist, add it to the map
+                            labelMap.set(item.label, item.count);
+                        }
+                    });
+
+                    // Convert the map back to an array of objects
+                    itemData = Array.from(labelMap.entries()).map(([label, count]) => ({
+                        label: label,
+                        count: count
+                    }));
+                }
 
                 const totalCount = itemData.reduce((acc, curr) => acc + curr.count, 0);
                 if (totalCount === 0) return; // Skip if there's no data

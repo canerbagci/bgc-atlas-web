@@ -11,18 +11,18 @@ block content
                             .table-responsive
                                 table#gcfTable(style="width:100%;", class="stripe")
                     +card("Summary Statistics", "", "summaryStatsCollapse")
-                        div(style="display: flex; justify-content: center;")
-                            table.table(style="font-size: 1.2em; font-weight: bold;")
-                                tr
-                                    td(style="text-align: left;") Total GCFs
-                                    td(style="text-align: left;") :
-                                    td(style="text-align: left;")
-                                        span.badge.badge-primary#gcf-count(style="color: #fff; background-color: #007bff;") Loading...
-                                tr
-                                    td(style="text-align: left;") Mean #GCF per sample
-                                    td(style="text-align: left;") :
-                                    td(style="text-align: left;")
-                                        span.badge.badge-primary#mean-gcf(style="color: #fff; background-color: #007bff;") Loading...
+                        div.container-fluid
+                            div.row.justify-content-center
+                                div.col-md-6.col-lg-4.mb-3.text-center
+                                    div.stats-card.p-3
+                                        div.stats-label Total GCFs
+                                        div.stats-value
+                                            span.badge.badge-primary#gcf-count(style="color: #fff; background-color: #007bff;") Loading...
+                                div.col-md-6.col-lg-4.mb-3.text-center
+                                    div.stats-card.p-3
+                                        div.stats-label Mean #GCF per sample
+                                        div.stats-value
+                                            span.badge.badge-primary#mean-gcf(style="color: #fff; background-color: #007bff;") Loading...
                     +card("BGC Count Histogram", "", "gcfCountHistCollapse")
                         .row
                             .col-md-12
@@ -59,6 +59,28 @@ block append head
         /* Center the text in the table headers */
         #gcfTable th {
             text-align: center;
+        }
+
+        /* Styles for the statistics cards */
+        .stats-card {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .stats-label {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+
+        .stats-value {
+            font-size: 1.2em;
         }
 
         /* Set height for the chart canvases to make them larger */
