@@ -8,18 +8,44 @@ const { BASE_DIR, FULL_AS_DIR, PRODUCT_AS_DIR, NAME_REGEX } = monthlySoilService
 
 /* ───────────────────────────── routes ─────────────────────────────── */
 
-// 1. Landing page - links to full-AS and product-AS
-router.get('/monthly-soil/?', async (_req, res, next) => {
+// 1. Landing page - integrated view with full-AS and product-AS data
+router.get('/monthly-soil/?', async (req, res, next) => {
   try {
     const fullMonths = await monthlySoilService.listMonths(FULL_AS_DIR);
     const productMonths = await monthlySoilService.listMonths(PRODUCT_AS_DIR);
+
+    // Get data for all months
+    const allFullMonthsData = [];
+    const allProductMonthsData = [];
+
+    // Fetch data for all full months
+    for (const month of fullMonths) {
+      const monthDir = path.join(FULL_AS_DIR, month);
+      const datasetNames = await monthlySoilService.listDatasets(monthDir);
+      const datasets = await monthlySoilService.getDatasetDetails(FULL_AS_DIR, month, datasetNames);
+
+      allFullMonthsData.push({
+        month,
+        datasets
+      });
+    }
+
+    // Fetch data for all product months
+    for (const month of productMonths) {
+      const productTypesWithDatasets = await monthlySoilService.getProductTypesWithDatasets(month);
+
+      allProductMonthsData.push({
+        month,
+        productTypesWithDatasets
+      });
+    }
 
     res.render('monthlySoil', { 
       title: 'Monthly Soil Samples',
       metaDescription: 'Browse monthly soil sample collections with antiSMASH analysis results for biosynthetic gene clusters.',
       activePage: 'monthlySoil',
-      fullMonths, 
-      productMonths 
+      allFullMonthsData,
+      allProductMonthsData
     });
   } catch (err) {
     logger.error(err);
@@ -27,46 +53,32 @@ router.get('/monthly-soil/?', async (_req, res, next) => {
   }
 });
 
-// 2. Full-AS month index page
+// 2. Full-AS month index page - redirect to integrated page
 router.get('/monthly-soil/full-AS/:month/?', async (req, res, next) => {
   try {
     const month = req.params.month;
     if (!NAME_REGEX.test(month)) {
       return res.status(400).send('Invalid month parameter');
     }
-    const monthDir = path.join(FULL_AS_DIR, month);
-    const datasetNames = await monthlySoilService.listDatasets(monthDir);
-    const datasets = await monthlySoilService.getDatasetDetails(FULL_AS_DIR, month, datasetNames);
 
-    res.render('fullASMonth', {
-      title: `Full antiSMASH Analysis - ${month}`,
-      metaDescription: `Complete antiSMASH analysis results for soil samples collected in ${month}, showing all detected biosynthetic gene clusters.`,
-      activePage: 'monthlySoil',
-      month,
-      datasets
-    });
+    // Redirect to the integrated page
+    res.redirect('/monthly-soil/');
   } catch (err) {
     logger.error(err);
     next(err);
   }
 });
 
-// 3. Product-AS month index page
+// 3. Product-AS month index page - redirect to integrated page
 router.get('/monthly-soil/product-AS/:month/?', async (req, res, next) => {
   try {
     const month = req.params.month;
     if (!NAME_REGEX.test(month)) {
       return res.status(400).send('Invalid month parameter');
     }
-    const productTypesWithDatasets = await monthlySoilService.getProductTypesWithDatasets(month);
 
-    res.render('productASMonth', {
-      title: `Product Analysis - ${month}`,
-      metaDescription: `Product-focused antiSMASH analysis for soil samples collected in ${month}, categorized by secondary metabolite types.`,
-      activePage: 'monthlySoil',
-      month,
-      productTypesWithDatasets
-    });
+    // Redirect to the integrated page
+    res.redirect('/monthly-soil/');
   } catch (err) {
     logger.error(err);
     next(err);

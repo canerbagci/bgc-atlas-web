@@ -1,57 +1,102 @@
 extends layout
+include components/card
+
+//- Define a mixin for collapsed cards
+mixin collapsedCard(title, className, collapseId)
+  .card.mb-2(class=className)
+    if title
+      .card-header.d-flex.justify-content-between.align-items-center
+        strong #{title}
+        if collapseId
+          button.btn.btn-sm.btn-outline-secondary(type='button', data-bs-toggle='collapse', data-bs-target=`#${collapseId}` aria-expanded='false' aria-controls=collapseId)
+            i.fas.fa-chevron-down
+    if collapseId
+      .collapse(id=collapseId)
+        .card-body
+          block
+    else
+      .card-body
+        block
 
 block content
-  #content-wrapper
-    .container
-      h1 Monthly Soil BGC Catalogue
+  div.row.flex-fill.d-flex.justify-content-center
+    .container(style="max-width: 900px; padding: 20px;")
+      div.row.mb-5
+        div.col-md-12
+          +card("Monthly Soil BGC Catalogue", "", "monthlySoilCollapse")
+            p Schönbuch monthly soil sampling data
 
-      .description
-        p Schönbuch monthly soil sampling data
+            div.mt-4
+              +card("Complete antiSMASH Results", "border-light", "completeResultsCollapse")
+                p Full antiSMASH results for each dataset by month:
 
-      h2 Complete antiSMASH Results
-      p Full antiSMASH results for each dataset by month:
-      ul
-        each month in fullMonths
-          li
-            a(href=`/monthly-soil/full-AS/${month}/`)= month.toUpperCase()
+                each monthData in allFullMonthsData
+                  div.mt-3
+                    +collapsedCard(`${monthData.month.toUpperCase()} - Full antiSMASH Results`, "border-light", `fullASMonth_${monthData.month}Collapse`)
+                      if monthData.datasets.length > 0
+                        p Total datasets: #{monthData.datasets.length}
 
-      h2 Product-Specific Results
-      p Results filtered by specific BGC product types:
-      ul
-        each month in productMonths
-          li
-            a(href=`/monthly-soil/product-AS/${month}/`)= month.toUpperCase()
+                        table.table.table-striped.table-hover
+                          thead
+                            tr
+                              th Dataset
+                              th BGC Count
+                              th Actions
+                          tbody
+                            each dataset in monthData.datasets
+                              tr
+                                td= dataset.name
+                                td= dataset.bgcCount
+                                td
+                                  a.btn.btn-primary.btn-sm(href=dataset.path) View Results
+                      else
+                        p No datasets available for this month.
+
+            div.mt-4
+              +card("Product-Specific Results", "border-light", "productResultsCollapse")
+                p Results filtered by specific BGC product types:
+
+                each monthData in allProductMonthsData
+                  div.mt-3
+                    +collapsedCard(`${monthData.month.toUpperCase()} - Product-Specific Results`, "border-light", `productASMonth_${monthData.month}Collapse`)
+                      if monthData.productTypesWithDatasets.length > 0
+                        each productTypeData, index in monthData.productTypesWithDatasets
+                          div(class=index > 0 ? "mt-4" : "")
+                            +collapsedCard(productTypeData.name, "border-light", `productType_${monthData.month}_${index}Collapse`)
+                              p Total datasets: #{productTypeData.datasets.length}
+
+                              table.table.table-striped.table-hover
+                                thead
+                                  tr
+                                    th Dataset
+                                    th BGC Count
+                                    th Actions
+                                tbody
+                                  each dataset in productTypeData.datasets
+                                    tr
+                                      td= dataset.name
+                                      td= dataset.bgcCount
+                                      td
+                                        a.btn.btn-primary.btn-sm(href=dataset.path) View Results
+                      else
+                        p No product types available for this month.
 
 block styles
   link(rel="stylesheet", href="/stylesheets/style.css")
   style.
-    .description { 
-      padding: 1rem;
-      border-radius: 5px; 
-      margin-bottom: 1.5rem; 
-    }
-
-    /* Make the page occupy 100% height */
-    .container {
-      min-height: calc(100vh - 120px); /* Subtract header and footer height */
-      padding-bottom: 2rem;
-      margin-bottom: auto;
-    }
-
-    /* Ensure content block takes up available space */
-    #content-wrapper {
-      flex: 1 0 auto;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Remove bullets from list elements */
-    ul {
-      list-style-type: none;
-      padding-left: 0;
-    }
-
     /* Add some spacing between list items for better readability */
     li {
       margin-bottom: 0.5rem;
+    }
+
+    /* Table styling */
+    .table {
+      margin-top: 1.5rem;
+      table-layout: fixed;
+      width: 100%;
+    }
+
+    .table th, .table td {
+      width: 33.33%;
+      text-align: left;
     }

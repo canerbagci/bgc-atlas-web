@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
           console.log(`[DEBUG_LOG] Found parent row for #${this.id}, setting height to auto`);
           parentRow.style.height = 'auto';
         } else {
-          console.log(`[DEBUG_LOG] No parent row found for #${this.id}`);
+          console.log(`[DEBUG_LOG] No parent row found for #${this.id}, continuing without adjustment`);
         }
       });
 
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
           console.log(`[DEBUG_LOG] Found parent row for #${this.id}, setting height to auto`);
           parentRow.style.height = 'auto';
         } else {
-          console.log(`[DEBUG_LOG] No parent row found for #${this.id}`);
+          console.log(`[DEBUG_LOG] No parent row found for #${this.id}, continuing without adjustment`);
         }
       });
     });

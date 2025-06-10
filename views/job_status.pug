@@ -99,6 +99,17 @@ append head
       display: none;
     }
 
+    /* Table styling for equal column widths */
+    .table {
+      table-layout: fixed;
+      width: 100%;
+    }
+
+    .table th, .table td {
+      width: 33.33%;
+      text-align: left;
+    }
+
   script.
     // Pass jobId from server to client
     const serverJobId = '#{jobId}';
