@@ -472,7 +472,80 @@ $(document).ready(function () {
                 type: 'string',
                 width: '15%',
                 render: function (data, type, row) {
-                    return type === 'display' ? data : data;
+                    if (type === 'display' && data) {
+                        // Parse the types and their counts
+                        const typeItems = data.split(',').map(item => {
+                            const [label, countStr] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
+                            return {
+                                label: label,
+                                count: parseInt(countStr) || 0
+                            };
+                        });
+
+                        // Sort by count in descending order
+                        typeItems.sort((a, b) => b.count - a.count);
+
+                        // Calculate total count
+                        const totalCount = typeItems.reduce((sum, item) => sum + item.count, 0);
+
+                        // Calculate cumulative percentage and find cutoff for 90%
+                        let cumulativeCount = 0;
+                        let cutoffIndex = -1;
+
+                        for (let i = 0; i < typeItems.length; i++) {
+                            cumulativeCount += typeItems[i].count;
+                            const cumulativePercentage = (cumulativeCount / totalCount) * 100;
+
+                            if (cumulativePercentage >= 90) {
+                                cutoffIndex = i;
+                                break;
+                            }
+                        }
+
+                        // If we have more types than the cutoff, group the rest as "Other"
+                        if (cutoffIndex >= 0 && cutoffIndex < typeItems.length - 1) {
+                            // Get the top types (up to 90%)
+                            const topTypes = typeItems.slice(0, cutoffIndex + 1);
+
+                            // Calculate the count and percentage for "Other"
+                            const otherCount = totalCount - topTypes.reduce((sum, item) => sum + item.count, 0);
+                            const otherPercentage = Math.round((otherCount / totalCount) * 100);
+
+                            // Get the types that will be grouped as "Other"
+                            const otherTypes = typeItems.slice(cutoffIndex + 1);
+
+                            // If "Other" is just one kind of type, show it normally
+                            if (otherTypes.length === 1) {
+                                const singleType = otherTypes[0];
+                                // Format the top types
+                                const topTypesText = topTypes.map(item => 
+                                    `${item.label} (${item.count})`
+                                ).join(', ');
+
+                                // Add the single type normally
+                                return topTypesText + 
+                                       `, ${singleType.label} (${singleType.count})`;
+                            }
+
+                            const otherTypesText = otherTypes.map(item => 
+                                `${item.label} (${item.count})`
+                            ).join(', ');
+
+                            // Format the top types
+                            const topTypesText = topTypes.map(item => 
+                                `${item.label} (${item.count})`
+                            ).join(', ');
+
+                            // Return the formatted string with top types and "Other"
+                            return topTypesText + 
+                                   `, <span style="text-decoration: underline; font-style: italic" title="${otherTypesText}">` +
+                                   `Other (${otherCount})</span>`;
+                        } else {
+                            // If all types are within 90%, return the original data
+                            return data;
+                        }
+                    }
+                    return data;
                 }
             },
             {
@@ -525,7 +598,80 @@ $(document).ready(function () {
                 type: 'string',
                 width: '15%',
                 render: function (data, type, row) {
-                    return type === 'display' ? data : data;
+                    if (type === 'display' && data) {
+                        // Parse the types and their counts
+                        const typeItems = data.split(',').map(item => {
+                            const [label, countStr] = item.trim().split(/\s*\(\s*|\s*\)\s*/);
+                            return {
+                                label: label,
+                                count: parseInt(countStr) || 0
+                            };
+                        });
+
+                        // Sort by count in descending order
+                        typeItems.sort((a, b) => b.count - a.count);
+
+                        // Calculate total count
+                        const totalCount = typeItems.reduce((sum, item) => sum + item.count, 0);
+
+                        // Calculate cumulative percentage and find cutoff for 90%
+                        let cumulativeCount = 0;
+                        let cutoffIndex = -1;
+
+                        for (let i = 0; i < typeItems.length; i++) {
+                            cumulativeCount += typeItems[i].count;
+                            const cumulativePercentage = (cumulativeCount / totalCount) * 100;
+
+                            if (cumulativePercentage >= 90) {
+                                cutoffIndex = i;
+                                break;
+                            }
+                        }
+
+                        // If we have more types than the cutoff, group the rest as "Other"
+                        if (cutoffIndex >= 0 && cutoffIndex < typeItems.length - 1) {
+                            // Get the top types (up to 90%)
+                            const topTypes = typeItems.slice(0, cutoffIndex + 1);
+
+                            // Calculate the count and percentage for "Other"
+                            const otherCount = totalCount - topTypes.reduce((sum, item) => sum + item.count, 0);
+                            const otherPercentage = Math.round((otherCount / totalCount) * 100);
+
+                            // Get the types that will be grouped as "Other"
+                            const otherTypes = typeItems.slice(cutoffIndex + 1);
+
+                            // If "Other" is just one kind of type, show it normally
+                            if (otherTypes.length === 1) {
+                                const singleType = otherTypes[0];
+                                // Format the top types
+                                const topTypesText = topTypes.map(item => 
+                                    `${item.label} (${item.count})`
+                                ).join(', ');
+
+                                // Add the single type normally
+                                return topTypesText + 
+                                       `, ${singleType.label} (${singleType.count})`;
+                            }
+
+                            const otherTypesText = otherTypes.map(item => 
+                                `${item.label} (${item.count})`
+                            ).join(', ');
+
+                            // Format the top types
+                            const topTypesText = topTypes.map(item => 
+                                `${item.label} (${item.count})`
+                            ).join(', ');
+
+                            // Return the formatted string with top types and "Other"
+                            return topTypesText + 
+                                   `, <span style="text-decoration: underline; font-style: italic;" title="${otherTypesText}">` +
+                                   `Other (${otherCount})</span>`;
+                        } else {
+                            // If all types are within 90%, return the original data
+                            return data;
+                        }
+                    }
+                    return data;
                 }
             },
             {
