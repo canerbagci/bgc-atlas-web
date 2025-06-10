@@ -36,7 +36,7 @@ const jobRouter = require('./routes/jobRouter');
 const app = express();
 app.locals.APP_URL = process.env.APP_URL || '';
 app.locals.MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true' || false;
-app.set('trust proxy', 1 github); // Trust X-Forwarded-For header for rate limiting behind proxy
+app.set('trust proxy', 1); // Trust X-Forwarded-For header for rate limiting behind proxy
 app.use(compression()); // Add compression middleware for faster JSON responses
 app.use(etagMiddleware);
 app.use(cookieParser());
