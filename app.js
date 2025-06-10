@@ -32,6 +32,7 @@ const experimentalRouter = require('./routes/experimentalRouter');
 const ultraDeepSoilRouter = require('./routes/ultraDeepSoilRouter');
 const monthlySoilRouter = require('./routes/monthlySoilRouter');
 const jobRouter = require('./routes/jobRouter');
+const adminRouter = require('./routes/adminRouter');
 
 const app = express();
 app.locals.APP_URL = process.env.APP_URL || '';
@@ -138,7 +139,13 @@ morgan.format('botAware', function(tokens, req, res) {
 app.use(morgan('botAware', { stream: logger.stream }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, path, stat) => {
+    if (path.endsWith('.js')) {
+      res.set('Content-Type', 'application/javascript');
+    }
+  }
+}));
 
 // Apply CSRF protection to all routes except cache invalidation and file upload
 app.use(function(req, res, next) {
@@ -195,6 +202,7 @@ app.use('/', experimentalRouter);
 app.use('/', ultraDeepSoilRouter);
 app.use('/', monthlySoilRouter);
 app.use('/jobs', jobRouter);
+app.use('/admin', adminRouter);
 
 // Start the scheduler
 schedulerService.start().catch(err => {
