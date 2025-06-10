@@ -114,6 +114,38 @@ area.bodyParts {
   margin-bottom: 20px;
 }
 
+// Card collapse styles
+.card {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.collapse {
+  transition: height 0.3s ease;
+}
+
+.card-header {
+  cursor: pointer;
+}
+
+.row {
+  transition: all 0.3s ease;
+}
+
+// Ensure parent containers resize when cards collapse
+.row:has(.collapse:not(.show)) {
+  height: auto;
+}
+
+// Rotate chevron when collapsed
+.card-header .fa-chevron-down {
+  transition: transform 0.3s ease;
+}
+
+.collapsed .fa-chevron-down {
+  transform: rotate(180deg);
+}
+
 canvas#category-chart,
 canvas#product-chart {
   max-width: 100%;

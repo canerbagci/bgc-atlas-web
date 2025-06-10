@@ -397,6 +397,7 @@ function drawTable() {
     var table = $('#bgcTable').DataTable({
         "processing": true,
         "serverSide": true,
+        "responsive": true,
         "searchDelay": 500, // Delay search execution by 500ms after user stops typing
         "ajax": {
             "url": '/bgc-table',
@@ -652,28 +653,83 @@ function downloadTableDataAsJson() {
 
 // Initialize everything when jQuery is ready
 $(document).ready(function () {
-    // Initialize the page content
-    getInfo();
-    plotChart();
-    plotProdChart();
-    plotTaxonomicChart();
-    createMapGCF();
-    createSunburstView('#sunburst-chart');
+    console.log('[DEBUG_LOG] bgcs.js: Document ready event triggered');
 
-    // Initialize the DataTable
-    var table = drawTable();
+    try {
+        // Check if Bootstrap is available
+        if (typeof bootstrap !== 'undefined') {
+            console.log('[DEBUG_LOG] bgcs.js: Bootstrap is available, version:', bootstrap.Tooltip.VERSION);
+        } else {
+            console.error('[DEBUG_LOG] bgcs.js: Bootstrap is not available!');
+        }
 
-    // Add event listeners for checkboxes
-    $('#showCoreMembers').on('change', function() {
-        $('#bgcTable').DataTable().ajax.reload();
-    });
+        // Check for collapse elements
+        const collapseElements = document.querySelectorAll('.collapse');
+        console.log(`[DEBUG_LOG] bgcs.js: Found ${collapseElements.length} collapse elements`);
 
-    $('#showNonPutativeMembers').on('change', function() {
-        $('#bgcTable').DataTable().ajax.reload();
-    });
+        // Log each collapse element's ID for debugging
+        collapseElements.forEach((el, index) => {
+            console.log(`[DEBUG_LOG] bgcs.js: Collapse #${index}: id=${el.id}, classList=${el.className}`);
+        });
 
-    // Activate tooltips when table is redrawn
-    $('#bgcTable').on('draw.dt', function () {
-        $('[data-bs-toggle="tooltip"]').tooltip();
-    });
+        // Check for card headers
+        const cardHeaders = document.querySelectorAll('.card-header');
+        console.log(`[DEBUG_LOG] bgcs.js: Found ${cardHeaders.length} card headers`);
+
+        // Initialize the page content
+        console.log('[DEBUG_LOG] bgcs.js: Initializing page content');
+        getInfo();
+        plotChart();
+        plotProdChart();
+        plotTaxonomicChart();
+        createMapGCF();
+        createSunburstView('#sunburst-chart');
+
+        // Initialize the DataTable
+        console.log('[DEBUG_LOG] bgcs.js: Initializing DataTable');
+        var table = drawTable();
+
+        // Add event listeners for checkboxes
+        $('#showCoreMembers').on('change', function() {
+            console.log('[DEBUG_LOG] bgcs.js: showCoreMembers checkbox changed');
+            $('#bgcTable').DataTable().ajax.reload();
+        });
+
+        $('#showNonPutativeMembers').on('change', function() {
+            console.log('[DEBUG_LOG] bgcs.js: showNonPutativeMembers checkbox changed');
+            $('#bgcTable').DataTable().ajax.reload();
+        });
+
+        // Activate tooltips when table is redrawn
+        $('#bgcTable').on('draw.dt', function () {
+            console.log('[DEBUG_LOG] bgcs.js: DataTable draw event triggered, initializing tooltips');
+            try {
+                $('[data-bs-toggle="tooltip"]').tooltip();
+                console.log('[DEBUG_LOG] bgcs.js: Tooltips initialized successfully');
+            } catch (error) {
+                console.error(`[DEBUG_LOG] bgcs.js: Error initializing tooltips: ${error.message}`);
+            }
+        });
+
+        // Test a collapse operation programmatically after a delay
+        setTimeout(function() {
+            console.log('[DEBUG_LOG] bgcs.js: Testing collapse functionality programmatically');
+            try {
+                const firstCollapseId = collapseElements[0]?.id;
+                if (firstCollapseId) {
+                    console.log(`[DEBUG_LOG] bgcs.js: Attempting to toggle collapse #${firstCollapseId}`);
+                    const collapseElement = document.getElementById(firstCollapseId);
+                    const bsCollapse = new bootstrap.Collapse(collapseElement);
+                    bsCollapse.toggle();
+                    console.log(`[DEBUG_LOG] bgcs.js: Successfully toggled collapse #${firstCollapseId}`);
+                } else {
+                    console.log('[DEBUG_LOG] bgcs.js: No collapse elements found to test');
+                }
+            } catch (error) {
+                console.error(`[DEBUG_LOG] bgcs.js: Error testing collapse functionality: ${error.message}`);
+            }
+        }, 3000);
+    } catch (error) {
+        console.error(`[DEBUG_LOG] bgcs.js: Error in document ready handler: ${error.message}`);
+    }
 });

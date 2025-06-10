@@ -1,4 +1,5 @@
 extends layout
+include components/card
 
 block content
     div.row.flex-fill.d-flex.justify-content-start(style=height="inherit;")
@@ -7,89 +8,91 @@ block content
                 h1 #{GCF ? 'GCF ' + GCF : 'Loading...'}
                 .row
                     .col-md-6
-                        h2 Summary Statistics
-                        div(style="display: flex; justify-content: center;")
-                            table.table(style="font-size: 1.2em; font-weight: bold;")
-                                tr
-                                    td(style="text-align: left;") Total BGCs
-                                    td(style="text-align: left;") :
-                                    td(style="text-align: left;")
-                                        span.badge.badge-primary#bgc-count Loading...
-                                tr
-                                    td(style="text-align: left;") Core BGCs
-                                        span.info-icon(data-bs-toggle="tooltip" title="Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.")
-                                            img(src="/images/info.svg" width="16" height="16" alt="Info" loading="lazy")
-                                    td(style="text-align: left;") :
-                                    td(style="text-align: left;")
-                                        span.badge.badge-primary#core-count Loading...
-                                tr
-                                    td(style="text-align: left;") Non-Putative BGCs
-                                        span.info-icon(data-bs-toggle="tooltip" title="Non-putative BGCs are those that have a membership value less than 0.4 to their assigned GCF.")
-                                            img(src="/images/info.svg" width="16" height="16" alt="Info" loading="lazy")
-                                    td(style="text-align: left;") :
-                                    td(style="text-align: left;")
-                                        span.badge.badge-primary#non-putative-count Loading...
-                                tr
-                                    td(style="text-align: left;") Mean #BGC per sample
-                                    td(style="text-align: left;") :
-                                    td(style="text-align: left;")
-                                        span.badge.badge-primary#meanbgcsamples Loading...
-                                if GCF
+                        +card("Summary Statistics", "", "summaryStatsCollapse")
+                            div(style="display: flex; justify-content: center;")
+                                table.table(style="font-size: 1.2em; font-weight: bold;")
                                     tr
-                                        td(style="text-align: center;" colspan="3")
-                                            a.btn.btn-info(href="/gcf-gene-view?gcf=" + GCF title="View gene organization") View Genes
+                                        td(style="text-align: left;") Total BGCs
+                                        td(style="text-align: left;") :
+                                        td(style="text-align: left;")
+                                            span.badge.badge-primary#bgc-count Loading...
+                                    tr
+                                        td(style="text-align: left;") Core BGCs
+                                            span.info-icon(data-bs-toggle="tooltip" title="Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.")
+                                                img(src="/images/info.svg" width="16" height="16" alt="Info" loading="lazy")
+                                        td(style="text-align: left;") :
+                                        td(style="text-align: left;")
+                                            span.badge.badge-primary#core-count Loading...
+                                    tr
+                                        td(style="text-align: left;") Non-Putative BGCs
+                                            span.info-icon(data-bs-toggle="tooltip" title="Non-putative BGCs are those that have a membership value less than 0.4 to their assigned GCF.")
+                                                img(src="/images/info.svg" width="16" height="16" alt="Info" loading="lazy")
+                                        td(style="text-align: left;") :
+                                        td(style="text-align: left;")
+                                            span.badge.badge-primary#non-putative-count Loading...
+                                    tr
+                                        td(style="text-align: left;") Mean #BGC per sample
+                                        td(style="text-align: left;") :
+                                        td(style="text-align: left;")
+                                            span.badge.badge-primary#meanbgcsamples Loading...
+                                    if GCF
+                                        tr
+                                            td(style="text-align: center;" colspan="3")
+                                                a.btn.btn-info(href="/gcf-gene-view?gcf=" + GCF title="View gene organization") View Genes
                     .col-md-6
-                        h2 Biome Distribution
-                        div#sunburst-chart Loading...
+                        +card("Biome Distribution", "", "biomeDistCollapse")
+                            div#sunburst-chart(style="width: 100%; overflow-x: auto; max-width: 100%;") Loading...
                 .row
-                    h2 Regions Summary
-                    .col-md-6
-                        .chart-container
-                            canvas#category-chart Loading...
-                    .col-md-6
-                        .chart-container
-                            canvas#product-chart Loading...
+                    +card("Regions Summary", "", "regionsSummaryCollapse")
+                        .row
+                            .col-md-6
+                                .chart-container
+                                    canvas#category-chart Loading...
+                            .col-md-6
+                                .chart-container
+                                    canvas#product-chart Loading...
                 .row
-                    h2 Taxonomic Distribution
-                    .col-md-12
-                        .chart-container
-                            canvas#taxonomic-chart Loading...
+                    +card("Taxonomic Distribution", "", "taxonomicDistCollapse")
+                        .col-md-12
+                            .chart-container
+                                canvas#taxonomic-chart Loading...
                 .row
-                    h2 Geographical Distribution
-                    .col-md-12
-                        div#map(style="height: 500px;")
+                    +card("Geographical Distribution", "", "geoDistCollapse")
+                        .col-md-12
+                            div#map(style="height: 500px;")
                 .row
-                    h2 BGC Table
-                    .col-md-12
-                        div.mb-3
-                            div.form-check.form-check-inline
-                                input.form-check-input.checkbox-custom(type="checkbox" id="showCoreMembers" name="showCoreMembers" aria-label="Show only core members")
-                                label.form-check-label(for="showCoreMembers") Show only core members
-                                span.info-icon(data-bs-toggle="tooltip" title="Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.")
-                                    img(src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy")
-                            div.form-check.form-check-inline.ms-3
-                                input.form-check-input.checkbox-custom(type="checkbox" id="showNonPutativeMembers" name="showNonPutativeMembers" aria-label="Show only non-putative members")
-                                label.form-check-label(for="showNonPutativeMembers") Show only non-putative members
-                                span.info-icon(data-bs-toggle="tooltip" title="Non-putative BGCs are those that have a membership value less than 0.4 to their assigned GCF.")
-                                    img(src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy")
+                    +card("BGC Table", "", "bgcTableCollapse")
+                        .col-md-12
+                            div.mb-3
+                                div.form-check.form-check-inline
+                                    input.form-check-input.checkbox-custom(type="checkbox" id="showCoreMembers" name="showCoreMembers" aria-label="Show only core members")
+                                    label.form-check-label(for="showCoreMembers") Show only core members
+                                    span.info-icon(data-bs-toggle="tooltip" title="Core BGCs are those that are annotated as complete by antiSMASH and used to construct the initial clustering of BGCs into GCFs.")
+                                        img(src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy")
+                                div.form-check.form-check-inline.ms-3
+                                    input.form-check-input.checkbox-custom(type="checkbox" id="showNonPutativeMembers" name="showNonPutativeMembers" aria-label="Show only non-putative members")
+                                    label.form-check-label(for="showNonPutativeMembers") Show only non-putative members
+                                    span.info-icon(data-bs-toggle="tooltip" title="Non-putative BGCs are those that have a membership value less than 0.4 to their assigned GCF.")
+                                        img(src="/images/info.svg" width="12" height="12" alt="Info" loading="lazy")
 
-                        table#bgcTable(style="width:100%;", class="stripe")
+                            table#bgcTable(style="width:100%;", class="stripe")
 
 
 block append head
     // Stylesheets for DataTables and its extensions
     link(rel="stylesheet", href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css")
+    link(rel="stylesheet", href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css")
     link(rel="stylesheet", href="https://cdn.datatables.net/searchbuilder/1.4.2/css/searchBuilder.bootstrap5.min.css")
     link(rel="stylesheet", href="https://cdn.datatables.net/datetime/1.4.1/css/dataTables.dateTime.min.css")
     link(rel="stylesheet", href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css")
 
-    // Stylesheets for Bootstrap and Leaflet
-    link(rel='stylesheet', href='https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css')
+    // Stylesheets for Leaflet
     link(rel='stylesheet', href='https://unpkg.com/leaflet@1.9.3/dist/leaflet.css')
     link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css')
 
     // Scripts for DataTables and its extensions
     script(src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.js")
+    script(src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js")
     script(src="https://cdn.datatables.net/searchbuilder/1.4.2/js/dataTables.searchBuilder.min.js")
     script(src="https://cdn.datatables.net/plug-ins/1.13.7/api/fnSetFilteringDelay.js")
     script(src="https://cdn.datatables.net/searchbuilder/1.4.2/js/searchBuilder.bootstrap5.min.js")
@@ -105,7 +108,7 @@ block append head
     script(src='https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js')
     script(src="https://cdn.jsdelivr.net/npm/vega@5.27.0")
 
-    script(src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js")
+    // Bootstrap is already loaded in layout.pug, no need to load it again
     script(src="https://cdn.jsdelivr.net/npm/vega-tooltip@0.32.0/build/vega-tooltip.min.js")
 
     // Scripts for custom JavaScript
@@ -122,6 +125,17 @@ block append head
 
         .putative-bgc {
             background-color: #ffcccb !important;
+        }
+
+        /* Fix for table overflow */
+        #bgcTable_wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table.dataTable {
+            width: 100% !important;
+            max-width: 100% !important;
         }
 
         .checkbox-custom {

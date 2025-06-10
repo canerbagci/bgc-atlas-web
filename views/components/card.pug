@@ -1,7 +1,15 @@
-mixin card(title)
-  .card.mb-3
+mixin card(title, className, collapseId)
+  .card.mb-3(class=className)
     if title
-      .card-header #{title}
-    .card-body
-      block
-
+      .card-header.d-flex.justify-content-between.align-items-center
+        strong #{title}
+        if collapseId
+          button.btn.btn-sm.btn-outline-secondary(type='button', data-bs-toggle='collapse', data-bs-target=`#${collapseId}` aria-expanded='true' aria-controls=collapseId)
+            i.fas.fa-chevron-down
+    if collapseId
+      .collapse.show(id=collapseId)
+        .card-body
+          block
+    else
+      .card-body
+        block
