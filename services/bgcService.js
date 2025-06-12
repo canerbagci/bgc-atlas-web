@@ -16,14 +16,17 @@ const sqlUtils = {
    * @returns {string} - The WHERE condition
    */
   createWhereCondition(column, operator, paramIndex, isArrayColumn = false) {
+    // For text columns that need to be treated as arrays, use string_to_array before unnest
+    const arrayExpr = isArrayColumn ? `unnest(string_to_array(${column}, ','))` : column;
+
     switch (operator) {
       case '=':
         return isArrayColumn
-          ? `EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem = $${paramIndex})`
+          ? `EXISTS (SELECT 1 FROM ${arrayExpr} AS elem WHERE elem = $${paramIndex})`
           : `${column} = $${paramIndex}`;
       case '!=':
         return isArrayColumn
-          ? `NOT EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem = $${paramIndex})`
+          ? `NOT EXISTS (SELECT 1 FROM ${arrayExpr} AS elem WHERE elem = $${paramIndex})`
           : `${column} != $${paramIndex}`;
       case '<':
       case '>':
@@ -33,35 +36,35 @@ const sqlUtils = {
         return `${column} ${operator} $${paramIndex}`;
       case 'between':
         return isArrayColumn
-          ? `EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem BETWEEN $${paramIndex} AND $${paramIndex + 1})`
+          ? `EXISTS (SELECT 1 FROM ${arrayExpr} AS elem WHERE elem BETWEEN $${paramIndex} AND $${paramIndex + 1})`
           : `${column} BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
       case 'not between':
         return isArrayColumn
-          ? `NOT EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem BETWEEN $${paramIndex} AND $${paramIndex + 1})`
+          ? `NOT EXISTS (SELECT 1 FROM ${arrayExpr} AS elem WHERE elem BETWEEN $${paramIndex} AND $${paramIndex + 1})`
           : `${column} NOT BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
       case 'contains':
         return isArrayColumn
-          ? `EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem LIKE $${paramIndex})`
+          ? `EXISTS (SELECT 1 FROM ${arrayExpr} AS elem WHERE elem LIKE $${paramIndex})`
           : `${column} LIKE $${paramIndex}`;
       case '!contains':
         return isArrayColumn
-          ? `NOT EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem LIKE $${paramIndex})`
+          ? `NOT EXISTS (SELECT 1 FROM ${arrayExpr} AS elem WHERE elem LIKE $${paramIndex})`
           : `${column} NOT LIKE $${paramIndex}`;
       case 'starts':
         return isArrayColumn
-          ? `EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem LIKE $${paramIndex})`
+          ? `EXISTS (SELECT 1 FROM ${arrayExpr} AS elem WHERE elem LIKE $${paramIndex})`
           : `${column} LIKE $${paramIndex}`;
       case '!starts':
         return isArrayColumn
-          ? `NOT EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem LIKE $${paramIndex})`
+          ? `NOT EXISTS (SELECT 1 FROM ${arrayExpr} AS elem WHERE elem LIKE $${paramIndex})`
           : `${column} NOT LIKE $${paramIndex}`;
       case 'ends':
         return isArrayColumn
-          ? `EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem LIKE $${paramIndex})`
+          ? `EXISTS (SELECT 1 FROM ${arrayExpr} AS elem WHERE elem LIKE $${paramIndex})`
           : `${column} LIKE $${paramIndex}`;
       case '!ends':
         return isArrayColumn
-          ? `NOT EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem LIKE $${paramIndex})`
+          ? `NOT EXISTS (SELECT 1 FROM ${arrayExpr} AS elem WHERE elem LIKE $${paramIndex})`
           : `${column} NOT LIKE $${paramIndex}`;
       case 'null':
         return `${column} IS NULL`;
@@ -694,6 +697,7 @@ async function getGcfTable(options = {}) {
     let whereClauses = [];
 
     // Process search builder criteria
+    // These columns are actually text fields that need to be treated as arrays
     const isArrayColumn = (column) => 
       ['core_products', 'all_products', 'core_biomes', 'all_biomes'].includes(column);
 
@@ -721,12 +725,12 @@ async function getGcfTable(options = {}) {
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
-      // For array columns, use unnest directly
-      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(g.core_products) AS cp WHERE cp ILIKE $${paramIndex})`);
+      // For text columns that need to be treated as arrays, use string_to_array before unnest
+      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(g.core_products, ',')) AS cp WHERE cp ILIKE $${paramIndex})`);
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
-      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(g.core_biomes) AS cb WHERE cb ILIKE $${paramIndex})`);
+      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(g.core_biomes, ',')) AS cb WHERE cb ILIKE $${paramIndex})`);
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
@@ -738,11 +742,11 @@ async function getGcfTable(options = {}) {
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
-      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(g.all_products) AS ap WHERE ap ILIKE $${paramIndex})`);
+      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(g.all_products, ',')) AS ap WHERE ap ILIKE $${paramIndex})`);
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
-      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(g.all_biomes) AS ab WHERE ab ILIKE $${paramIndex})`);
+      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(g.all_biomes, ',')) AS ab WHERE ab ILIKE $${paramIndex})`);
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
