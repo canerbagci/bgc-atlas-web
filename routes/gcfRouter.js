@@ -41,12 +41,17 @@ router.get('/gcf-table-sunburst', async (req, res, next) => {
 
 router.get('/gcf-table', async (req, res, next) => {
   try {
+    // Safely access nested properties
+    const searchValue = req.query.search && req.query.search.value ? req.query.search.value : null;
+
     // Extract pagination parameters from the request
     const options = {
       draw: req.query.draw,
       start: parseInt(req.query.start) || 0,
       length: parseInt(req.query.length) || 10,
-      order: req.query.order ? JSON.parse(req.query.order) : []
+      order: req.query.order ? JSON.parse(req.query.order) : [],
+      searchValue: searchValue,
+      searchBuilder: req.query.searchBuilder ? JSON.parse(req.query.searchBuilder) : null
     };
 
     // Get paginated data from the service

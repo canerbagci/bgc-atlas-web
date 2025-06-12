@@ -428,6 +428,12 @@ $(document).ready(function () {
             "data": function(d) {
                 // Convert the order array to a string for transmission
                 d.order = JSON.stringify(d.order);
+
+                // Include searchBuilder data if available
+                if (d.searchBuilder) {
+                    d.searchBuilder = JSON.stringify(d.searchBuilder);
+                }
+
                 return d;
             },
             "dataSrc": function(json) {
