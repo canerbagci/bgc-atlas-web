@@ -108,7 +108,8 @@ router.get('/dashboard', isAuthenticated, async (req, res) => {
 
         // Extract IP addresses and count unique ones
         const ipAddresses = new Set();
-        const visitorsByCountry = {};
+        const visitorsByIP = {};
+        const visitCountByIP = {};
 
         combinedLogContent.split('\n').forEach(line => {
           if (!line.trim()) return;
@@ -119,7 +120,11 @@ router.get('/dashboard', isAuthenticated, async (req, res) => {
               // Extract IP address from log message
               const ipMatch = logEntry.message.match(/^(\d+\.\d+\.\d+\.\d+)/);
               if (ipMatch && ipMatch[1]) {
-                ipAddresses.add(ipMatch[1]);
+                const ip = ipMatch[1];
+                ipAddresses.add(ip);
+
+                // Count visits for each IP
+                visitCountByIP[ip] = (visitCountByIP[ip] || 0) + 1;
 
                 // Extract country from geolocation info at the end of the log entry
                 // The geolocation is the last part of the log entry after the user-agent
@@ -129,7 +134,11 @@ router.get('/dashboard', isAuthenticated, async (req, res) => {
                   const geoInfo = parts[parts.length - 1].trim();
                   if (geoInfo && geoInfo !== '') {
                     const country = geoInfo.split(',')[0].trim();
-                    visitorsByCountry[country] = (visitorsByCountry[country] || 0) + 1;
+
+                    // Store country with IP
+                    if (!visitorsByIP[ip]) {
+                      visitorsByIP[ip] = { country };
+                    }
                   }
                 }
               }
@@ -139,16 +148,41 @@ router.get('/dashboard', isAuthenticated, async (req, res) => {
           }
         });
 
+        // Create array of unique visitors by IP
+        const uniqueIPsList = Array.from(ipAddresses).map(ip => ({
+          ip,
+          country: visitorsByIP[ip] ? visitorsByIP[ip].country : 'Unknown',
+          visits: visitCountByIP[ip] || 1
+        }));
+
+        // Group IPs by country for backward compatibility
+        const ipsByCountry = {};
+        uniqueIPsList.forEach(visitor => {
+          if (!ipsByCountry[visitor.country]) {
+            ipsByCountry[visitor.country] = [];
+          }
+          ipsByCountry[visitor.country].push(visitor.ip);
+        });
+
         uniqueVisitors = {
           total: ipAddresses.size,
-          byCountry: Object.entries(visitorsByCountry)
-            .map(([country, count]) => ({ country, count }))
+          byIP: uniqueIPsList,
+          byCountry: Object.entries(ipsByCountry)
+            .map(([country, ips]) => ({ 
+              country, 
+              count: ips.length,
+              ips: ips
+            }))
             .sort((a, b) => b.count - a.count)
         };
       }
     } catch (error) {
       logger.error('Error analyzing visitor logs:', error);
-      uniqueVisitors = { total: 0, byCountry: [] };
+      uniqueVisitors = { 
+        total: 0, 
+        byIP: [], 
+        byCountry: [] 
+      };
     }
 
     res.render('admin/dashboard', {

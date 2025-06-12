@@ -33,7 +33,7 @@ const storage = multer.diskStorage({
       const baseName = safeName.replace(/\.[^/.]+$/, "");
       // Generate a random 3-digit number for XXX
       const randomNum = Math.floor(Math.random() * 900) + 100; // 100-999
-      safeName = `${baseName}_region${randomNum}.gbk`;
+      safeName = `${baseName}.region${randomNum}.gbk`;
     }
 
     const uniqueName = `${uuidv4()}_${safeName}`;

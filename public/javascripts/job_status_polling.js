@@ -26,7 +26,10 @@
         nameCell.textContent = item.bgc_name;
 
         const gcfLink = document.createElement('a');
-        const base = (window.APP_URL || '');
+        let base = (window.APP_URL || '');
+        console.log(`Base URL: ${base}`);
+        base = base.endsWith('/') ? base.slice(0, -1) : base;
+        console.log(`Adjusted Base URL: ${base}`);
         gcfLink.href = `${base}/bgcs?gcf=${item.gcf_id}`;
         gcfLink.textContent = item.gcf_id;
         gcfLink.target = '_blank';
@@ -183,47 +186,71 @@
     JS.updateJobIdDisplay(jobId);
     JS.checkJobStatus(jobId);
 
-    const eventSource = new EventSource('/events');
-    eventSource.onmessage = function(event){
-      const data = JSON.parse(event.data);
-      if(data.jobId && data.jobId === jobId){
-        const statusEl = document.getElementById('status');
-        statusEl.innerHTML = `<strong>Status:</strong> ${data.status}`;
+    // Try to use EventSource for real-time updates, with fallback to polling
+    let usePolling = false;
+    let eventSource;
 
-        const queueInfo = document.getElementById('queueInfo');
-        if(queueInfo){
-          if(data.status === 'Queued' && data.queuePosition){
-            const queuePosition = document.getElementById('queuePosition');
-            const totalJobs = document.getElementById('totalJobs');
-            const estimatedTime = document.getElementById('estimatedTime');
-            if(queuePosition) queuePosition.textContent = data.queuePosition;
-            if(totalJobs) totalJobs.textContent = data.totalJobs || 0;
-            if(estimatedTime && data.queuePosition > 1){
-              const jobsAhead = data.queuePosition - 1;
-              const estMin = jobsAhead * 2;
-              estimatedTime.textContent = `Estimated wait time: approximately ${estMin} minutes`;
-            } else if(estimatedTime){
-              estimatedTime.textContent = 'Your job is next in the queue!';
+    try {
+      eventSource = new EventSource('/events');
+
+      eventSource.onmessage = function(event){
+        const data = JSON.parse(event.data);
+        if(data.jobId && data.jobId === jobId){
+          const statusEl = document.getElementById('status');
+          statusEl.innerHTML = `<strong>Status:</strong> ${data.status}`;
+
+          const queueInfo = document.getElementById('queueInfo');
+          if(queueInfo){
+            if(data.status === 'Queued' && data.queuePosition){
+              const queuePosition = document.getElementById('queuePosition');
+              const totalJobs = document.getElementById('totalJobs');
+              const estimatedTime = document.getElementById('estimatedTime');
+              if(queuePosition) queuePosition.textContent = data.queuePosition;
+              if(totalJobs) totalJobs.textContent = data.totalJobs || 0;
+              if(estimatedTime && data.queuePosition > 1){
+                const jobsAhead = data.queuePosition - 1;
+                const estMin = jobsAhead * 2;
+                estimatedTime.textContent = `Estimated wait time: approximately ${estMin} minutes`;
+              } else if(estimatedTime){
+                estimatedTime.textContent = 'Your job is next in the queue!';
+              }
+              queueInfo.classList.remove('d-none');
+            } else {
+              queueInfo.classList.add('d-none');
             }
-            queueInfo.classList.remove('d-none');
-          } else {
-            queueInfo.classList.add('d-none');
+          }
+
+          const loading = document.getElementById('loadingIndicator');
+          if(loading){
+            if(data.status === 'Running' || data.status === 'Uploading'){ loading.classList.remove('d-none'); }
+            else { loading.classList.add('d-none'); }
+          }
+
+          if(data.status === 'completed' && data.records){
+            const hideToggle = document.getElementById('hidePutativeToggle');
+            const filter = hideToggle ? hideToggle.checked : false;
+            JS.displayResults(data.records, filter);
+            JS.updateMapWithResults(data.records, filter);
           }
         }
+      };
 
-        const loading = document.getElementById('loadingIndicator');
-        if(loading){
-          if(data.status === 'Running' || data.status === 'Uploading'){ loading.classList.remove('d-none'); }
-          else { loading.classList.add('d-none'); }
-        }
+      // Handle EventSource errors
+      eventSource.onerror = function(event) {
+        console.info('EventSource connection failed - falling back to polling');
+        // Close the connection and fall back to polling
+        eventSource.close();
+        usePolling = true;
+        // Start polling immediately
+        JS.checkJobStatus(jobId);
+      };
+    } catch (error) {
+      console.info('EventSource not supported or failed to initialize:', error);
+      usePolling = true;
+      // Start polling immediately
+      JS.checkJobStatus(jobId);
+    }
 
-        if(data.status === 'completed' && data.records){
-          const hideToggle = document.getElementById('hidePutativeToggle');
-          const filter = hideToggle ? hideToggle.checked : false;
-          JS.displayResults(data.records, filter);
-          JS.updateMapWithResults(data.records, filter);
-        }
-      }
-    };
+    // If we're using polling, don't call checkJobStatus initially as it will be called by the error handler
   });
 })(window);

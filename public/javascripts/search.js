@@ -288,35 +288,55 @@ document.addEventListener('DOMContentLoaded', function() {
     // Display previous jobs from local storage
     displayPreviousJobs();
 
-    // Listen for server-sent events
-    const eventSource = new EventSource('/events');
-    eventSource.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-        const status = document.getElementById('status');
+    // Listen for server-sent events with fallback to polling
+    try {
+        const eventSource = new EventSource('/events');
 
-        status.innerHTML = `<strong>Status:</strong> ${data.status || 'Idle'}`;
+        eventSource.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            const status = document.getElementById('status');
 
-        // Store job ID if provided
-        if (data.jobId) {
-            // Save the job ID to the list of previous jobs
-            saveJobId(data.jobId);
+            status.innerHTML = `<strong>Status:</strong> ${data.status || 'Idle'}`;
 
-            // Store timestamp for this job if not already stored
-            if (!localStorage.getItem(`job_${data.jobId}_timestamp`)) {
-                localStorage.setItem(`job_${data.jobId}_timestamp`, Date.now().toString());
+            // Store job ID if provided
+            if (data.jobId) {
+                // Save the job ID to the list of previous jobs
+                saveJobId(data.jobId);
+
+                // Store timestamp for this job if not already stored
+                if (!localStorage.getItem(`job_${data.jobId}_timestamp`)) {
+                    localStorage.setItem(`job_${data.jobId}_timestamp`, Date.now().toString());
+                }
+
+                updateJobIdDisplay(data.jobId);
+
+                // Refresh the list of previous jobs
+                displayPreviousJobs();
             }
 
-            updateJobIdDisplay(data.jobId);
+            // Update queue status if this is a connection event or if queue information changed
+            if (data.type === 'connection' || data.queuePosition) {
+                fetchQueueStatus();
+            }
+        };
 
-            // Refresh the list of previous jobs
-            displayPreviousJobs();
-        }
+        // Handle EventSource errors
+        eventSource.onerror = function(event) {
+            console.info('EventSource connection failed - falling back to polling');
+            // Close the connection and fall back to polling
+            eventSource.close();
 
-        // Update queue status if this is a connection event or if queue information changed
-        if (data.type === 'connection' || data.queuePosition) {
-            fetchQueueStatus();
-        }
-    };
+            // Set up a polling interval for queue status as fallback
+            console.log('Falling back to polling for queue status');
+            setInterval(fetchQueueStatus, 10000); // Poll more frequently (every 10 seconds)
+        };
+    } catch (error) {
+        console.info('EventSource not supported or failed to initialize:', error);
+
+        // Set up a polling interval for queue status as fallback
+        console.log('Falling back to polling for queue status');
+        setInterval(fetchQueueStatus, 10000); // Poll more frequently (every 10 seconds)
+    }
 
     // Add job ID lookup form handler
     const lookupForm = document.getElementById('jobLookupForm');

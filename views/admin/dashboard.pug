@@ -7,7 +7,7 @@ block content
         h1.display-4 Admin Dashboard
         .d-flex.justify-content-end
           a.btn.btn-outline-danger(href="/admin/logout") Logout
-    
+
     .row
       // Job Queue Section
       .col-md-6.mb-4
@@ -31,7 +31,7 @@ block content
                   .card-body
                     h4= queueStatus.completedJobs
                     p.text-muted Completed Jobs
-            
+
             if queueStatus.queuedJobs > 0
               h5.mt-4 Queued Jobs
               .table-responsive
@@ -47,7 +47,7 @@ block content
                         td= job.id
                         td= job.type
                         td= new Date(job.createdAt).toLocaleString()
-            
+
             if queueStatus.runningJobs > 0
               h5.mt-4 Running Jobs
               .table-responsive
@@ -63,7 +63,7 @@ block content
                         td= job.id
                         td= job.type
                         td= new Date(job.startedAt).toLocaleString()
-      
+
       // Unique Visitors Section
       .col-md-6.mb-4
         .card.h-100
@@ -74,21 +74,42 @@ block content
               .col-12.text-center
                 h2.display-4= uniqueVisitors.total
                 p.text-muted Total Unique Visitors
-            
-            if uniqueVisitors.byCountry && uniqueVisitors.byCountry.length > 0
-              h5 Visitors by Country
+
+            if uniqueVisitors.byIP && uniqueVisitors.byIP.length > 0
+              h5 Unique Visitors by IP
+              .table-responsive
+                table.table.table-sm.table-striped
+                  thead
+                    tr
+                      th IP Address
+                      th Country
+                      th Visits
+                  tbody
+                    each visitor in uniqueVisitors.byIP
+                      tr
+                        td= visitor.ip
+                        td= visitor.country || 'Unknown'
+                        td= visitor.visits || 1
+
+              h5.mt-4 Summary by Country
               .table-responsive
                 table.table.table-sm.table-striped
                   thead
                     tr
                       th Country
                       th Count
+                      th IP Addresses
                   tbody
                     each visitor in uniqueVisitors.byCountry
                       tr
                         td= visitor.country
                         td= visitor.count
-    
+                        td
+                          if visitor.ips && visitor.ips.length > 0
+                            small.text-muted= visitor.ips.join(', ')
+                          else
+                            small.text-muted No IPs recorded
+
     .row
       // Error Logs Section
       .col-md-6.mb-4
@@ -110,7 +131,7 @@ block content
                         td= error.message || error.stack || JSON.stringify(error)
             else
               .alert.alert-success No recent errors! 👍
-      
+
       // Performance Metrics Section
       .col-md-6.mb-4
         .card.h-100
@@ -123,7 +144,7 @@ block content
                   .card-body
                     h5 Uptime
                     p.mb-0= Math.floor(performanceMetrics.uptime / 86400) + " days, " + Math.floor((performanceMetrics.uptime % 86400) / 3600) + " hours, " + Math.floor((performanceMetrics.uptime % 3600) / 60) + " minutes"
-              
+
               .col-md-6.mb-3
                 .card.bg-light
                   .card-body
@@ -132,7 +153,7 @@ block content
                       - const memoryUsagePercent = Math.round((performanceMetrics.memoryUsage.rss / performanceMetrics.systemMemory.total) * 100)
                       .progress-bar(role="progressbar", style=`width: ${memoryUsagePercent}%`, aria-valuenow=memoryUsagePercent, aria-valuemin="0", aria-valuemax="100")= memoryUsagePercent + "%"
                     p.mb-0= Math.round(performanceMetrics.memoryUsage.rss / 1024 / 1024) + " MB / " + Math.round(performanceMetrics.systemMemory.total / 1024 / 1024) + " MB"
-            
+
             .row
               .col-md-6.mb-3
                 .card.bg-light
@@ -141,7 +162,7 @@ block content
                     p.mb-0 1 min: #{performanceMetrics.loadAverage[0].toFixed(2)}
                     p.mb-0 5 min: #{performanceMetrics.loadAverage[1].toFixed(2)}
                     p.mb-0 15 min: #{performanceMetrics.loadAverage[2].toFixed(2)}
-              
+
               .col-md-6.mb-3
                 .card.bg-light
                   .card-body
