@@ -26,10 +26,11 @@
         nameCell.textContent = item.bgc_name;
 
         const gcfLink = document.createElement('a');
+        // Get base URL and ensure it doesn't have a trailing slash
         let base = (window.APP_URL || '');
-        console.log(`Base URL: ${base}`);
-        base = base.endsWith('/') ? base.slice(0, -1) : base;
-        console.log(`Adjusted Base URL: ${base}`);
+        if (base.endsWith('/')) {
+          base = base.slice(0, -1);
+        }
         gcfLink.href = `${base}/bgcs?gcf=${item.gcf_id}`;
         gcfLink.textContent = item.gcf_id;
         gcfLink.target = '_blank';

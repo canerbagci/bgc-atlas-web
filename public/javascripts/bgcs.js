@@ -506,8 +506,6 @@ function drawTable() {
                 biomeCell.html(biomeCell.html().replaceAll('root:', ''));
                 var assemblyCell = $(row).find('td').eq(1);
                 var assemblyID = assemblyCell.html();
-                base = '';
-                base = base.replace(/\/$/, ''); // Remove trailing slash if exists
                 assemblyCell.html('<a href="' + base + '/antismash?dataset=' + assemblyCell.html() + '" target="_blank">' + assemblyCell.html() + '</a>');
 
                 // assemblyCell.html('<a href="https://bgc-atlas.ziemertlab.com/datasets/' + assemblyCell.html() + '/antismash/index.html" target="_blank">' + assemblyCell.html() + '</a>');
@@ -655,6 +653,14 @@ function downloadTableDataAsJson() {
 // Initialize everything when jQuery is ready
 $(document).ready(function () {
     console.log('[DEBUG_LOG] bgcs.js: Document ready event triggered');
+
+    // Initialize base URL for links
+    window.base = (window.APP_URL || '');
+    // Remove trailing slash if it exists
+    if (window.base.endsWith('/')) {
+        window.base = window.base.slice(0, -1);
+    }
+    console.log('[DEBUG_LOG] bgcs.js: Base URL initialized:', window.base);
 
     try {
         // Check if Bootstrap is available

@@ -35,7 +35,13 @@ const jobRouter = require('./routes/jobRouter');
 const adminRouter = require('./routes/adminRouter');
 
 const app = express();
-app.locals.APP_URL = process.env.APP_URL || '';
+// Ensure APP_URL has a protocol
+let appUrl = process.env.APP_URL || '';
+// If APP_URL is not empty and doesn't start with http:// or https://, add https://
+if (appUrl && !appUrl.match(/^https?:\/\//)) {
+  appUrl = 'https://' + appUrl;
+}
+app.locals.APP_URL = appUrl;
 app.locals.MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true' || false;
 app.set('trust proxy', 1); // Trust X-Forwarded-For header for rate limiting behind proxy
 app.use(compression()); // Add compression middleware for faster JSON responses
