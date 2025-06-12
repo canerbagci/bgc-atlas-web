@@ -4,6 +4,148 @@ const debug = require('debug')('bgc-atlas:bgcService');
 const logger = require('../utils/logger');
 
 /**
+ * SQL query builder utilities
+ */
+const sqlUtils = {
+  /**
+   * Creates a parameterized WHERE condition for array columns
+   * @param {string} column - The column name
+   * @param {string} operator - The operator (=, !=, etc.)
+   * @param {number} paramIndex - The parameter index
+   * @param {boolean} isArrayColumn - Whether the column is an array
+   * @returns {string} - The WHERE condition
+   */
+  createWhereCondition(column, operator, paramIndex, isArrayColumn = false) {
+    switch (operator) {
+      case '=':
+        return isArrayColumn
+          ? `EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem = $${paramIndex})`
+          : `${column} = $${paramIndex}`;
+      case '!=':
+        return isArrayColumn
+          ? `NOT EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem = $${paramIndex})`
+          : `${column} != $${paramIndex}`;
+      case '<':
+      case '>':
+      case '<=':
+      case '>=':
+        // These operators don't make sense for arrays, so we'll just use them as-is
+        return `${column} ${operator} $${paramIndex}`;
+      case 'between':
+        return isArrayColumn
+          ? `EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem BETWEEN $${paramIndex} AND $${paramIndex + 1})`
+          : `${column} BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
+      case 'not between':
+        return isArrayColumn
+          ? `NOT EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem BETWEEN $${paramIndex} AND $${paramIndex + 1})`
+          : `${column} NOT BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
+      case 'contains':
+        return isArrayColumn
+          ? `EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem LIKE $${paramIndex})`
+          : `${column} LIKE $${paramIndex}`;
+      case '!contains':
+        return isArrayColumn
+          ? `NOT EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem LIKE $${paramIndex})`
+          : `${column} NOT LIKE $${paramIndex}`;
+      case 'starts':
+        return isArrayColumn
+          ? `EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem LIKE $${paramIndex})`
+          : `${column} LIKE $${paramIndex}`;
+      case '!starts':
+        return isArrayColumn
+          ? `NOT EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem LIKE $${paramIndex})`
+          : `${column} NOT LIKE $${paramIndex}`;
+      case 'ends':
+        return isArrayColumn
+          ? `EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem LIKE $${paramIndex})`
+          : `${column} LIKE $${paramIndex}`;
+      case '!ends':
+        return isArrayColumn
+          ? `NOT EXISTS (SELECT 1 FROM unnest(${column}) AS elem WHERE elem LIKE $${paramIndex})`
+          : `${column} NOT LIKE $${paramIndex}`;
+      case 'null':
+        return `${column} IS NULL`;
+      case '!null':
+        return `${column} IS NOT NULL`;
+      default:
+        throw new Error(`Unsupported operator: ${operator}`);
+    }
+  },
+
+  /**
+   * Adds a filter for GCF ID
+   * @param {number|null} gcfId - The GCF ID
+   * @param {string} columnName - The column name
+   * @param {Array} whereClauses - The array of WHERE clauses
+   * @param {Array} params - The array of parameters
+   * @param {number} paramIndex - The current parameter index
+   * @returns {number} - The updated parameter index
+   */
+  addGcfFilter(gcfId, columnName, whereClauses, params, paramIndex) {
+    if (gcfId !== null) {
+      whereClauses.push(`${columnName} = $${paramIndex}`);
+      params.push(gcfId);
+      paramIndex++;
+    }
+    return paramIndex;
+  },
+
+  /**
+   * Adds a filter for samples
+   * @param {string[]|null} samples - The samples
+   * @param {string} columnName - The column name
+   * @param {Array} whereClauses - The array of WHERE clauses
+   * @param {Array} params - The array of parameters
+   * @param {number} paramIndex - The current parameter index
+   * @returns {number} - The updated parameter index
+   */
+  addSamplesFilter(samples, columnName, whereClauses, params, paramIndex) {
+    if (samples && samples.length > 0) {
+      const placeholders = samples.map((_, idx) => `$${paramIndex + idx}`).join(', ');
+      whereClauses.push(`${columnName} IN (${placeholders})`);
+      params.push(...samples);
+      paramIndex += samples.length;
+    }
+    return paramIndex;
+  },
+
+  /**
+   * Processes search builder criteria
+   * @param {Array} criteria - The search builder criteria
+   * @param {Array} whereClauses - The array of WHERE clauses
+   * @param {Array} params - The array of parameters
+   * @param {number} paramIndex - The current parameter index
+   * @param {Function} isArrayColumn - Function to determine if a column is an array
+   * @param {Function} getQualifiedColumn - Function to get the qualified column name
+   * @returns {number} - The updated parameter index
+   */
+  processSearchBuilderCriteria(criteria, whereClauses, params, paramIndex, isArrayColumn, getQualifiedColumn) {
+    for (const criterion of criteria) {
+      const { origData, condition, value, value1 } = criterion;
+      const qualifiedColumn = getQualifiedColumn(origData);
+      const isArray = isArrayColumn(origData);
+
+      const whereCondition = this.createWhereCondition(qualifiedColumn, condition, paramIndex, isArray);
+      whereClauses.push(whereCondition);
+
+      // Add parameters based on the condition
+      if (['=', '!=', '<', '>', '<=', '>=', 'contains', '!contains', 'starts', '!starts', 'ends', '!ends'].includes(condition)) {
+        const paramValue = ['contains', '!contains'].includes(condition) ? `%${value}%` :
+                          ['starts', '!starts'].includes(condition) ? `${value}%` :
+                          ['ends', '!ends'].includes(condition) ? `%${value}` : value;
+        params.push(paramValue);
+        paramIndex++;
+      } else if (['between', 'not between'].includes(condition)) {
+        params.push(value, value1);
+        paramIndex += 2;
+      }
+      // 'null' and '!null' don't need parameters
+    }
+    return paramIndex;
+  }
+};
+
+/**
  * Validates a GCF ID parameter
  * @param {*} gcfId - The GCF ID to validate
  * @returns {number} - The validated GCF ID as a number
@@ -137,59 +279,58 @@ async function getBgcInfo(gcfId = null, samples = null) {
             (SELECT COUNT(*) FROM regions WHERE membership_value < 0.405)          AS non_putative_count
         `;
 
-        const params = [];
-        const where = [];
+        let params = [];
+        let whereClauses = [];
+        let paramIndex = 1;
 
-        /* ────────────
-           2. gcfId filter
-           ──────────── */
-        if (validatedGcfId) {
-          where.push(`regions.bigslice_gcf_id = $${params.length + 1}`);
-          params.push(validatedGcfId);
-        }
+        // Add GCF filter using utility function
+        paramIndex = sqlUtils.addGcfFilter(
+          validatedGcfId, 
+          'regions.bigslice_gcf_id', 
+          whereClauses, 
+          params, 
+          paramIndex
+        );
 
-        /* ────────────
-           3. samples filter
-           ──────────── */
-        if (validatedSamples && validatedSamples.length) {
-          const placeholders = validatedSamples
-              .map((_, idx) => `$${params.length + idx + 1}`)
-              .join(', ');
-
-          where.push(`assembly IN (${placeholders})`);
-          params.push(...validatedSamples);
-        }
+        // Add samples filter using utility function
+        paramIndex = sqlUtils.addSamplesFilter(
+          validatedSamples, 
+          'assembly', 
+          whereClauses, 
+          params, 
+          paramIndex
+        );
 
         /* ────────────
            4. If filters → wrap with CTEs using ONE where-clause string
            ──────────── */
-        if (where.length) {
-          const wc = where.join(' AND ');
+        if (whereClauses.length) {
+          const whereClause = whereClauses.join(' AND ');
           sql = `
             WITH
               bgc AS (
-                SELECT COUNT(*) AS count FROM regions WHERE ${wc}
+                SELECT COUNT(*) AS count FROM regions WHERE ${whereClause}
               ),
               success AS (
                 SELECT COUNT(*) AS count
                 FROM antismash_runs
                 WHERE status = 'success'
-                  AND assembly IN (SELECT assembly FROM regions WHERE ${wc})
+                  AND assembly IN (SELECT assembly FROM regions WHERE ${whereClause})
               ),
               gcf AS (
                 SELECT COUNT(DISTINCT gcf_id) AS count
                 FROM bigslice_gcf_membership
-                WHERE gcf_id IN (SELECT bigslice_gcf_id FROM regions WHERE ${wc})
+                WHERE gcf_id IN (SELECT bigslice_gcf_id FROM regions WHERE ${whereClause})
               ),
               core AS (
                 SELECT COUNT(*) AS count
                 FROM regions
-                WHERE gcf_from_search = false AND ${wc}
+                WHERE gcf_from_search = false AND ${whereClause}
               ),
               non_putative AS (
                 SELECT COUNT(*) AS count
                 FROM regions
-                WHERE membership_value < 0.405 AND ${wc}
+                WHERE membership_value < 0.405 AND ${whereClause}
               )
             SELECT
               bgc.count          AS bgc_count,
@@ -228,38 +369,38 @@ async function getProductCategoryCounts(gcfId = null, samples = null) {
     const validatedGcfId = validateGcfId(gcfId);
     const validatedSamples = validateSamples(samples);
 
-    let sql = `
-        SELECT ARRAY_TO_STRING(product_categories, '|') AS categories, COUNT(*) AS count
-        FROM regions
-        GROUP BY categories
-        ORDER BY count DESC
-    `;
-
     let params = [];
-    let filters = [];
+    let whereClauses = [];
+    let paramIndex = 1;
 
-    // If the gcf query parameter is provided, modify the SQL query
-    if (validatedGcfId) {
-      filters.push(`bigslice_gcf_id = $${params.length + 1}`);
-      params.push(validatedGcfId);
-    }
+    // Add GCF filter using utility function
+    paramIndex = sqlUtils.addGcfFilter(
+      validatedGcfId, 
+      'bigslice_gcf_id', 
+      whereClauses, 
+      params, 
+      paramIndex
+    );
 
-    // Handle the samples query parameter
-    if (validatedSamples && validatedSamples.length > 0) {
-      filters.push(`assembly IN (${validatedSamples.map((_, idx) => `$${params.length + idx + 1}`).join(', ')})`);
-      params.push(...validatedSamples);
-    }
+    // Add samples filter using utility function
+    paramIndex = sqlUtils.addSamplesFilter(
+      validatedSamples, 
+      'assembly', 
+      whereClauses, 
+      params, 
+      paramIndex
+    );
 
-    // If there are any filters, apply them to the SQL query
-    if (filters.length > 0) {
-      sql = `
-        SELECT ARRAY_TO_STRING(product_categories, '|') AS categories, COUNT(*) AS count
-        FROM regions
-        WHERE ${filters.join(' AND ')}
-        GROUP BY categories
-        ORDER BY count DESC
-      `;
-    }
+    // Build the SQL query with or without WHERE clause
+    const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const sql = `
+      SELECT ARRAY_TO_STRING(product_categories, '|') AS categories, COUNT(*) AS count
+      FROM regions
+      ${whereClause}
+      GROUP BY categories
+      ORDER BY count DESC
+    `;
 
     const result = await pool.query(sql, params);
     return result.rows;
@@ -306,48 +447,38 @@ async function getProductCounts(gcfId = null, samples = null) {
     const validatedGcfId = validateGcfId(gcfId);
     const validatedSamples = validateSamples(samples);
 
-    let sql = `
-      SELECT prod, count
-      FROM (
-             SELECT type AS prod, COUNT(*) AS count, ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC) AS row_num
-             FROM regions
-             GROUP BY type
-           ) top_rows
-      WHERE row_num <= 15
-      UNION ALL
-      SELECT 'Others', SUM(count) AS count
-      FROM (
-        SELECT COUNT(*) AS count
-        FROM regions
-        GROUP BY type
-        ORDER BY count DESC
-        OFFSET 15 -- Exclude the top 15 rows
-        ) other_rows;
-    `;
-
     let params = [];
-    let filters = [];
+    let whereClauses = [];
+    let paramIndex = 1;
 
-    // Handle the gcf query parameter
-    if (validatedGcfId) {
-      filters.push(`bigslice_gcf_id = $${params.length + 1}`);
-      params.push(validatedGcfId);
-    }
+    // Add GCF filter using utility function
+    paramIndex = sqlUtils.addGcfFilter(
+      validatedGcfId, 
+      'bigslice_gcf_id', 
+      whereClauses, 
+      params, 
+      paramIndex
+    );
 
-    // Handle the samples query parameter
-    if (validatedSamples && validatedSamples.length > 0) {
-      filters.push(`assembly IN (${validatedSamples.map((_, idx) => `$${params.length + idx + 1}`).join(', ')})`);
-      params.push(...validatedSamples);
-    }
+    // Add samples filter using utility function
+    paramIndex = sqlUtils.addSamplesFilter(
+      validatedSamples, 
+      'assembly', 
+      whereClauses, 
+      params, 
+      paramIndex
+    );
 
-    // If filters are applied, adjust the SQL query
-    if (filters.length > 0) {
-      sql = `
+    // Build the WHERE clause
+    const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    // Build the SQL query with or without WHERE clause
+    const sql = `
       SELECT prod, count
       FROM (
         SELECT type AS prod, COUNT(*) AS count, ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC) AS row_num
         FROM regions
-        WHERE ${filters.join(' AND ')}
+        ${whereClause}
         GROUP BY type
       ) top_rows
       WHERE row_num <= 15
@@ -356,13 +487,12 @@ async function getProductCounts(gcfId = null, samples = null) {
       FROM (
         SELECT COUNT(*) AS count
         FROM regions
-        WHERE ${filters.join(' AND ')}
+        ${whereClause}
         GROUP BY type
         ORDER BY count DESC
         OFFSET 15 -- Exclude the top 15 rows
       ) other_rows;
-      `;
-    }
+    `;
 
     const result = await pool.query(sql, params);
     return result.rows;
@@ -432,33 +562,38 @@ async function getGcfTableSunburst(gcfId = null, samples = null) {
     const validatedGcfId = validateGcfId(gcfId);
     const validatedSamples = validateSamples(samples);
 
-    let sql = `
+    let params = [];
+    let whereClauses = ['longest_biome IS NOT NULL']; // Start with the base condition
+    let paramIndex = 1;
+
+    // Add GCF filter using utility function
+    paramIndex = sqlUtils.addGcfFilter(
+      validatedGcfId, 
+      'bigslice_gcf_id', 
+      whereClauses, 
+      params, 
+      paramIndex
+    );
+
+    // Add samples filter using utility function
+    paramIndex = sqlUtils.addSamplesFilter(
+      validatedSamples, 
+      'assembly', 
+      whereClauses, 
+      params, 
+      paramIndex
+    );
+
+    // Build the WHERE clause
+    const whereClause = `WHERE ${whereClauses.join(' AND ')}`;
+
+    // Build the SQL query
+    const sql = `
       SELECT longest_biome, COUNT(longest_biome)
       FROM regions
-      WHERE longest_biome IS NOT NULL
+      ${whereClause}
+      GROUP BY longest_biome
     `;
-
-    let params = [];
-    let filters = [];
-
-    // Handle the gcf query parameter
-    if (validatedGcfId) {
-      filters.push(`bigslice_gcf_id = $${params.length + 1}`);
-      params.push(validatedGcfId);
-    }
-
-    // Handle the samples query parameter
-    if (validatedSamples && validatedSamples.length > 0) {
-      filters.push(`assembly IN (${validatedSamples.map((_, idx) => `$${params.length + idx + 1}`).join(', ')})`);
-      params.push(...validatedSamples);
-    }
-
-    // If there are filters, append them to the SQL query
-    if (filters.length > 0) {
-      sql += ` AND ${filters.join(' AND ')}`;
-    }
-
-    sql += ` GROUP BY longest_biome`;
 
     const result = await pool.query(sql, params);
     return result.rows;
@@ -554,129 +689,26 @@ async function getGcfTable(options = {}) {
     /* ───────────────
        WHERE clause for search
        ─────────────── */
-    let whereClause = '';
     let params = [];
     let paramIndex = 1;
     let whereClauses = [];
 
     // Process search builder criteria
-    for (const criteria of validatedCriteria) {
-      const { origData, condition, value, value1 } = criteria;
+    const isArrayColumn = (column) => 
+      ['core_products', 'all_products', 'core_biomes', 'all_biomes'].includes(column);
 
-      // Handle the column name
-      const qualifiedColumn = `g.${origData}`;
+    const getQualifiedColumn = (column) => `g.${column}`;
 
-      switch (condition) {
-        case '=':
-          if (origData === 'core_products' || origData === 'all_products' || origData === 'core_biomes' || origData === 'all_biomes') {
-            whereClauses.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem = $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} = $${paramIndex}`);
-          }
-          params.push(value);
-          paramIndex++;
-          break;
-        case '!=':
-          if (origData === 'core_products' || origData === 'all_products' || origData === 'core_biomes' || origData === 'all_biomes') {
-            whereClauses.push(`NOT EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem = $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} != $${paramIndex}`);
-          }
-          params.push(value);
-          paramIndex++;
-          break;
-        case '<':
-        case '>':
-        case '<=':
-        case '>=':
-          // These operators don't make sense for arrays, so we'll just use them as-is
-          whereClauses.push(`${qualifiedColumn} ${condition} $${paramIndex}`);
-          params.push(value);
-          paramIndex++;
-          break;
-        case 'between':
-          if (origData === 'core_products' || origData === 'all_products' || origData === 'core_biomes' || origData === 'all_biomes') {
-            whereClauses.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem BETWEEN $${paramIndex} AND $${paramIndex + 1})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
-          }
-          params.push(value, value1);
-          paramIndex += 2;
-          break;
-        case 'not between':
-          if (origData === 'core_products' || origData === 'all_products' || origData === 'core_biomes' || origData === 'all_biomes') {
-            whereClauses.push(`NOT EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem BETWEEN $${paramIndex} AND $${paramIndex + 1})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} NOT BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
-          }
-          params.push(value, value1);
-          paramIndex += 2;
-          break;
-        case 'contains':
-          if (origData === 'core_products' || origData === 'all_products' || origData === 'core_biomes' || origData === 'all_biomes') {
-            whereClauses.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem LIKE $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} LIKE $${paramIndex}`);
-          }
-          params.push(`%${value}%`);
-          paramIndex++;
-          break;
-        case '!contains':
-          if (origData === 'core_products' || origData === 'all_products' || origData === 'core_biomes' || origData === 'all_biomes') {
-            whereClauses.push(`NOT EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem LIKE $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} NOT LIKE $${paramIndex}`);
-          }
-          params.push(`%${value}%`);
-          paramIndex++;
-          break;
-        case 'starts':
-          if (origData === 'core_products' || origData === 'all_products' || origData === 'core_biomes' || origData === 'all_biomes') {
-            whereClauses.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem LIKE $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} LIKE $${paramIndex}`);
-          }
-          params.push(`${value}%`);
-          paramIndex++;
-          break;
-        case '!starts':
-          if (origData === 'core_products' || origData === 'all_products' || origData === 'core_biomes' || origData === 'all_biomes') {
-            whereClauses.push(`NOT EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem LIKE $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} NOT LIKE $${paramIndex}`);
-          }
-          params.push(`${value}%`);
-          paramIndex++;
-          break;
-        case 'ends':
-          if (origData === 'core_products' || origData === 'all_products' || origData === 'core_biomes' || origData === 'all_biomes') {
-            whereClauses.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem LIKE $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} LIKE $${paramIndex}`);
-          }
-          params.push(`%${value}`);
-          paramIndex++;
-          break;
-        case '!ends':
-          if (origData === 'core_products' || origData === 'all_products' || origData === 'core_biomes' || origData === 'all_biomes') {
-            whereClauses.push(`NOT EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem LIKE $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} NOT LIKE $${paramIndex}`);
-          }
-          params.push(`%${value}`);
-          paramIndex++;
-          break;
-        case 'null':
-          // IS NULL works the same for arrays and non-arrays
-          whereClauses.push(`${qualifiedColumn} IS NULL`);
-          break;
-        case '!null':
-          // IS NOT NULL works the same for arrays and non-arrays
-          whereClauses.push(`${qualifiedColumn} IS NOT NULL`);
-          break;
-      }
-    }
+    paramIndex = sqlUtils.processSearchBuilderCriteria(
+      validatedCriteria, 
+      whereClauses, 
+      params, 
+      paramIndex, 
+      isArrayColumn, 
+      getQualifiedColumn
+    );
 
+    // Process free-text search
     if (validatedSearchValue) {
       const searchConditions = [];
 
@@ -689,12 +721,12 @@ async function getGcfTable(options = {}) {
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
-      // For array columns, use string_to_array and unnest
-      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(g.core_products, ',')) AS cp WHERE cp ILIKE $${paramIndex})`);
+      // For array columns, use unnest directly
+      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(g.core_products) AS cp WHERE cp ILIKE $${paramIndex})`);
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
-      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(g.core_biomes, ',')) AS cb WHERE cb ILIKE $${paramIndex})`);
+      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(g.core_biomes) AS cb WHERE cb ILIKE $${paramIndex})`);
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
@@ -706,11 +738,11 @@ async function getGcfTable(options = {}) {
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
-      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(g.all_products, ',')) AS ap WHERE ap ILIKE $${paramIndex})`);
+      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(g.all_products) AS ap WHERE ap ILIKE $${paramIndex})`);
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
-      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(g.all_biomes, ',')) AS ab WHERE ab ILIKE $${paramIndex})`);
+      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(g.all_biomes) AS ab WHERE ab ILIKE $${paramIndex})`);
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
@@ -723,9 +755,7 @@ async function getGcfTable(options = {}) {
     }
 
     // Build the final where clause
-    if (whereClauses.length > 0) {
-      whereClause = `WHERE ${whereClauses.join(' AND ')}`;
-    }
+    const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
     /* ───────────────
        ORDER BY logic
@@ -938,138 +968,36 @@ async function getBgcTable(options) {
     let params = [];
     let paramIndex = 1;
 
-    // Process search builder criteria
-    for (const criteria of validatedCriteria) {
-      const { origData, condition, value, value1 } = criteria;
+    // Process search builder criteria using utility function
+    const isArrayColumn = (column) => ['product_categories', 'products'].includes(column);
+    const getQualifiedColumn = (column) => column === 'taxon_name' ? 'taxdump_map.name' : `regions.${column}`;
 
-      // Handle taxon_name specially as it comes from taxdump_map table
-      const qualifiedColumn = origData === 'taxon_name' ? 'taxdump_map.name' : `regions.${origData}`;
+    paramIndex = sqlUtils.processSearchBuilderCriteria(
+      validatedCriteria, 
+      whereClauses, 
+      params, 
+      paramIndex, 
+      isArrayColumn, 
+      getQualifiedColumn
+    );
 
-      switch (condition) {
-        case '=':
-          if (origData === 'product_categories' || origData === 'products') {
-            whereClauses.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem = $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} = $${paramIndex}`);
-          }
-          params.push(value);
-          paramIndex++;
-          break;
-        case '!=':
-          if (origData === 'product_categories' || origData === 'products') {
-            whereClauses.push(`NOT EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem = $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} != $${paramIndex}`);
-          }
-          params.push(value);
-          paramIndex++;
-          break;
-        case '<':
-        case '>':
-        case '<=':
-        case '>=':
-          // These operators don't make sense for arrays, so we'll just use them as-is
-          whereClauses.push(`${qualifiedColumn} ${condition} $${paramIndex}`);
-          params.push(value);
-          paramIndex++;
-          break;
-        case 'between':
-          if (origData === 'product_categories' || origData === 'products') {
-            whereClauses.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem BETWEEN $${paramIndex} AND $${paramIndex + 1})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
-          }
-          params.push(value, value1);
-          paramIndex += 2;
-          break;
-        case 'not between':
-          if (origData === 'product_categories' || origData === 'products') {
-            whereClauses.push(`NOT EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem BETWEEN $${paramIndex} AND $${paramIndex + 1})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} NOT BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
-          }
-          params.push(value, value1);
-          paramIndex += 2;
-          break;
-        case 'contains':
-          if (origData === 'product_categories' || origData === 'products') {
-            whereClauses.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem LIKE $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} LIKE $${paramIndex}`);
-          }
-          params.push(`%${value}%`);
-          paramIndex++;
-          break;
-        case '!contains':
-          if (origData === 'product_categories' || origData === 'products') {
-            whereClauses.push(`NOT EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem LIKE $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} NOT LIKE $${paramIndex}`);
-          }
-          params.push(`%${value}%`);
-          paramIndex++;
-          break;
-        case 'starts':
-          if (origData === 'product_categories' || origData === 'products') {
-            whereClauses.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem LIKE $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} LIKE $${paramIndex}`);
-          }
-          params.push(`${value}%`);
-          paramIndex++;
-          break;
-        case '!starts':
-          if (origData === 'product_categories' || origData === 'products') {
-            whereClauses.push(`NOT EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem LIKE $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} NOT LIKE $${paramIndex}`);
-          }
-          params.push(`${value}%`);
-          paramIndex++;
-          break;
-        case 'ends':
-          if (origData === 'product_categories' || origData === 'products') {
-            whereClauses.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem LIKE $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} LIKE $${paramIndex}`);
-          }
-          params.push(`%${value}`);
-          paramIndex++;
-          break;
-        case '!ends':
-          if (origData === 'product_categories' || origData === 'products') {
-            whereClauses.push(`NOT EXISTS (SELECT 1 FROM unnest(string_to_array(${qualifiedColumn}, ',')) AS elem WHERE elem LIKE $${paramIndex})`);
-          } else {
-            whereClauses.push(`${qualifiedColumn} NOT LIKE $${paramIndex}`);
-          }
-          params.push(`%${value}`);
-          paramIndex++;
-          break;
-        case 'null':
-          // IS NULL works the same for arrays and non-arrays
-          whereClauses.push(`${qualifiedColumn} IS NULL`);
-          break;
-        case '!null':
-          // IS NOT NULL works the same for arrays and non-arrays
-          whereClauses.push(`${qualifiedColumn} IS NOT NULL`);
-          break;
-      }
-    }
+    // Add GCF filter using utility function
+    paramIndex = sqlUtils.addGcfFilter(
+      validatedGcfId, 
+      'regions.bigslice_gcf_id', 
+      whereClauses, 
+      params, 
+      paramIndex
+    );
 
-    // Add GCF filter
-    if (validatedGcfId) {
-      whereClauses.push(`regions.bigslice_gcf_id = $${paramIndex}`);
-      params.push(validatedGcfId);
-      paramIndex++;
-    }
-
-    // Add samples filter
-    if (validatedSamples && validatedSamples.length > 0) {
-      let placeholders = validatedSamples.map((_, idx) => `$${paramIndex + idx}`).join(', ');
-      whereClauses.push(`regions.assembly IN (${placeholders})`);
-      params.push(...validatedSamples);
-      paramIndex += validatedSamples.length;
-    }
+    // Add samples filter using utility function
+    paramIndex = sqlUtils.addSamplesFilter(
+      validatedSamples, 
+      'regions.assembly', 
+      whereClauses, 
+      params, 
+      paramIndex
+    );
 
     // Add core members filter
     if (validatedShowCoreMembers) {
@@ -1098,11 +1026,11 @@ async function getBgcTable(options) {
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
-      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(regions.product_categories, ',')) AS pc WHERE pc ILIKE $${paramIndex})`);
+      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(regions.product_categories) AS pc WHERE pc ILIKE $${paramIndex})`);
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
-      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(string_to_array(regions.products, ',')) AS p WHERE p ILIKE $${paramIndex})`);
+      searchConditions.push(`EXISTS (SELECT 1 FROM unnest(regions.products) AS p WHERE p ILIKE $${paramIndex})`);
       params.push(`%${validatedSearchValue}%`);
       paramIndex++;
 
@@ -1185,23 +1113,30 @@ async function getTaxonomicCounts(gcfId = null, samples = null) {
     const validatedGcfId = validateGcfId(gcfId);
     const validatedSamples = validateSamples(samples);
 
-    const params = [];
-    const where = [];                 // filters applied to region_genus
+    let params = [];
+    let whereClauses = [];
+    let paramIndex = 1;
 
-    /* 1. optional GCF filter --------------------------------------- */
-    if (validatedGcfId !== null) {
-      where.push(`region_genus.bigslice_gcf_id = $${params.length + 1}`);
-      params.push(validatedGcfId);
-    }
+    // Add GCF filter using utility function
+    paramIndex = sqlUtils.addGcfFilter(
+      validatedGcfId, 
+      'region_genus.bigslice_gcf_id', 
+      whereClauses, 
+      params, 
+      paramIndex
+    );
 
-    /* 2. optional assembly filter ---------------------------------- */
-    if (validatedSamples && validatedSamples.length) {
-      const ph = validatedSamples.map((_, i) => `$${params.length + i + 1}`).join(', ');
-      where.push(`region_genus.assembly IN (${ph})`);
-      params.push(...validatedSamples);
-    }
+    // Add samples filter using utility function
+    paramIndex = sqlUtils.addSamplesFilter(
+      validatedSamples, 
+      'region_genus.assembly', 
+      whereClauses, 
+      params, 
+      paramIndex
+    );
 
-    const wc = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    // Build the WHERE clause
+    const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
     /* 3. fast genus count using materialised view ------------------ */
     const sql = `
@@ -1211,7 +1146,7 @@ async function getTaxonomicCounts(gcfId = null, samples = null) {
           COUNT(*)                               AS count,
         ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC) AS rn
       FROM region_genus
-        ${wc}
+        ${whereClause}
       GROUP BY genus_name
         ),
         top_15 AS (
