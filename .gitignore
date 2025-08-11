@@ -136,3 +136,4 @@ views/layout-2.pug
 views/test.pug
 .env
 public/stylesheets/*.map
+CLAUDE.md
